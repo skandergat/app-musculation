@@ -13,7 +13,7 @@ import {
 // 👉 Remplace XX par l'IP locale de ton PC (ipconfig → adresse IPv4).
 // Le téléphone (Expo Go) et le PC doivent être sur le même Wi-Fi.
 // "localhost" ne marchera PAS depuis le téléphone.
-const API_URL = 'http://192.168.1.XX:5000';
+const API_URL = 'http://192.168.100.200';
 
 export default function App() {
   const [exercices, setExercices] = useState([]);
