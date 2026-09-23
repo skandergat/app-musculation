@@ -72,6 +72,7 @@ export default function SeanceScreen() {
   const [seanceId, setSeanceId] = useState<number | null>(null);
   const [chargement, setChargement] = useState(true);
   const [terminee, setTerminee] = useState(false);
+  const [previous, setPrevious] = useState<Record<string, PreviousSerie[]>>({});
   const [exercicesDisponibles, setExercicesDisponibles] = useState<
     { nom: string; muscle: string }[]
   >([]);
@@ -912,3 +913,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+
