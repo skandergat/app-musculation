@@ -108,6 +108,51 @@ export default function SeanceScreen() {
     }
   };
 
+  const chargerPrevious = async (exercice: Exercice) => {
+    try {
+      const exercicesResponse = await fetch(
+        `${API_URL}/exercices`
+      );
+
+      if (!exercicesResponse.ok) {
+        return;
+      }
+
+      const exercicesBackend =
+        await exercicesResponse.json();
+
+      const exerciceBackend =
+        exercicesBackend.find(
+          (item: any) =>
+            item.nom === exercice.nom
+        );
+
+      if (!exerciceBackend) {
+        return;
+      }
+
+      const response = await fetch(
+        `${API_URL}/exercices/${exerciceBackend.id}/previous`
+      );
+
+      if (!response.ok) {
+        return;
+      }
+
+      const data: PreviousSerie[] =
+        await response.json();
+
+      setPrevious((ancien) => ({
+        ...ancien,
+        [exercice.nom]: data,
+      }));
+    } catch (error) {
+      console.error(
+        'Erreur chargement Previous :',
+        error
+      );
+    }
+  };
   const demarrerSeance = async () => {
     try {
       const response = await fetch(`${API_URL}/seances`, {
@@ -913,4 +958,5 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+
 
