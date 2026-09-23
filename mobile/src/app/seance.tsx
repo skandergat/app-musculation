@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import {
   SafeAreaView,
   StatusBar,
@@ -21,6 +21,11 @@ type Serie = {
   sauvegardee?: boolean;
 };
 
+type PreviousSerie = {
+  poids: number;
+  repetitions: number;
+};
+
 type Exercice = {
   id: number;
   nom: string;
@@ -33,7 +38,7 @@ export default function SeanceScreen() {
   const [exercices, setExercices] = useState<Exercice[]>([
     {
       id: 1,
-      nom: 'Développé couché',
+      nom: 'DÃ©veloppÃ© couchÃ©',
       muscle: 'Pectoraux',
       series: [
         { id: 1, poids: '40', reps: '12', terminee: false },
@@ -43,7 +48,7 @@ export default function SeanceScreen() {
     },
     {
       id: 2,
-      nom: 'Développé incliné haltères',
+      nom: 'DÃ©veloppÃ© inclinÃ© haltÃ¨res',
       muscle: 'Pectoraux',
       series: [
         { id: 1, poids: '30', reps: '12', terminee: false },
@@ -82,7 +87,7 @@ export default function SeanceScreen() {
 
       if (!response.ok) {
         throw new Error(
-          'Impossible de récupérer les exercices'
+          'Impossible de rÃ©cupÃ©rer les exercices'
         );
       }
 
@@ -112,7 +117,7 @@ export default function SeanceScreen() {
       });
 
       if (!response.ok) {
-        throw new Error('Impossible de démarrer la séance');
+        throw new Error('Impossible de dÃ©marrer la sÃ©ance');
       }
 
       const data = await response.json();
@@ -121,12 +126,12 @@ export default function SeanceScreen() {
       setChargement(false);
 
       console.log(
-        'Séance créée avec ID :',
+        'SÃ©ance crÃ©Ã©e avec ID :',
         data.seance_id
       );
     } catch (error) {
       console.error(
-        'Erreur démarrage séance :',
+        'Erreur dÃ©marrage sÃ©ance :',
         error
       );
 
@@ -268,7 +273,7 @@ export default function SeanceScreen() {
     if (!seanceId) {
       Alert.alert(
         'Erreur',
-        'La séance n’a pas encore été créée.'
+        'La sÃ©ance nâ€™a pas encore Ã©tÃ© crÃ©Ã©e.'
       );
       return false;
     }
@@ -280,7 +285,7 @@ export default function SeanceScreen() {
 
       if (!exercicesResponse.ok) {
         throw new Error(
-          'Impossible de récupérer les exercices'
+          'Impossible de rÃ©cupÃ©rer les exercices'
         );
       }
 
@@ -320,12 +325,12 @@ export default function SeanceScreen() {
 
       if (!response.ok) {
         throw new Error(
-          'Impossible de sauvegarder la série'
+          'Impossible de sauvegarder la sÃ©rie'
         );
       }
 
       console.log(
-        'Série sauvegardée :',
+        'SÃ©rie sauvegardÃ©e :',
         exercice.nom,
         serie.poids,
         serie.reps
@@ -334,13 +339,13 @@ export default function SeanceScreen() {
       return true;
     } catch (error) {
       console.error(
-        'Erreur sauvegarde série :',
+        'Erreur sauvegarde sÃ©rie :',
         error
       );
 
       Alert.alert(
         'Erreur',
-        'La série n’a pas pu être sauvegardée.'
+        'La sÃ©rie nâ€™a pas pu Ãªtre sauvegardÃ©e.'
       );
 
       return false;
@@ -427,7 +432,7 @@ export default function SeanceScreen() {
     if (!seanceId) {
       Alert.alert(
         'Erreur',
-        'Aucune séance active.'
+        'Aucune sÃ©ance active.'
       );
       return;
     }
@@ -445,30 +450,30 @@ export default function SeanceScreen() {
 
       if (!response.ok) {
         throw new Error(
-          'Impossible de terminer la séance'
+          'Impossible de terminer la sÃ©ance'
         );
       }
 
       setTerminee(true);
 
       Alert.alert(
-        'Séance terminée',
-        'Ta séance a été enregistrée dans la base de données.'
+        'SÃ©ance terminÃ©e',
+        'Ta sÃ©ance a Ã©tÃ© enregistrÃ©e dans la base de donnÃ©es.'
       );
 
       console.log(
-        'Séance terminée :',
+        'SÃ©ance terminÃ©e :',
         seanceId
       );
     } catch (error) {
       console.error(
-        'Erreur terminaison séance :',
+        'Erreur terminaison sÃ©ance :',
         error
       );
 
       Alert.alert(
         'Erreur',
-        'Impossible de terminer la séance.'
+        'Impossible de terminer la sÃ©ance.'
       );
     }
   };
@@ -480,7 +485,7 @@ export default function SeanceScreen() {
 
         <View style={styles.chargement}>
           <Text style={styles.chargementTexte}>
-            Démarrage de la séance...
+            DÃ©marrage de la sÃ©ance...
           </Text>
         </View>
       </SafeAreaView>
@@ -493,11 +498,11 @@ export default function SeanceScreen() {
 
       <ScrollView contentContainerStyle={styles.contenu}>
         <Text style={styles.titre}>
-          Séance
+          SÃ©ance
         </Text>
 
         <Text style={styles.sousTitre}>
-          Ma séance du jour
+          Ma sÃ©ance du jour
         </Text>
 
         {exercices.map((exercice) => (
@@ -517,7 +522,7 @@ export default function SeanceScreen() {
 
             <View style={styles.headerSeries}>
               <Text style={styles.headerTexte}>
-                Série
+                SÃ©rie
               </Text>
 
               <Text style={styles.headerTexte}>
@@ -529,7 +534,7 @@ export default function SeanceScreen() {
               </Text>
 
               <Text style={styles.headerTexte}>
-                ✓
+                âœ“
               </Text>
             </View>
 
@@ -590,7 +595,7 @@ export default function SeanceScreen() {
                 >
                   {serie.terminee && (
                     <Text style={styles.check}>
-                      ✓
+                      âœ“
                     </Text>
                   )}
                 </TouchableOpacity>
@@ -605,7 +610,7 @@ export default function SeanceScreen() {
               }
             >
               <Text style={styles.boutonAjouterTexte}>
-                + Ajouter une série
+                + Ajouter une sÃ©rie
               </Text>
             </TouchableOpacity>
           </View>
@@ -619,7 +624,7 @@ export default function SeanceScreen() {
           }
         >
           <Text style={styles.boutonAjouterExerciceTexte}>
-            ＋ AJOUTER UN EXERCICE
+            ï¼‹ AJOUTER UN EXERCICE
           </Text>
         </TouchableOpacity>
 
@@ -660,7 +665,7 @@ export default function SeanceScreen() {
                   </View>
 
                   <Text style={styles.plus}>
-                    ＋
+                    ï¼‹
                   </Text>
                 </TouchableOpacity>
               )
@@ -679,8 +684,8 @@ export default function SeanceScreen() {
         >
           <Text style={styles.boutonTerminerTexte}>
             {terminee
-              ? 'SÉANCE TERMINÉE ✓'
-              : 'TERMINER LA SÉANCE'}
+              ? 'SÃ‰ANCE TERMINÃ‰E âœ“'
+              : 'TERMINER LA SÃ‰ANCE'}
           </Text>
         </TouchableOpacity>
       </ScrollView>
