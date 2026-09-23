@@ -575,22 +575,10 @@ export default function SeanceScreen() {
             <View style={styles.headerSeries}>
   <Text style={styles.headerTexte}>Série</Text>
   <Text style={styles.headerPrevious}>Previous</Text>
-              <Text style={styles.headerTexte}>
-                SÃ©rie
-              </Text>
-
-              <Text style={styles.headerTexte}>
-                Poids
-              </Text>
-
-              <Text style={styles.headerTexte}>
-                Reps
-              </Text>
-
-              <Text style={styles.headerTexte}>
-                âœ“
-              </Text>
-            </View>
+  <Text style={styles.headerTexte}>Poids</Text>
+  <Text style={styles.headerTexte}>Reps</Text>
+  <Text style={styles.headerTexte}>✓</Text>
+</View>
 
             {exercice.series.map((serie) => (
               <View
@@ -966,6 +954,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+
 
 
 
