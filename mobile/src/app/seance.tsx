@@ -190,7 +190,7 @@ export default function SeanceScreen() {
     }
   };
 
-  const ajouterExercice = (
+  const ajouterExercice = async (
     nom: string,
     muscle: string
   ) => {
@@ -226,6 +226,8 @@ export default function SeanceScreen() {
     ]);
 
     setMenuExercices(false);
+
+    await chargerPrevious(nouvelExercice);
   };
 
   const ajouterSerie = (exerciceId: number) => {
@@ -958,5 +960,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+
 
 
