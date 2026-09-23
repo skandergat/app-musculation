@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+﻿from flask import Flask, jsonify, request
 import sqlite3
 from datetime import datetime
 
@@ -42,20 +42,20 @@ def assurer_base():
     cursor.execute("SELECT COUNT(*) FROM exercices")
     if cursor.fetchone()[0] == 0:
         exercices_de_base = [
-            ("Développé couché", "Pectoraux"),
-            ("Développé incliné haltères", "Pectoraux"),
+            ("DÃ©veloppÃ© couchÃ©", "Pectoraux"),
+            ("DÃ©veloppÃ© inclinÃ© haltÃ¨res", "Pectoraux"),
             ("Pompes", "Pectoraux"),
             ("Squat", "Jambes"),
-            ("Presse à cuisses", "Jambes"),
+            ("Presse Ã  cuisses", "Jambes"),
             ("Fentes", "Jambes"),
-            ("Soulevé de terre", "Dos"),
+            ("SoulevÃ© de terre", "Dos"),
             ("Tractions", "Dos"),
             ("Rowing barre", "Dos"),
             ("Tirage vertical", "Dos"),
-            ("Développé militaire", "Épaules"),
-            ("Élévations latérales", "Épaules"),
+            ("DÃ©veloppÃ© militaire", "Ã‰paules"),
+            ("Ã‰lÃ©vations latÃ©rales", "Ã‰paules"),
             ("Curl biceps barre", "Biceps"),
-            ("Curl biceps haltères", "Biceps"),
+            ("Curl biceps haltÃ¨res", "Biceps"),
             ("Extensions triceps poulie", "Triceps"),
             ("Dips", "Triceps"),
             ("Crunch", "Abdominaux"),
@@ -129,8 +129,51 @@ def terminer_seance(seance_id):
     )
     conn.commit()
     conn.close()
-    return jsonify({"status": "séance terminée"})
+    return jsonify({"status": "sÃ©ance terminÃ©e"})
 
+
+
+@app.route("/exercices/<int:exercice_id>/previous")
+def previous_exercice(exercice_id):
+    conn = get_db()
+
+    seance = conn.execute(
+        """
+        SELECT seances.id
+        FROM seances
+        JOIN series ON series.seance_id = seances.id
+        WHERE series.exercice_id = ?
+          AND seances.date_fin IS NOT NULL
+        ORDER BY seances.date_debut DESC
+        LIMIT 1
+        """,
+        (exercice_id,),
+    ).fetchone()
+
+    if not seance:
+        conn.close()
+        return jsonify([])
+
+    series = conn.execute(
+        """
+        SELECT id, poids, repetitions
+        FROM series
+        WHERE seance_id = ?
+          AND exercice_id = ?
+        ORDER BY id ASC
+        """,
+        (seance["id"], exercice_id),
+    ).fetchall()
+
+    conn.close()
+
+    return jsonify([
+        {
+            "poids": serie["poids"],
+            "repetitions": serie["repetitions"],
+        }
+        for serie in series
+    ])
 
 @app.route("/historique")
 def historique():
