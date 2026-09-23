@@ -593,6 +593,12 @@ export default function SeanceScreen() {
                   {serie.id}
                 </Text>
 
+                <Text style={styles.previous}>
+                  {previous[exercice.nom]?.[serie.id - 1]
+                    ? `${previous[exercice.nom][serie.id - 1].poids} kg × ${previous[exercice.nom][serie.id - 1].repetitions}`
+                    : '—'}
+                </Text>
+
                 <TextInput
                   style={styles.input}
                   value={serie.poids}
@@ -808,6 +814,22 @@ const styles = StyleSheet.create({
     color: '#8A8A8E',
   },
 
+  headerPrevious: {
+    width: 90,
+    textAlign: 'center',
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#8A8A8E',
+  },
+
+  previous: {
+    width: 90,
+    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#8A8A8E',
+  },
+
   serie: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -954,6 +976,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+
+
 
 
 
