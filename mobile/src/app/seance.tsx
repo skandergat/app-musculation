@@ -29,19 +29,6 @@ type Exercice = {
   series: Serie[];
 };
 
-const exercicesDisponibles = [
-  { nom: 'Développé couché', muscle: 'Pectoraux' },
-  { nom: 'Développé incliné', muscle: 'Pectoraux' },
-  { nom: 'Écartés haltères', muscle: 'Pectoraux' },
-  { nom: 'Tirage vertical', muscle: 'Dos' },
-  { nom: 'Rowing', muscle: 'Dos' },
-  { nom: 'Curl biceps', muscle: 'Biceps' },
-  { nom: 'Extension triceps', muscle: 'Triceps' },
-  { nom: 'Squat', muscle: 'Jambes' },
-  { nom: 'Presse à cuisses', muscle: 'Jambes' },
-  { nom: 'Élévations latérales', muscle: 'Épaules' },
-];
-
 export default function SeanceScreen() {
   const [exercices, setExercices] = useState<Exercice[]>([
     {
@@ -56,7 +43,7 @@ export default function SeanceScreen() {
     },
     {
       id: 2,
-      nom: 'Développé incliné',
+      nom: 'Développé incliné haltères',
       muscle: 'Pectoraux',
       series: [
         { id: 1, poids: '30', reps: '12', terminee: false },
@@ -66,7 +53,7 @@ export default function SeanceScreen() {
     },
     {
       id: 3,
-      nom: 'Extension triceps poulie',
+      nom: 'Extensions triceps poulie',
       muscle: 'Triceps',
       series: [
         { id: 1, poids: '20', reps: '12', terminee: false },
@@ -80,10 +67,40 @@ export default function SeanceScreen() {
   const [seanceId, setSeanceId] = useState<number | null>(null);
   const [chargement, setChargement] = useState(true);
   const [terminee, setTerminee] = useState(false);
+  const [exercicesDisponibles, setExercicesDisponibles] = useState<
+    { nom: string; muscle: string }[]
+  >([]);
 
   useEffect(() => {
     demarrerSeance();
+    chargerExercicesDisponibles();
   }, []);
+
+  const chargerExercicesDisponibles = async () => {
+    try {
+      const response = await fetch(`${API_URL}/exercices`);
+
+      if (!response.ok) {
+        throw new Error(
+          'Impossible de récupérer les exercices'
+        );
+      }
+
+      const data = await response.json();
+
+      setExercicesDisponibles(
+        data.map((e: any) => ({
+          nom: e.nom,
+          muscle: e.groupe_musculaire ?? '',
+        }))
+      );
+    } catch (error) {
+      console.error(
+        'Erreur chargement exercices disponibles :',
+        error
+      );
+    }
+  };
 
   const demarrerSeance = async () => {
     try {
