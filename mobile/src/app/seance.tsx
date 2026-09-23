@@ -80,6 +80,10 @@ export default function SeanceScreen() {
   useEffect(() => {
     demarrerSeance();
     chargerExercicesDisponibles();
+
+    exercices.forEach((exercice) => {
+      chargerPrevious(exercice);
+    });
   }, []);
 
   const chargerExercicesDisponibles = async () => {
@@ -960,6 +964,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+
 
 
 
