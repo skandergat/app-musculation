@@ -573,6 +573,8 @@ export default function SeanceScreen() {
             </View>
 
             <View style={styles.headerSeries}>
+  <Text style={styles.headerTexte}>Série</Text>
+  <Text style={styles.headerPrevious}>Previous</Text>
               <Text style={styles.headerTexte}>
                 SÃ©rie
               </Text>
@@ -964,6 +966,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+
 
 
 
