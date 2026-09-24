@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 
 // 👉 IP locale de ton PC (ipconfig → adresse IPv4). Déjà mise à jour avec la tienne.
-const API_URL = 'http://192.168.100.200:5000';
+const API_URL = 'http://192.168.100.200:5001';
 
 type Exercice = {
   id: number;
