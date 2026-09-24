@@ -1,138 +1,105 @@
-import { useState, useEffect } from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  FlatList,
-  ActivityIndicator,
-  RefreshControl,
-  SafeAreaView,
-  StatusBar,
-} from 'react-native';
+import { StyleSheet, Text, View, SafeAreaView, StatusBar, Pressable } from 'react-native';
+import { router } from 'expo-router';
 
-const API_URL = 'http://192.168.100.200:5001';
-
-type Exercice = {
-  id: number;
-  nom?: string;
-  name?: string;
-  groupe_musculaire?: string;
-};
-
-export default function ExercicesScreen() {
-  const [exercices, setExercices] = useState<Exercice[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [erreur, setErreur] = useState<string | null>(null);
-
-  const chargerExercices = async () => {
-    try {
-      setErreur(null);
-      const response = await fetch(`${API_URL}/exercices`);
-      if (!response.ok) throw new Error(`Erreur ${response.status}`);
-      const data = await response.json();
-      setExercices(data);
-    } catch (err: any) {
-      setErreur(err.message);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    chargerExercices();
-  }, []);
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    chargerExercices();
-  };
-
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.centered}>
-        <ActivityIndicator size="large" color="#0A84FF" />
-      </SafeAreaView>
-    );
-  }
-
-  if (erreur) {
-    return (
-      <SafeAreaView style={styles.centered}>
-        <Text style={styles.erreurTitre}>Connexion impossible</Text>
-        <Text style={styles.erreurTexte}>{erreur}</Text>
-        <Text style={styles.erreurAide}>
-          Vérifie que le serveur Flask tourne (python app.py) et que API_URL
-          pointe vers l'IP locale de ton PC, pas "localhost".
-        </Text>
-      </SafeAreaView>
-    );
-  }
-
+export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      <Text style={styles.titre}>Exercices</Text>
-      <FlatList
-        data={exercices}
-        keyExtractor={(item) => String(item.id)}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        contentContainerStyle={styles.liste}
-        renderItem={({ item }) => (
-          <View style={styles.carte}>
-            <Text style={styles.nomExercice}>{item.nom ?? item.name}</Text>
-            {item.groupe_musculaire ? (
-              <Text style={styles.sousTexte}>{item.groupe_musculaire}</Text>
-            ) : null}
+
+      <View style={styles.contenu}>
+        <Text style={styles.titre}>Home</Text>
+        <Text style={styles.sousTitre}>Choisis ton entraînement</Text>
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.carteGym,
+            pressed && styles.presse,
+          ]}
+          onPress={() => router.push('/gym')}
+        >
+          <View style={styles.icone}>
+            <Text style={styles.iconeTexte}>GYM</Text>
           </View>
-        )}
-        ListEmptyComponent={
-          <Text style={styles.sousTexte}>Aucun exercice pour l'instant.</Text>
-        }
-      />
+
+          <View style={styles.texteCarte}>
+            <Text style={styles.titreCarte}>GYM</Text>
+            <Text style={styles.descriptionCarte}>
+              Tous les exercices de musculation
+            </Text>
+          </View>
+
+          <Text style={styles.chevron}>›</Text>
+        </Pressable>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F5F7' },
-  centered: {
+  container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
+    backgroundColor: '#F5F5F7',
+  },
+  contenu: {
+    flex: 1,
+    padding: 20,
   },
   titre: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '700',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
+    color: '#111',
+    marginTop: 8,
   },
-  liste: { paddingHorizontal: 16, paddingBottom: 24 },
-  carte: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
+  sousTitre: {
+    fontSize: 16,
+    color: '#8A8A8E',
+    marginTop: 4,
+    marginBottom: 24,
   },
-  nomExercice: { fontSize: 16, fontWeight: '600', color: '#111' },
-  sousTexte: { fontSize: 13, color: '#8A8A8E', marginTop: 2 },
-  erreurTitre: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
-  erreurTexte: {
+  carteGym: {
+    minHeight: 190,
+    backgroundColor: '#111',
+    borderRadius: 22,
+    padding: 22,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+  },
+  icone: {
+    width: 76,
+    height: 76,
+    borderRadius: 18,
+    backgroundColor: '#2C2C2E',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconeTexte: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  texteCarte: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  titreCarte: {
+    color: '#FFFFFF',
+    fontSize: 30,
+    fontWeight: '800',
+  },
+  descriptionCarte: {
+    color: '#D1D1D6',
     fontSize: 14,
-    color: '#FF3B30',
-    textAlign: 'center',
-    marginBottom: 8,
+    marginTop: 4,
   },
-  erreurAide: { fontSize: 13, color: '#8A8A8E', textAlign: 'center' },
+  chevron: {
+    color: '#FFFFFF',
+    fontSize: 36,
+    fontWeight: '300',
+    marginLeft: 12,
+  },
+  presse: {
+    opacity: 0.75,
+    transform: [{ scale: 0.99 }],
+  },
 });
