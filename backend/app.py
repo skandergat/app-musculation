@@ -214,44 +214,769 @@ def assurer_base():
     """)
 
     # --------------------------------------------------------
-    # EXERCICES DE BASE
+    # BIBLIOTHÈQUE GYM
     # --------------------------------------------------------
+    # Tous les exercices appartiennent pour l'instant à la catégorie
+    # GYM côté application. Le groupe_musculaire reste une information
+    # interne utile pour les futures fonctionnalités de recherche/filtre.
+    exercices_gym = [
+          [
+                    "Développé couché",
+                    "Pectoraux"
+          ],
+          [
+                    "Développé couché haltères",
+                    "Pectoraux"
+          ],
+          [
+                    "Développé incliné barre",
+                    "Pectoraux"
+          ],
+          [
+                    "Développé incliné haltères",
+                    "Pectoraux"
+          ],
+          [
+                    "Développé décliné barre",
+                    "Pectoraux"
+          ],
+          [
+                    "Développé décliné haltères",
+                    "Pectoraux"
+          ],
+          [
+                    "Chest press machine",
+                    "Pectoraux"
+          ],
+          [
+                    "Chest press convergente",
+                    "Pectoraux"
+          ],
+          [
+                    "Développé Hammer Strength",
+                    "Pectoraux"
+          ],
+          [
+                    "Écarté haltères",
+                    "Pectoraux"
+          ],
+          [
+                    "Écarté incliné haltères",
+                    "Pectoraux"
+          ],
+          [
+                    "Écarté décliné haltères",
+                    "Pectoraux"
+          ],
+          [
+                    "Pec deck",
+                    "Pectoraux"
+          ],
+          [
+                    "Crossover poulie",
+                    "Pectoraux"
+          ],
+          [
+                    "Crossover haut vers bas",
+                    "Pectoraux"
+          ],
+          [
+                    "Crossover bas vers haut",
+                    "Pectoraux"
+          ],
+          [
+                    "Pompes",
+                    "Pectoraux"
+          ],
+          [
+                    "Pompes lestées",
+                    "Pectoraux"
+          ],
+          [
+                    "Pompes inclinées",
+                    "Pectoraux"
+          ],
+          [
+                    "Pompes déclinées",
+                    "Pectoraux"
+          ],
+          [
+                    "Dips poitrine",
+                    "Pectoraux"
+          ],
+          [
+                    "Tractions pronation",
+                    "Dos"
+          ],
+          [
+                    "Tractions supination",
+                    "Dos"
+          ],
+          [
+                    "Tractions prise neutre",
+                    "Dos"
+          ],
+          [
+                    "Tractions lestées",
+                    "Dos"
+          ],
+          [
+                    "Tirage vertical",
+                    "Dos"
+          ],
+          [
+                    "Tirage vertical prise large",
+                    "Dos"
+          ],
+          [
+                    "Tirage vertical prise serrée",
+                    "Dos"
+          ],
+          [
+                    "Tirage vertical supination",
+                    "Dos"
+          ],
+          [
+                    "Rowing barre",
+                    "Dos"
+          ],
+          [
+                    "Rowing Pendlay",
+                    "Dos"
+          ],
+          [
+                    "Rowing T-bar",
+                    "Dos"
+          ],
+          [
+                    "Rowing haltère unilatéral",
+                    "Dos"
+          ],
+          [
+                    "Rowing machine",
+                    "Dos"
+          ],
+          [
+                    "Rowing poulie basse",
+                    "Dos"
+          ],
+          [
+                    "Rowing assis",
+                    "Dos"
+          ],
+          [
+                    "Rowing poitrine supportée",
+                    "Dos"
+          ],
+          [
+                    "Tirage horizontal",
+                    "Dos"
+          ],
+          [
+                    "Pullover haltère",
+                    "Dos"
+          ],
+          [
+                    "Pullover poulie",
+                    "Dos"
+          ],
+          [
+                    "Straight-arm pulldown",
+                    "Dos"
+          ],
+          [
+                    "Shrugs barre",
+                    "Trapèzes"
+          ],
+          [
+                    "Shrugs haltères",
+                    "Trapèzes"
+          ],
+          [
+                    "Shrugs machine",
+                    "Trapèzes"
+          ],
+          [
+                    "Développé militaire barre",
+                    "Épaules"
+          ],
+          [
+                    "Développé militaire haltères",
+                    "Épaules"
+          ],
+          [
+                    "Développé Arnold",
+                    "Épaules"
+          ],
+          [
+                    "Shoulder press machine",
+                    "Épaules"
+          ],
+          [
+                    "Shoulder press convergente",
+                    "Épaules"
+          ],
+          [
+                    "Élévations latérales haltères",
+                    "Épaules"
+          ],
+          [
+                    "Élévations latérales poulie",
+                    "Épaules"
+          ],
+          [
+                    "Élévations latérales machine",
+                    "Épaules"
+          ],
+          [
+                    "Élévations frontales haltères",
+                    "Épaules"
+          ],
+          [
+                    "Élévations frontales barre",
+                    "Épaules"
+          ],
+          [
+                    "Élévations frontales poulie",
+                    "Épaules"
+          ],
+          [
+                    "Oiseau haltères",
+                    "Épaules"
+          ],
+          [
+                    "Oiseau machine",
+                    "Épaules"
+          ],
+          [
+                    "Reverse pec deck",
+                    "Épaules"
+          ],
+          [
+                    "Face pull",
+                    "Épaules"
+          ],
+          [
+                    "Cuban press",
+                    "Épaules"
+          ],
+          [
+                    "Upright row barre",
+                    "Épaules"
+          ],
+          [
+                    "Upright row poulie",
+                    "Épaules"
+          ],
+          [
+                    "Curl barre droite",
+                    "Biceps"
+          ],
+          [
+                    "Curl barre EZ",
+                    "Biceps"
+          ],
+          [
+                    "Curl haltères",
+                    "Biceps"
+          ],
+          [
+                    "Curl alterné",
+                    "Biceps"
+          ],
+          [
+                    "Curl marteau",
+                    "Biceps"
+          ],
+          [
+                    "Curl marteau croisé",
+                    "Biceps"
+          ],
+          [
+                    "Curl incliné",
+                    "Biceps"
+          ],
+          [
+                    "Curl pupitre",
+                    "Biceps"
+          ],
+          [
+                    "Curl pupitre machine",
+                    "Biceps"
+          ],
+          [
+                    "Curl concentration",
+                    "Biceps"
+          ],
+          [
+                    "Curl câble",
+                    "Biceps"
+          ],
+          [
+                    "Curl câble unilatéral",
+                    "Biceps"
+          ],
+          [
+                    "Bayesian curl",
+                    "Biceps"
+          ],
+          [
+                    "Spider curl",
+                    "Biceps"
+          ],
+          [
+                    "Drag curl",
+                    "Biceps"
+          ],
+          [
+                    "Reverse curl",
+                    "Biceps"
+          ],
+          [
+                    "Zottman curl",
+                    "Biceps"
+          ],
+          [
+                    "Extension poulie corde",
+                    "Triceps"
+          ],
+          [
+                    "Extension poulie barre",
+                    "Triceps"
+          ],
+          [
+                    "Extension poulie prise inversée",
+                    "Triceps"
+          ],
+          [
+                    "Extension unilatérale poulie",
+                    "Triceps"
+          ],
+          [
+                    "Skull crushers",
+                    "Triceps"
+          ],
+          [
+                    "Barre front",
+                    "Triceps"
+          ],
+          [
+                    "Extension haltère au-dessus de la tête",
+                    "Triceps"
+          ],
+          [
+                    "Extension câble au-dessus de la tête",
+                    "Triceps"
+          ],
+          [
+                    "Extension française",
+                    "Triceps"
+          ],
+          [
+                    "Kickback haltère",
+                    "Triceps"
+          ],
+          [
+                    "Kickback poulie",
+                    "Triceps"
+          ],
+          [
+                    "Dips triceps",
+                    "Triceps"
+          ],
+          [
+                    "Développé couché prise serrée",
+                    "Triceps"
+          ],
+          [
+                    "JM Press",
+                    "Triceps"
+          ],
+          [
+                    "Squat barre",
+                    "Quadriceps"
+          ],
+          [
+                    "Front squat",
+                    "Quadriceps"
+          ],
+          [
+                    "Hack squat",
+                    "Quadriceps"
+          ],
+          [
+                    "Hack squat machine",
+                    "Quadriceps"
+          ],
+          [
+                    "Leg press",
+                    "Quadriceps"
+          ],
+          [
+                    "Leg press horizontale",
+                    "Quadriceps"
+          ],
+          [
+                    "Leg press inclinée",
+                    "Quadriceps"
+          ],
+          [
+                    "Bulgarian split squat",
+                    "Quadriceps"
+          ],
+          [
+                    "Fentes avant",
+                    "Quadriceps"
+          ],
+          [
+                    "Fentes arrière",
+                    "Quadriceps"
+          ],
+          [
+                    "Fentes marchées",
+                    "Quadriceps"
+          ],
+          [
+                    "Fentes haltères",
+                    "Quadriceps"
+          ],
+          [
+                    "Fentes barre",
+                    "Quadriceps"
+          ],
+          [
+                    "Step-up",
+                    "Quadriceps"
+          ],
+          [
+                    "Sissy squat",
+                    "Quadriceps"
+          ],
+          [
+                    "Leg extension",
+                    "Quadriceps"
+          ],
+          [
+                    "Spanish squat",
+                    "Quadriceps"
+          ],
+          [
+                    "Belt squat",
+                    "Quadriceps"
+          ],
+          [
+                    "Goblet squat",
+                    "Quadriceps"
+          ],
+          [
+                    "Romanian deadlift",
+                    "Ischio-jambiers"
+          ],
+          [
+                    "Romanian deadlift haltères",
+                    "Ischio-jambiers"
+          ],
+          [
+                    "Soulevé de terre jambes tendues",
+                    "Ischio-jambiers"
+          ],
+          [
+                    "Leg curl allongé",
+                    "Ischio-jambiers"
+          ],
+          [
+                    "Leg curl assis",
+                    "Ischio-jambiers"
+          ],
+          [
+                    "Leg curl debout",
+                    "Ischio-jambiers"
+          ],
+          [
+                    "Nordic curl",
+                    "Ischio-jambiers"
+          ],
+          [
+                    "Glute ham raise",
+                    "Ischio-jambiers"
+          ],
+          [
+                    "Good morning",
+                    "Ischio-jambiers"
+          ],
+          [
+                    "Kettlebell swing",
+                    "Ischio-jambiers"
+          ],
+          [
+                    "Hip thrust barre",
+                    "Fessiers"
+          ],
+          [
+                    "Hip thrust machine",
+                    "Fessiers"
+          ],
+          [
+                    "Hip thrust unilatéral",
+                    "Fessiers"
+          ],
+          [
+                    "Glute bridge",
+                    "Fessiers"
+          ],
+          [
+                    "Glute bridge lesté",
+                    "Fessiers"
+          ],
+          [
+                    "Cable kickback",
+                    "Fessiers"
+          ],
+          [
+                    "Kickback machine",
+                    "Fessiers"
+          ],
+          [
+                    "Abduction machine",
+                    "Fessiers"
+          ],
+          [
+                    "Abduction poulie",
+                    "Fessiers"
+          ],
+          [
+                    "Frog pumps",
+                    "Fessiers"
+          ],
+          [
+                    "Step-up haut",
+                    "Fessiers"
+          ],
+          [
+                    "Sumo squat",
+                    "Fessiers"
+          ],
+          [
+                    "Standing calf raise",
+                    "Mollets"
+          ],
+          [
+                    "Seated calf raise",
+                    "Mollets"
+          ],
+          [
+                    "Calf raise à la presse",
+                    "Mollets"
+          ],
+          [
+                    "Calf raise machine",
+                    "Mollets"
+          ],
+          [
+                    "Calf raise unilatéral",
+                    "Mollets"
+          ],
+          [
+                    "Donkey calf raise",
+                    "Mollets"
+          ],
+          [
+                    "Tibialis raise",
+                    "Mollets"
+          ],
+          [
+                    "Crunch",
+                    "Abdominaux"
+          ],
+          [
+                    "Crunch lesté",
+                    "Abdominaux"
+          ],
+          [
+                    "Crunch poulie",
+                    "Abdominaux"
+          ],
+          [
+                    "Crunch machine",
+                    "Abdominaux"
+          ],
+          [
+                    "Sit-up",
+                    "Abdominaux"
+          ],
+          [
+                    "Sit-up lesté",
+                    "Abdominaux"
+          ],
+          [
+                    "Reverse crunch",
+                    "Abdominaux"
+          ],
+          [
+                    "Hanging leg raise",
+                    "Abdominaux"
+          ],
+          [
+                    "Hanging knee raise",
+                    "Abdominaux"
+          ],
+          [
+                    "Leg raise au sol",
+                    "Abdominaux"
+          ],
+          [
+                    "Leg raise chaise romaine",
+                    "Abdominaux"
+          ],
+          [
+                    "Ab wheel",
+                    "Abdominaux"
+          ],
+          [
+                    "Planche",
+                    "Abdominaux"
+          ],
+          [
+                    "Side plank",
+                    "Abdominaux"
+          ],
+          [
+                    "Mountain climbers",
+                    "Abdominaux"
+          ],
+          [
+                    "Russian twist",
+                    "Abdominaux"
+          ],
+          [
+                    "Russian twist lesté",
+                    "Abdominaux"
+          ],
+          [
+                    "Bicycle crunch",
+                    "Abdominaux"
+          ],
+          [
+                    "Dead bug",
+                    "Abdominaux"
+          ],
+          [
+                    "Pallof press",
+                    "Abdominaux"
+          ],
+          [
+                    "Woodchopper poulie",
+                    "Abdominaux"
+          ],
+          [
+                    "Cable rotation",
+                    "Abdominaux"
+          ],
+          [
+                    "V-up",
+                    "Abdominaux"
+          ],
+          [
+                    "L-sit",
+                    "Abdominaux"
+          ],
+          [
+                    "Wrist curl",
+                    "Avant-bras"
+          ],
+          [
+                    "Reverse wrist curl",
+                    "Avant-bras"
+          ],
+          [
+                    "Farmer's walk",
+                    "Avant-bras"
+          ],
+          [
+                    "Plate pinch",
+                    "Avant-bras"
+          ],
+          [
+                    "Dead hang",
+                    "Avant-bras"
+          ],
+          [
+                    "Grip trainer",
+                    "Avant-bras"
+          ],
+          [
+                    "Soulevé de terre",
+                    "Full body"
+          ],
+          [
+                    "Sumo deadlift",
+                    "Full body"
+          ],
+          [
+                    "Trap bar deadlift",
+                    "Full body"
+          ],
+          [
+                    "Clean",
+                    "Full body"
+          ],
+          [
+                    "Power clean",
+                    "Full body"
+          ],
+          [
+                    "Clean & press",
+                    "Full body"
+          ],
+          [
+                    "Snatch",
+                    "Full body"
+          ],
+          [
+                    "Kettlebell clean",
+                    "Full body"
+          ],
+          [
+                    "Kettlebell snatch",
+                    "Full body"
+          ],
+          [
+                    "Turkish get-up",
+                    "Full body"
+          ],
+          [
+                    "Thruster",
+                    "Full body"
+          ],
+          [
+                    "Dumbbell clean",
+                    "Full body"
+          ],
+          [
+                    "Dumbbell snatch",
+                    "Full body"
+          ],
+          [
+                    "Man makers",
+                    "Full body"
+          ]
+]
 
-    cursor.execute("SELECT COUNT(*) FROM exercices")
+    for nom, groupe in exercices_gym:
+        existe = cursor.execute(
+            "SELECT id FROM exercices WHERE nom = ?",
+            (nom,),
+        ).fetchone()
 
-    if cursor.fetchone()[0] == 0:
-
-        exercices_de_base = [
-            ("Développé couché", "Pectoraux"),
-            ("Développé incliné haltères", "Pectoraux"),
-            ("Pompes", "Pectoraux"),
-            ("Squat", "Jambes"),
-            ("Presse à cuisses", "Jambes"),
-            ("Fentes", "Jambes"),
-            ("Soulevé de terre", "Dos"),
-            ("Tractions", "Dos"),
-            ("Rowing barre", "Dos"),
-            ("Tirage vertical", "Dos"),
-            ("Développé militaire", "Épaules"),
-            ("Élévations latérales", "Épaules"),
-            ("Curl biceps barre", "Biceps"),
-            ("Curl biceps haltères", "Biceps"),
-            ("Extensions triceps poulie", "Triceps"),
-            ("Dips", "Triceps"),
-            ("Crunch", "Abdominaux"),
-            ("Planche", "Abdominaux"),
-            ("Mollets debout", "Mollets"),
-            ("Hip thrust", "Fessiers"),
-        ]
-
-        cursor.executemany(
-            """
-            INSERT INTO exercices
-            (nom, groupe_musculaire)
-            VALUES (?, ?)
-            """,
-            exercices_de_base,
-        )
+        if not existe:
+            cursor.execute(
+                """
+                INSERT INTO exercices
+                (nom, groupe_musculaire)
+                VALUES (?, ?)
+                """,
+                (nom, groupe),
+            )
 
     conn.commit()
     conn.close()
