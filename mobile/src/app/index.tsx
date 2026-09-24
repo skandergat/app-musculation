@@ -8,9 +8,13 @@ import {
   RefreshControl,
   SafeAreaView,
   StatusBar,
+  Pressable,
+  Alert,
 } from 'react-native';
 
-// 👉 IP locale de ton PC (ipconfig → adresse IPv4). Déjà mise à jour avec la tienne.
+import { useAuth } from '@/context/AuthContext';
+
+// 👉 IP locale de ton PC (ipconfig → adresse IPv4).
 const API_URL = 'http://192.168.100.200:5001';
 
 type Exercice = {
@@ -21,15 +25,17 @@ type Exercice = {
 };
 
 export default function ExercicesScreen() {
+  const { user, logout } = useAuth();
+
   const [exercices, setExercices] = useState<Exercice[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [deconnexionEnCours, setDeconnexionEnCours] = useState(false);
 
   const chargerExercices = async () => {
     try {
       setErreur(null);
-      // 👉 Adapte "/exercices" si ta route Flask s'appelle autrement
       const response = await fetch(`${API_URL}/exercices`);
       if (!response.ok) throw new Error(`Erreur ${response.status}`);
       const data = await response.json();
@@ -49,6 +55,31 @@ export default function ExercicesScreen() {
   const onRefresh = () => {
     setRefreshing(true);
     chargerExercices();
+  };
+
+  const demanderDeconnexion = () => {
+    Alert.alert(
+      'Déconnexion',
+      'Voulez-vous vraiment vous déconnecter ?',
+      [
+        {
+          text: 'Annuler',
+          style: 'cancel',
+        },
+        {
+          text: 'Se déconnecter',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setDeconnexionEnCours(true);
+              await logout();
+            } finally {
+              setDeconnexionEnCours(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (loading) {
@@ -75,7 +106,33 @@ export default function ExercicesScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      <Text style={styles.titre}>Exercices</Text>
+
+      <View style={styles.entete}>
+        <View style={styles.enteteTexte}>
+          <Text style={styles.titre}>Exercices</Text>
+          {user ? (
+            <Text style={styles.utilisateur}>
+              Connecté en tant que {user.nom}
+            </Text>
+          ) : null}
+        </View>
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.boutonDeconnexion,
+            pressed && styles.boutonPresse,
+          ]}
+          onPress={demanderDeconnexion}
+          disabled={deconnexionEnCours}
+        >
+          {deconnexionEnCours ? (
+            <ActivityIndicator size="small" color="#FF3B30" />
+          ) : (
+            <Text style={styles.texteDeconnexion}>Déconnexion</Text>
+          )}
+        </Pressable>
+      </View>
+
       <FlatList
         data={exercices}
         keyExtractor={(item) => String(item.id)}
@@ -107,12 +164,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 24,
   },
+  entete: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  enteteTexte: {
+    flex: 1,
+  },
   titre: {
     fontSize: 28,
     fontWeight: '700',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
+  },
+  utilisateur: {
+    fontSize: 13,
+    color: '#8A8A8E',
+    marginTop: 3,
+  },
+  boutonDeconnexion: {
+    borderWidth: 1,
+    borderColor: '#FF3B30',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minWidth: 105,
+    alignItems: 'center',
+  },
+  boutonPresse: {
+    opacity: 0.6,
+  },
+  texteDeconnexion: {
+    color: '#FF3B30',
+    fontSize: 13,
+    fontWeight: '600',
   },
   liste: { paddingHorizontal: 16, paddingBottom: 24 },
   carte: {
