@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Vibration } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import {
   SafeAreaView,
@@ -92,6 +93,29 @@ export default function SeanceScreen() {
   const [exercicesDisponibles, setExercicesDisponibles] = useState<
     { nom: string; muscle: string; backendId: number }[]
   >([]);
+  const [tempsReposDefaut, setTempsReposDefaut] = useState(90);
+  const [timerActif, setTimerActif] = useState(false);
+  const [timerPause, setTimerPause] = useState(false);
+  const [tempsRestant, setTempsRestant] = useState(0);
+
+  useEffect(() => {
+    if (!timerActif || timerPause) return;
+
+    const interval = setInterval(() => {
+      setTempsRestant((ancien) => {
+        if (ancien <= 1) {
+          clearInterval(interval);
+          setTimerActif(false);
+          setTimerPause(false);
+          Vibration.vibrate(500);
+          return 0;
+        }
+        return ancien - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [timerActif, timerPause]);
 
   useEffect(() => {
     demarrerSeance();
@@ -487,6 +511,10 @@ export default function SeanceScreen() {
         };
       })
     );
+    
+    setTempsRestant(tempsReposDefaut);
+    setTimerPause(false);
+    setTimerActif(true);
   };
 
   const terminerSeance = async () => {
@@ -642,6 +670,84 @@ export default function SeanceScreen() {
         <Text style={styles.sousTitre}>
           Ma séance du jour
         </Text>
+        
+        <View style={styles.timerCarte}>
+          <View style={styles.timerEntete}>
+            <Text style={styles.timerTitre}>Temps de repos</Text>
+            <Text style={styles.timerValeur}>
+              {Math.floor(tempsRestant / 60).toString().padStart(2, '0')}:{(tempsRestant % 60).toString().padStart(2, '0')}
+            </Text>
+          </View>
+
+          <View style={styles.timerPresets}>
+            {[30, 60, 90, 120].map((secondes) => (
+              <TouchableOpacity
+                key={secondes}
+                style={[
+                  styles.timerPreset,
+                  tempsReposDefaut === secondes && styles.timerPresetActif,
+                ]}
+                onPress={() => {
+                  setTempsReposDefaut(secondes);
+                  if (!timerActif) setTempsRestant(secondes);
+                }}
+              >
+                <Text style={styles.timerPresetTexte}>
+                  {secondes >= 60 ? secondes / 60 + ' min' : secondes + ' s'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.timerActions}>
+            <TouchableOpacity
+              style={styles.timerAction}
+              onPress={() => setTempsRestant((ancien) => Math.max(0, ancien - 15))}
+            >
+              <Text style={styles.timerActionTexte}>−15 s</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.timerActionPrincipal}
+              onPress={() => {
+                if (tempsRestant === 0) {
+                  setTempsRestant(tempsReposDefaut);
+                  setTimerPause(false);
+                  setTimerActif(true);
+                } else {
+                  setTimerPause((ancien) => !ancien);
+                  setTimerActif(true);
+                }
+              }}
+            >
+              <Text style={styles.timerActionPrincipalTexte}>
+                {tempsRestant === 0 ? 'Démarrer' : timerPause ? 'Reprendre' : 'Pause'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.timerAction}
+              onPress={() => setTempsRestant((ancien) => ancien + 15)}
+            >
+              <Text style={styles.timerActionTexte}>+15 s</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.timerPasser}
+              onPress={() => {
+                setTempsRestant(0);
+                setTimerActif(false);
+                setTimerPause(false);
+              }}
+            >
+              <Text style={styles.timerPasserTexte}>Passer</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.timerInfo}>
+            Le repos démarre automatiquement après chaque série validée.
+          </Text>
+        </View>
 
         {exercices.map((exercice) => (
           <View
@@ -869,6 +975,114 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#8A8A8E',
     marginBottom: 24,
+  },
+
+  timerCarte: {
+    backgroundColor: '#1C1C1E',
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 24,
+  },
+
+  timerEntete: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  timerTitre: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+
+  timerValeur: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    fontVariant: ['tabular-nums'],
+  },
+
+  timerPresets: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 14,
+    gap: 6,
+  },
+
+  timerPreset: {
+    flex: 1,
+    backgroundColor: '#2C2C2E',
+    borderRadius: 9,
+    paddingVertical: 9,
+    alignItems: 'center',
+  },
+
+  timerPresetActif: {
+    backgroundColor: '#0A84FF',
+  },
+
+  timerPresetTexte: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  timerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+    flexWrap: 'wrap',
+  },
+
+  timerAction: {
+    backgroundColor: '#2C2C2E',
+    borderRadius: 10,
+    minWidth: 64,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+
+  timerActionTexte: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  timerActionPrincipal: {
+    backgroundColor: '#0A84FF',
+    borderRadius: 10,
+    minWidth: 82,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+
+  timerActionPrincipalTexte: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  timerPasser: {
+    backgroundColor: '#3A3A3C',
+    borderRadius: 10,
+    minWidth: 64,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+
+  timerPasserTexte: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  timerInfo: {
+    color: '#AEAEB2',
+    fontSize: 12,
+    marginTop: 12,
+    lineHeight: 17,
   },
 
   exerciceBloc: {
