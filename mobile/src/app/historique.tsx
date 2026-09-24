@@ -7,6 +7,7 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -34,11 +35,14 @@ type ExerciceGroupe = {
 
 const formaterDate = (iso: string) => {
   const date = new Date(iso);
+
   const texte = date.toLocaleDateString('fr-FR', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
+    year: 'numeric',
   });
+
   return texte.charAt(0).toUpperCase() + texte.slice(1);
 };
 
@@ -49,43 +53,74 @@ const formaterHeure = (iso: string) =>
   });
 
 const calculerDuree = (debut: string, fin: string) => {
-  const ms = new Date(fin).getTime() - new Date(debut).getTime();
-  const minutes = Math.max(0, Math.round(ms / 60000));
-  if (minutes < 60) return `${minutes} min`;
+  const ms =
+    new Date(fin).getTime() -
+    new Date(debut).getTime();
+
+  const minutes = Math.max(
+    0,
+    Math.round(ms / 60000)
+  );
+
+  if (minutes < 60) {
+    return `${minutes} min`;
+  }
+
   const heures = Math.floor(minutes / 60);
   const reste = minutes % 60;
+
   return `${heures}h${String(reste).padStart(2, '0')}`;
 };
 
-const grouperParExercice = (series: Serie[]): ExerciceGroupe[] => {
+const grouperParExercice = (
+  series: Serie[]
+): ExerciceGroupe[] => {
   const groupes: ExerciceGroupe[] = [];
+
   series.forEach((serie) => {
     const groupe = groupes.find(
       (g) => g.nom === serie.exercice_nom
     );
+
     if (groupe) {
       groupe.series.push(serie);
     } else {
-      groupes.push({ nom: serie.exercice_nom, series: [serie] });
+      groupes.push({
+        nom: serie.exercice_nom,
+        series: [serie],
+      });
     }
   });
+
   return groupes;
 };
 
 export default function HistoriqueScreen() {
   const [seances, setSeances] = useState<Seance[]>([]);
   const [chargement, setChargement] = useState(true);
-  const [rafraichissement, setRafraichissement] = useState(false);
+  const [rafraichissement, setRafraichissement] =
+    useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+
+  const [seanceSelectionnee, setSeanceSelectionnee] =
+    useState<Seance | null>(null);
 
   const chargerHistorique = useCallback(async () => {
     try {
       setErreur(null);
-      const response = await fetch(`${API_URL}/historique`);
+
+      const response = await fetch(
+        `${API_URL}/historique`
+      );
+
       if (!response.ok) {
-        throw new Error(`Erreur ${response.status}`);
+        throw new Error(
+          `Erreur ${response.status}`
+        );
       }
+
       const data = await response.json();
+
       setSeances(data);
     } catch (error: any) {
       setErreur(
@@ -109,7 +144,10 @@ export default function HistoriqueScreen() {
   if (chargement) {
     return (
       <SafeAreaView style={styles.centre}>
-        <ActivityIndicator size="large" color="#0A84FF" />
+        <ActivityIndicator
+          size="large"
+          color="#0A84FF"
+        />
       </SafeAreaView>
     );
   }
@@ -120,23 +158,184 @@ export default function HistoriqueScreen() {
         <Text style={styles.erreurTitre}>
           Connexion impossible
         </Text>
-        <Text style={styles.erreurTexte}>{erreur}</Text>
+
+        <Text style={styles.erreurTexte}>
+          {erreur}
+        </Text>
+
         <Text style={styles.erreurAide}>
-          Vérifie que le serveur Flask tourne (python app.py) et
-          que API_URL pointe vers l'IP locale de ton PC.
+          Vérifie que le serveur Flask tourne
+          (python app.py) et que API_URL pointe
+          vers l'IP locale de ton PC.
         </Text>
       </SafeAreaView>
     );
   }
 
+  /*
+   * ÉCRAN DÉTAIL
+   */
+  if (seanceSelectionnee) {
+    const groupes = grouperParExercice(
+      seanceSelectionnee.series
+    );
+
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" />
+
+        <View style={styles.detailHeader}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() =>
+              setSeanceSelectionnee(null)
+            }
+            style={styles.boutonRetour}
+          >
+            <Text style={styles.flecheRetour}>
+              ‹
+            </Text>
+
+            <Text style={styles.retourTexte}>
+              Historique
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={styles.detailTitre}>
+            Détail de la séance
+          </Text>
+        </View>
+
+        <FlatList
+          data={groupes}
+          keyExtractor={(item) => item.nom}
+          contentContainerStyle={
+            styles.detailListe
+          }
+          ListHeaderComponent={
+            <View style={styles.resumeCarte}>
+              <Text style={styles.dateDetail}>
+                {formaterDate(
+                  seanceSelectionnee.date_debut
+                )}
+              </Text>
+
+              <Text style={styles.infoDetail}>
+                {formaterHeure(
+                  seanceSelectionnee.date_debut
+                )}
+
+                {seanceSelectionnee.date_fin
+                  ? `  ·  ${calculerDuree(
+                      seanceSelectionnee.date_debut,
+                      seanceSelectionnee.date_fin
+                    )}`
+                  : ''}
+              </Text>
+
+              <View style={styles.statsLigne}>
+                <View style={styles.stat}>
+                  <Text style={styles.statValeur}>
+                    {groupes.length}
+                  </Text>
+
+                  <Text style={styles.statLabel}>
+                    Exercices
+                  </Text>
+                </View>
+
+                <View style={styles.separateur} />
+
+                <View style={styles.stat}>
+                  <Text style={styles.statValeur}>
+                    {seanceSelectionnee.series.length}
+                  </Text>
+
+                  <Text style={styles.statLabel}>
+                    Séries
+                  </Text>
+                </View>
+              </View>
+            </View>
+          }
+          renderItem={({ item }) => (
+            <View style={styles.exerciceCarte}>
+              <Text style={styles.exerciceNom}>
+                {item.nom}
+              </Text>
+
+              {item.series.map(
+                (serie, index) => (
+                  <View
+                    key={serie.id}
+                    style={styles.serieLigne}
+                  >
+                    <View
+                      style={
+                        styles.numeroCercle
+                      }
+                    >
+                      <Text
+                        style={
+                          styles.numeroTexte
+                        }
+                      >
+                        {index + 1}
+                      </Text>
+                    </View>
+
+                    <Text
+                      style={styles.seriePoids}
+                    >
+                      {serie.poids} kg
+                    </Text>
+
+                    <Text
+                      style={
+                        styles.multiplication
+                      }
+                    >
+                      ×
+                    </Text>
+
+                    <Text
+                      style={styles.serieReps}
+                    >
+                      {serie.repetitions} reps
+                    </Text>
+                  </View>
+                )
+              )}
+            </View>
+          )}
+          ListFooterComponent={
+            <View style={styles.finDetail}>
+              <Text style={styles.finDetailTexte}>
+                Fin de la séance
+              </Text>
+            </View>
+          }
+        />
+      </SafeAreaView>
+    );
+  }
+
+  /*
+   * ÉCRAN HISTORIQUE
+   */
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      <Text style={styles.titre}>Historique</Text>
+
+      <Text style={styles.titre}>
+        Historique
+      </Text>
 
       <FlatList
         data={seances}
-        keyExtractor={(item) => String(item.id)}
+        keyExtractor={(item) =>
+          String(item.id)
+        }
         contentContainerStyle={styles.liste}
         refreshControl={
           <RefreshControl
@@ -146,58 +345,129 @@ export default function HistoriqueScreen() {
         }
         ListEmptyComponent={
           <Text style={styles.videTexte}>
-            Aucune séance terminée pour l'instant.
+            Aucune séance terminée pour
+            l'instant.
           </Text>
         }
         renderItem={({ item }) => {
-          const groupes = grouperParExercice(item.series);
-          const totalSeries = item.series.length;
+          const groupes =
+            grouperParExercice(item.series);
+
+          const totalSeries =
+            item.series.length;
 
           return (
-            <View style={styles.carte}>
-              <View style={styles.carteEntete}>
-                <Text style={styles.date}>
-                  {formaterDate(item.date_debut)}
-                </Text>
-                {item.date_fin ? (
-                  <Text style={styles.duree}>
-                    {calculerDuree(
-                      item.date_debut,
-                      item.date_fin
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => {
+                setSeanceSelectionnee(item);
+              }}
+            >
+              <View style={styles.carte}>
+                <View
+                  style={styles.carteEntete}
+                >
+                  <Text style={styles.date}>
+                    {formaterDate(
+                      item.date_debut
                     )}
                   </Text>
-                ) : null}
-              </View>
 
-              <Text style={styles.sousTitre}>
-                {formaterHeure(item.date_debut)}
-                {'  ·  '}
-                {groupes.length} exercice
-                {groupes.length > 1 ? 's' : ''}
-                {'  ·  '}
-                {totalSeries} série
-                {totalSeries > 1 ? 's' : ''}
-              </Text>
+                  {item.date_fin ? (
+                    <Text style={styles.duree}>
+                      {calculerDuree(
+                        item.date_debut,
+                        item.date_fin
+                      )}
+                    </Text>
+                  ) : null}
+                </View>
 
-              {groupes.map((groupe) => (
-                <View
-                  key={groupe.nom}
-                  style={styles.exerciceLigne}
+                <Text
+                  style={styles.sousTitre}
                 >
-                  <Text style={styles.exerciceNom}>
-                    {groupe.nom}
+                  {formaterHeure(
+                    item.date_debut
+                  )}
+                  {'  ·  '}
+                  {groupes.length} exercice
+                  {groupes.length > 1
+                    ? 's'
+                    : ''}
+                  {'  ·  '}
+                  {totalSeries} série
+                  {totalSeries > 1
+                    ? 's'
+                    : ''}
+                </Text>
+
+                {groupes
+                  .slice(0, 3)
+                  .map((groupe) => (
+                    <View
+                      key={groupe.nom}
+                      style={
+                        styles.exerciceLigne
+                      }
+                    >
+                      <Text
+                        style={
+                          styles.exerciceNom
+                        }
+                      >
+                        {groupe.nom}
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.exerciceDetail
+                        }
+                      >
+                        {groupe.series
+                          .map(
+                            (serie) =>
+                              `${serie.poids}kg × ${serie.repetitions}`
+                          )
+                          .join('   ')}
+                      </Text>
+                    </View>
+                  ))}
+
+                {groupes.length > 3 && (
+                  <Text
+                    style={
+                      styles.plusExercices
+                    }
+                  >
+                    + {groupes.length - 3}{' '}
+                    autre
+                    {groupes.length - 3 > 1
+                      ? 's'
+                      : ''}{' '}
+                    exercice
+                    {groupes.length - 3 > 1
+                      ? 's'
+                      : ''}
                   </Text>
-                  <Text style={styles.exerciceDetail}>
-                    {groupe.series
-                      .map(
-                        (s) =>
-                          `${s.poids}kg × ${s.repetitions}`
-                      )
-                      .join('   ')}
+                )}
+
+                <View
+                  style={styles.ouvrirLigne}
+                >
+                  <Text
+                    style={styles.ouvrirTexte}
+                  >
+                    Voir le détail
+                  </Text>
+
+                  <Text
+                    style={styles.fleche}
+                  >
+                    ›
                   </Text>
                 </View>
-              ))}
-            </View>
+              </View>
+            </TouchableOpacity>
           );
         }}
       />
@@ -206,7 +476,10 @@ export default function HistoriqueScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F5F7' },
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F5F7',
+  },
 
   centre: {
     flex: 1,
@@ -224,7 +497,10 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
 
-  liste: { paddingHorizontal: 16, paddingBottom: 24 },
+  liste: {
+    paddingHorizontal: 16,
+    paddingBottom: 24,
+  },
 
   carte: {
     backgroundColor: '#FFFFFF',
@@ -243,6 +519,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     color: '#000000',
+    flex: 1,
   },
 
   duree: {
@@ -274,6 +551,35 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+  plusExercices: {
+    fontSize: 13,
+    color: '#8A8A8E',
+    marginTop: 2,
+    marginBottom: 8,
+  },
+
+  ouvrirLigne: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5EA',
+    paddingTop: 12,
+    marginTop: 4,
+  },
+
+  ouvrirTexte: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0A84FF',
+  },
+
+  fleche: {
+    fontSize: 24,
+    color: '#0A84FF',
+    lineHeight: 24,
+  },
+
   videTexte: {
     fontSize: 14,
     color: '#8A8A8E',
@@ -298,5 +604,156 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#8A8A8E',
     textAlign: 'center',
+  },
+
+  detailHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 16,
+  },
+
+  boutonRetour: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginBottom: 12,
+  },
+
+  flecheRetour: {
+    fontSize: 36,
+    color: '#0A84FF',
+    lineHeight: 36,
+    marginRight: 4,
+  },
+
+  retourTexte: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0A84FF',
+  },
+
+  detailTitre: {
+    fontSize: 30,
+    fontWeight: '700',
+    color: '#000000',
+  },
+
+  detailListe: {
+    paddingHorizontal: 16,
+    paddingBottom: 40,
+  },
+
+  resumeCarte: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 20,
+    marginBottom: 22,
+  },
+
+  dateDetail: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#000000',
+  },
+
+  infoDetail: {
+    fontSize: 14,
+    color: '#8A8A8E',
+    marginTop: 6,
+  },
+
+  statsLigne: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 22,
+  },
+
+  stat: {
+    flex: 1,
+    alignItems: 'center',
+  },
+
+  statValeur: {
+    fontSize: 25,
+    fontWeight: '700',
+    color: '#000000',
+  },
+
+  statLabel: {
+    fontSize: 13,
+    color: '#8A8A8E',
+    marginTop: 3,
+  },
+
+  separateur: {
+    width: 1,
+    height: 40,
+    backgroundColor: '#E5E5EA',
+  },
+
+  exerciceCarte: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 12,
+  },
+
+  exerciceNom: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 12,
+  },
+
+  serieLigne: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 9,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F2',
+  },
+
+  numeroCercle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#F2F2F7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+
+  numeroTexte: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#000000',
+  },
+
+  seriePoids: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000000',
+  },
+
+  multiplication: {
+    fontSize: 16,
+    color: '#8A8A8E',
+    marginHorizontal: 8,
+  },
+
+  serieReps: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+  },
+
+  finDetail: {
+    alignItems: 'center',
+    paddingVertical: 24,
+  },
+
+  finDetailTexte: {
+    fontSize: 13,
+    color: '#8A8A8E',
   },
 });

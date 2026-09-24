@@ -34,48 +34,59 @@ type Exercice = {
   series: Serie[];
 };
 
+const exercicesInitiaux: Exercice[] = [
+  {
+    id: 1,
+    backendId: 1,
+    nom: 'Développé couché',
+    muscle: 'Pectoraux',
+    series: [
+      { id: 1, poids: '40', reps: '12', terminee: false },
+      { id: 2, poids: '40', reps: '12', terminee: false },
+      { id: 3, poids: '40', reps: '10', terminee: false },
+    ],
+  },
+  {
+    id: 2,
+    backendId: 2,
+    nom: 'Développé incliné haltères',
+    muscle: 'Pectoraux',
+    series: [
+      { id: 1, poids: '30', reps: '12', terminee: false },
+      { id: 2, poids: '30', reps: '10', terminee: false },
+      { id: 3, poids: '30', reps: '10', terminee: false },
+    ],
+  },
+  {
+    id: 3,
+    backendId: 15,
+    nom: 'Extensions triceps poulie',
+    muscle: 'Triceps',
+    series: [
+      { id: 1, poids: '20', reps: '12', terminee: false },
+      { id: 2, poids: '20', reps: '12', terminee: false },
+      { id: 3, poids: '20', reps: '10', terminee: false },
+    ],
+  },
+];
+
 export default function SeanceScreen() {
-  const [exercices, setExercices] = useState<Exercice[]>([
-    {
-      id: 1,
-      backendId: 1,
-      nom: 'Développé couché',
-      muscle: 'Pectoraux',
-      series: [
-        { id: 1, poids: '40', reps: '12', terminee: false },
-        { id: 2, poids: '40', reps: '12', terminee: false },
-        { id: 3, poids: '40', reps: '10', terminee: false },
-      ],
-    },
-    {
-      id: 2,
-      backendId: 2,
-      nom: 'Développé incliné haltères',
-      muscle: 'Pectoraux',
-      series: [
-        { id: 1, poids: '30', reps: '12', terminee: false },
-        { id: 2, poids: '30', reps: '10', terminee: false },
-        { id: 3, poids: '30', reps: '10', terminee: false },
-      ],
-    },
-    {
-      id: 3,
-      backendId: 15,
-      nom: 'Extensions triceps poulie',
-      muscle: 'Triceps',
-      series: [
-        { id: 1, poids: '20', reps: '12', terminee: false },
-        { id: 2, poids: '20', reps: '12', terminee: false },
-        { id: 3, poids: '20', reps: '10', terminee: false },
-      ],
-    },
-  ]);
+  const [exercices, setExercices] = useState<Exercice[]>(
+    exercicesInitiaux.map((exercice) => ({
+      ...exercice,
+      series: exercice.series.map((serie) => ({
+        ...serie,
+      })),
+    }))
+  );
 
   const [menuExercices, setMenuExercices] = useState(false);
   const [seanceId, setSeanceId] = useState<number | null>(null);
   const [chargement, setChargement] = useState(true);
   const [terminee, setTerminee] = useState(false);
-  const [previous, setPrevious] = useState<Record<string, PreviousSerie[]>>({});
+  const [previous, setPrevious] = useState<
+    Record<string, PreviousSerie[]>
+  >({});
   const [exercicesDisponibles, setExercicesDisponibles] = useState<
     { nom: string; muscle: string; backendId: number }[]
   >([]);
@@ -84,7 +95,7 @@ export default function SeanceScreen() {
     demarrerSeance();
     chargerExercicesDisponibles();
 
-    exercices.forEach((exercice) => {
+    exercicesInitiaux.forEach((exercice) => {
       chargerPrevious(exercice);
     });
   }, []);
@@ -94,9 +105,7 @@ export default function SeanceScreen() {
       const response = await fetch(`${API_URL}/exercices`);
 
       if (!response.ok) {
-        throw new Error(
-          'Impossible de récupérer les exercices'
-        );
+        throw new Error('Impossible de récupérer les exercices');
       }
 
       const data = await response.json();
@@ -130,8 +139,7 @@ export default function SeanceScreen() {
         return;
       }
 
-      const data: PreviousSerie[] =
-        await response.json();
+      const data: PreviousSerie[] = await response.json();
 
       setPrevious((ancien) => ({
         ...ancien,
@@ -144,6 +152,7 @@ export default function SeanceScreen() {
       );
     }
   };
+
   const demarrerSeance = async () => {
     try {
       const response = await fetch(`${API_URL}/seances`, {
@@ -213,8 +222,8 @@ export default function SeanceScreen() {
       ],
     };
 
-    setExercices([
-      ...exercices,
+    setExercices((anciens) => [
+      ...anciens,
       nouvelExercice,
     ]);
 
@@ -224,8 +233,8 @@ export default function SeanceScreen() {
   };
 
   const ajouterSerie = (exerciceId: number) => {
-    setExercices(
-      exercices.map((exercice) => {
+    setExercices((anciens) =>
+      anciens.map((exercice) => {
         if (exercice.id !== exerciceId) {
           return exercice;
         }
@@ -258,8 +267,8 @@ export default function SeanceScreen() {
     serieId: number,
     poids: string
   ) => {
-    setExercices(
-      exercices.map((exercice) => {
+    setExercices((anciens) =>
+      anciens.map((exercice) => {
         if (exercice.id !== exerciceId) {
           return exercice;
         }
@@ -285,8 +294,8 @@ export default function SeanceScreen() {
     serieId: number,
     reps: string
   ) => {
-    setExercices(
-      exercices.map((exercice) => {
+    setExercices((anciens) =>
+      anciens.map((exercice) => {
         if (exercice.id !== exerciceId) {
           return exercice;
         }
@@ -316,6 +325,7 @@ export default function SeanceScreen() {
         'Erreur',
         'La séance n’a pas encore été créée.'
       );
+
       return false;
     }
 
@@ -357,7 +367,8 @@ export default function SeanceScreen() {
           },
           body: JSON.stringify({
             exercice_id: exerciceBackend.id,
-            poids: parseFloat(serie.poids) || 0,
+            poids:
+              parseFloat(serie.poids) || 0,
             repetitions:
               parseInt(serie.reps, 10) || 0,
           }),
@@ -414,8 +425,8 @@ export default function SeanceScreen() {
     }
 
     if (serie.terminee) {
-      setExercices(
-        exercices.map((item) => {
+      setExercices((anciens) =>
+        anciens.map((item) => {
           if (item.id !== exerciceId) {
             return item;
           }
@@ -447,8 +458,8 @@ export default function SeanceScreen() {
       return;
     }
 
-    setExercices(
-      exercices.map((item) => {
+    setExercices((anciens) =>
+      anciens.map((item) => {
         if (item.id !== exerciceId) {
           return item;
         }
@@ -475,12 +486,15 @@ export default function SeanceScreen() {
         'Erreur',
         'Aucune séance active.'
       );
+
       return;
     }
 
     try {
+      const ancienneSeanceId = seanceId;
+
       const response = await fetch(
-        `${API_URL}/seances/${seanceId}/terminer`,
+        `${API_URL}/seances/${ancienneSeanceId}/terminer`,
         {
           method: 'POST',
           headers: {
@@ -495,22 +509,94 @@ export default function SeanceScreen() {
         );
       }
 
-      setTerminee(true);
+      console.log(
+        'Séance terminée :',
+        ancienneSeanceId
+      );
+
+      /*
+       * RESET DE LA PAGE
+       *
+       * On remet uniquement les exercices par défaut.
+       * Les exercices ajoutés pendant la séance disparaissent.
+       *
+       * IMPORTANT :
+       * On ne supprime PAS previous.
+       * On va même le recharger juste après.
+       */
+      const exercicesReset = exercicesInitiaux.map(
+        (exercice) => ({
+          ...exercice,
+          series: exercice.series.map(
+            (serie) => ({
+              ...serie,
+              terminee: false,
+              sauvegardee: false,
+            })
+          ),
+        })
+      );
+
+      setExercices(exercicesReset);
+      setMenuExercices(false);
+
+      /*
+       * Préparation de la nouvelle séance.
+       */
+      setChargement(true);
+
+      const nouvelleSeanceResponse =
+        await fetch(`${API_URL}/seances`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+      if (!nouvelleSeanceResponse.ok) {
+        throw new Error(
+          'Impossible de démarrer la nouvelle séance'
+        );
+      }
+
+      const nouvelleSeance =
+        await nouvelleSeanceResponse.json();
+
+      setSeanceId(nouvelleSeance.seance_id);
+
+      /*
+       * IMPORTANT :
+       * On recharge Previous maintenant que l'ancienne
+       * séance est terminée.
+       *
+       * Cela permet d'afficher les performances que
+       * l'utilisateur vient tout juste d'enregistrer.
+       */
+      await Promise.all(
+        exercicesReset.map((exercice) =>
+          chargerPrevious(exercice)
+        )
+      );
+
+      setTerminee(false);
+      setChargement(false);
+
+      console.log(
+        'Nouvelle séance créée avec ID :',
+        nouvelleSeance.seance_id
+      );
 
       Alert.alert(
         'Séance terminée',
-        'Ta séance a été enregistrée dans la base de données.'
-      );
-
-      console.log(
-        'Séance terminée :',
-        seanceId
+        'La séance a été enregistrée. Une nouvelle séance est prête.'
       );
     } catch (error) {
       console.error(
         'Erreur terminaison séance :',
         error
       );
+
+      setChargement(false);
 
       Alert.alert(
         'Erreur',
@@ -562,12 +648,26 @@ export default function SeanceScreen() {
             </View>
 
             <View style={styles.headerSeries}>
-  <Text style={styles.headerTexte}>S�rie</Text>
-  <Text style={styles.headerPrevious}>Previous</Text>
-  <Text style={styles.headerTexte}>Poids</Text>
-  <Text style={styles.headerTexte}>Reps</Text>
-  <Text style={styles.headerTexte}>?</Text>
-</View>
+              <Text style={styles.headerTexte}>
+                Série
+              </Text>
+
+              <Text style={styles.headerPrevious}>
+                Previous
+              </Text>
+
+              <Text style={styles.headerTexte}>
+                Poids
+              </Text>
+
+              <Text style={styles.headerTexte}>
+                Reps
+              </Text>
+
+              <Text style={styles.headerTexte}>
+                ?
+              </Text>
+            </View>
 
             {exercice.series.map((serie) => (
               <View
@@ -583,9 +683,11 @@ export default function SeanceScreen() {
                 </Text>
 
                 <Text style={styles.previous}>
-                  {previous[exercice.nom]?.[serie.id - 1]
-                    ? `${previous[exercice.nom][serie.id - 1].poids} kg � ${previous[exercice.nom][serie.id - 1].repetitions}`
-                    : '�'}
+                  {previous[exercice.nom]?.[
+                    serie.id - 1
+                  ]
+                    ? `${previous[exercice.nom][serie.id - 1].poids} kg × ${previous[exercice.nom][serie.id - 1].repetitions}`
+                    : '—'}
                 </Text>
 
                 <TextInput
@@ -685,19 +787,11 @@ export default function SeanceScreen() {
                   }
                 >
                   <View>
-                    <Text
-                      style={
-                        styles.optionNom
-                      }
-                    >
+                    <Text style={styles.optionNom}>
                       {exercice.nom}
                     </Text>
 
-                    <Text
-                      style={
-                        styles.optionMuscle
-                      }
-                    >
+                    <Text style={styles.optionMuscle}>
                       {exercice.muscle}
                     </Text>
                   </View>
