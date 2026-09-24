@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import {
   SafeAreaView,
   StatusBar,
@@ -11,7 +12,7 @@ import {
   Alert,
 } from 'react-native';
 
-const API_URL = 'http://192.168.100.200:5000';
+const API_URL = 'http://192.168.100.200:5001';
 
 type Serie = {
   id: number;
@@ -71,6 +72,7 @@ const exercicesInitiaux: Exercice[] = [
 ];
 
 export default function SeanceScreen() {
+  const { token } = useAuth();
   const [exercices, setExercices] = useState<Exercice[]>(
     exercicesInitiaux.map((exercice) => ({
       ...exercice,
@@ -132,7 +134,12 @@ export default function SeanceScreen() {
       }
 
       const response = await fetch(
-        `${API_URL}/exercices/${exercice.backendId}/previous`
+        `${API_URL}/exercices/${exercice.backendId}/previous`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
 
       if (!response.ok) {
@@ -159,6 +166,7 @@ export default function SeanceScreen() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -364,6 +372,7 @@ export default function SeanceScreen() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             exercice_id: exerciceBackend.id,
@@ -499,6 +508,7 @@ export default function SeanceScreen() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -550,6 +560,7 @@ export default function SeanceScreen() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
           },
         });
 
