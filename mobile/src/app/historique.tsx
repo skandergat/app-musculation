@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import {
   ActivityIndicator,
   FlatList,
@@ -11,7 +12,7 @@ import {
   View,
 } from 'react-native';
 
-const API_URL = 'http://192.168.100.200:5000';
+const API_URL = 'http://192.168.100.200:5001';
 
 type Serie = {
   id: number;
@@ -96,6 +97,7 @@ const grouperParExercice = (
 };
 
 export default function HistoriqueScreen() {
+  const { token } = useAuth();
   const [seances, setSeances] = useState<Seance[]>([]);
   const [chargement, setChargement] = useState(true);
   const [rafraichissement, setRafraichissement] =
@@ -110,7 +112,12 @@ export default function HistoriqueScreen() {
       setErreur(null);
 
       const response = await fetch(
-        `${API_URL}/historique`
+        `${API_URL}/historique`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
 
       if (!response.ok) {
