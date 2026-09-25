@@ -104,7 +104,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, dark && styles.containerDark]}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.contenu}>
         <Text style={[styles.titreHome, dark && styles.textDark]}>{t('home')}</Text>
