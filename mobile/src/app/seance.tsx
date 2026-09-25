@@ -883,7 +883,7 @@ export default function SeanceScreen() {
   if (chargement) {
     return (
       <SafeAreaView style={[styles.container, dark && styles.containerDark]}>
-        <StatusBar barStyle="dark-content" />
+        <StatusBar barStyle={dark ? 'light-content' : 'dark-content'} />
 
         <View style={styles.chargement}>
           <Text style={[styles.chargementTexte, dark && styles.mutedDark]}>
@@ -921,7 +921,7 @@ export default function SeanceScreen() {
                 {exercice.nom}
               </Text>
 
-              <Text style={styles.muscle}>
+              <Text style={[styles.muscle, dark && styles.mutedDark]}>
                 {exercice.muscle}
               </Text>
             </View>
@@ -965,7 +965,7 @@ export default function SeanceScreen() {
                     {serie.id}
                   </Text>
 
-                  <Text style={styles.previous}>
+                  <Text style={[styles.previous, dark && styles.mutedDark]}>
                     {previous[
                       exercice.nom
                     ]?.[serie.id - 1]
