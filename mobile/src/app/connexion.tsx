@@ -13,9 +13,11 @@ import {
 import { router } from 'expo-router';
 
 import { useAuth } from '@/context/AuthContext';
+import { useI18n } from '@/context/I18nContext';
 
 export default function ConnexionScreen() {
   const { login } = useAuth();
+  const { t } = useI18n();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -54,15 +56,15 @@ export default function ConnexionScreen() {
       <View style={styles.contenu}>
         <Text style={styles.logo}>Musculation</Text>
 
-        <Text style={styles.titre}>Connexion</Text>
+        <Text style={styles.titre}>{t("login")}</Text>
 
         <Text style={styles.sousTitre}>
-          Connecte-toi à ton compte pour retrouver tes séances.
+          {t("loginSubtitle")}
         </Text>
 
         <TextInput
           style={styles.input}
-          placeholder="Email"
+          placeholder={t("email")}
           placeholderTextColor="#8A8A8E"
           value={email}
           onChangeText={setEmail}
@@ -73,7 +75,7 @@ export default function ConnexionScreen() {
 
         <TextInput
           style={styles.input}
-          placeholder="Mot de passe"
+          placeholder={t("password")}
           placeholderTextColor="#8A8A8E"
           value={password}
           onChangeText={setPassword}
@@ -92,19 +94,19 @@ export default function ConnexionScreen() {
           {loading ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text style={styles.boutonTexte}>Se connecter</Text>
+            <Text style={styles.boutonTexte}>{t("loginButton")}</Text>
           )}
         </Pressable>
 
         <View style={styles.inscriptionContainer}>
           <Text style={styles.question}>
-            Pas encore de compte ?
+            {t("noAccount")}
           </Text>
 
           <Pressable
             onPress={() => router.push('/inscription')}
           >
-            <Text style={styles.lien}>Créer un compte</Text>
+            <Text style={styles.lien}>{t("createAccount")}</Text>
           </Pressable>
         </View>
       </View>
