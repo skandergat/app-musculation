@@ -1,7 +1,9 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { Slot, Redirect } from 'expo-router';
-import { useColorScheme, View, ActivityIndicator } from 'react-native';
+import { Appearance, useColorScheme, View, ActivityIndicator } from 'react-native';
+import { useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
@@ -40,6 +42,12 @@ function Navigation() {
 }
 
 export default function RootLayout() {
+  useEffect(() => {
+    AsyncStorage.getItem('@app_musculation_dark_mode').then((value) => {
+      Appearance.setColorScheme(value === 'true' ? 'dark' : 'light');
+    });
+  }, []);
+
   const colorScheme = useColorScheme();
 
   return (
