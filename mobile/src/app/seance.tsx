@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Vibration } from 'react-native';
+import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { useAuth } from '@/context/AuthContext';
 import {
   SafeAreaView,
@@ -14,6 +15,9 @@ import {
 } from 'react-native';
 
 const API_URL = 'http://192.168.100.200:5001';
+
+const SON_FIN_TIMER =
+  'https://raw.githubusercontent.com/TaterTotterson/microWakeWords/main/wakeSounds/notification-ding.wav';
 
 type Serie = {
   id: number;
@@ -74,6 +78,9 @@ const exercicesInitiaux: Exercice[] = [
 
 export default function SeanceScreen() {
   const { token } = useAuth();
+
+  const sonFinTimer = useAudioPlayer(SON_FIN_TIMER);
+
   const [exercices, setExercices] = useState<Exercice[]>(
     exercicesInitiaux.map((exercice) => ({
       ...exercice,
@@ -87,44 +94,62 @@ export default function SeanceScreen() {
   const [seanceId, setSeanceId] = useState<number | null>(null);
   const [chargement, setChargement] = useState(true);
   const [terminee, setTerminee] = useState(false);
+  const [terminaisonEnCours, setTerminaisonEnCours] = useState(false);
+
   const [previous, setPrevious] = useState<
     Record<string, PreviousSerie[]>
   >({});
+
   const [exercicesDisponibles, setExercicesDisponibles] = useState<
     { nom: string; muscle: string; backendId: number }[]
   >([]);
-  const [tempsReposDefaut, setTempsReposDefaut] = useState(90);
+
+  const [tempsReposDefaut] = useState(30);
   const [timerActif, setTimerActif] = useState(false);
-  const [timerPause, setTimerPause] = useState(false);
   const [tempsRestant, setTempsRestant] = useState(0);
+  const [timerExerciceId, setTimerExerciceId] = useState<number | null>(null);
+  const [timerSerieId, setTimerSerieId] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!timerActif || timerPause) return;
+    setAudioModeAsync({
+      playsInSilentMode: true,
+    }).catch((error) => {
+      console.error('Erreur configuration audio :', error);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!timerActif) {
+      return;
+    }
 
     const interval = setInterval(() => {
       setTempsRestant((ancien) => {
         if (ancien <= 1) {
           clearInterval(interval);
+
           setTimerActif(false);
-          setTimerPause(false);
+          setTimerExerciceId(null);
+          setTimerSerieId(null);
+
           Vibration.vibrate(500);
+
+          try {
+            sonFinTimer.seekTo(0);
+            sonFinTimer.play();
+          } catch (error) {
+            console.error('Erreur lecture son timer :', error);
+          }
+
           return 0;
         }
+
         return ancien - 1;
       });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [timerActif, timerPause]);
-
-  useEffect(() => {
-    demarrerSeance();
-    chargerExercicesDisponibles();
-
-    exercicesInitiaux.forEach((exercice) => {
-      chargerPrevious(exercice);
-    });
-  }, []);
+  }, [timerActif, sonFinTimer]);
 
   const chargerExercicesDisponibles = async () => {
     try {
@@ -177,10 +202,7 @@ export default function SeanceScreen() {
         [exercice.nom]: data,
       }));
     } catch (error) {
-      console.error(
-        'Erreur chargement Previous :',
-        error
-      );
+      console.error('Erreur chargement Previous :', error);
     }
   };
 
@@ -203,15 +225,9 @@ export default function SeanceScreen() {
       setSeanceId(data.seance_id);
       setChargement(false);
 
-      console.log(
-        'Séance créée avec ID :',
-        data.seance_id
-      );
+      console.log('Séance créée avec ID :', data.seance_id);
     } catch (error) {
-      console.error(
-        'Erreur démarrage séance :',
-        error
-      );
+      console.error('Erreur démarrage séance :', error);
 
       setChargement(false);
 
@@ -221,6 +237,15 @@ export default function SeanceScreen() {
       );
     }
   };
+
+  useEffect(() => {
+    demarrerSeance();
+    chargerExercicesDisponibles();
+
+    exercicesInitiaux.forEach((exercice) => {
+      chargerPrevious(exercice);
+    });
+  }, []);
 
   const ajouterExercice = async (
     nom: string,
@@ -272,9 +297,7 @@ export default function SeanceScreen() {
         }
 
         const derniereSerie =
-          exercice.series[
-            exercice.series.length - 1
-          ];
+          exercice.series[exercice.series.length - 1];
 
         const nouvelleSerie: Serie = {
           id: exercice.series.length + 1,
@@ -289,6 +312,40 @@ export default function SeanceScreen() {
             ...exercice.series,
             nouvelleSerie,
           ],
+        };
+      })
+    );
+  };
+
+  const supprimerSerie = (
+    exerciceId: number,
+    serieId: number
+  ) => {
+    setExercices((anciens) =>
+      anciens.map((exercice) => {
+        if (exercice.id !== exerciceId) {
+          return exercice;
+        }
+
+        if (exercice.series.length <= 1) {
+          Alert.alert(
+            'Impossible',
+            'Un exercice doit garder au moins une série.'
+          );
+
+          return exercice;
+        }
+
+        const nouvellesSeries = exercice.series
+          .filter((serie) => serie.id !== serieId)
+          .map((serie, index) => ({
+            ...serie,
+            id: index + 1,
+          }));
+
+        return {
+          ...exercice,
+          series: nouvellesSeries,
         };
       })
     );
@@ -400,10 +457,8 @@ export default function SeanceScreen() {
           },
           body: JSON.stringify({
             exercice_id: exerciceBackend.id,
-            poids:
-              parseFloat(serie.poids) || 0,
-            repetitions:
-              parseInt(serie.reps, 10) || 0,
+            poids: parseFloat(serie.poids) || 0,
+            repetitions: parseInt(serie.reps, 10) || 0,
           }),
         }
       );
@@ -511,13 +566,18 @@ export default function SeanceScreen() {
         };
       })
     );
-    
+
     setTempsRestant(tempsReposDefaut);
-    setTimerPause(false);
+    setTimerExerciceId(exerciceId);
+    setTimerSerieId(serieId);
     setTimerActif(true);
   };
 
   const terminerSeance = async () => {
+    if (terminaisonEnCours) {
+      return;
+    }
+
     if (!seanceId) {
       Alert.alert(
         'Erreur',
@@ -528,6 +588,8 @@ export default function SeanceScreen() {
     }
 
     try {
+      setTerminaisonEnCours(true);
+
       const ancienneSeanceId = seanceId;
 
       const response = await fetch(
@@ -552,35 +614,27 @@ export default function SeanceScreen() {
         ancienneSeanceId
       );
 
-      /*
-       * RESET DE LA PAGE
-       *
-       * On remet uniquement les exercices par défaut.
-       * Les exercices ajoutés pendant la séance disparaissent.
-       *
-       * IMPORTANT :
-       * On ne supprime PAS previous.
-       * On va même le recharger juste après.
-       */
-      const exercicesReset = exercicesInitiaux.map(
-        (exercice) => ({
-          ...exercice,
-          series: exercice.series.map(
-            (serie) => ({
-              ...serie,
-              terminee: false,
-              sauvegardee: false,
-            })
-          ),
-        })
-      );
+      setTimerActif(false);
+      setTempsRestant(0);
+      setTimerExerciceId(null);
+      setTimerSerieId(null);
+
+      const exercicesReset =
+        exercicesInitiaux.map(
+          (exercice) => ({
+            ...exercice,
+            series: exercice.series.map(
+              (serie) => ({
+                ...serie,
+                terminee: false,
+                sauvegardee: false,
+              })
+            ),
+          })
+        );
 
       setExercices(exercicesReset);
       setMenuExercices(false);
-
-      /*
-       * Préparation de la nouvelle séance.
-       */
       setChargement(true);
 
       const nouvelleSeanceResponse =
@@ -601,16 +655,10 @@ export default function SeanceScreen() {
       const nouvelleSeance =
         await nouvelleSeanceResponse.json();
 
-      setSeanceId(nouvelleSeance.seance_id);
+      setSeanceId(
+        nouvelleSeance.seance_id
+      );
 
-      /*
-       * IMPORTANT :
-       * On recharge Previous maintenant que l'ancienne
-       * séance est terminée.
-       *
-       * Cela permet d'afficher les performances que
-       * l'utilisateur vient tout juste d'enregistrer.
-       */
       await Promise.all(
         exercicesReset.map((exercice) =>
           chargerPrevious(exercice)
@@ -641,6 +689,8 @@ export default function SeanceScreen() {
         'Erreur',
         'Impossible de terminer la séance.'
       );
+    } finally {
+      setTerminaisonEnCours(false);
     }
   };
 
@@ -662,7 +712,9 @@ export default function SeanceScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
 
-      <ScrollView contentContainerStyle={styles.contenu}>
+      <ScrollView
+        contentContainerStyle={styles.contenu}
+      >
         <Text style={styles.titre}>
           Séance
         </Text>
@@ -670,91 +722,15 @@ export default function SeanceScreen() {
         <Text style={styles.sousTitre}>
           Ma séance du jour
         </Text>
-        
-        <View style={styles.timerCarte}>
-          <View style={styles.timerEntete}>
-            <Text style={styles.timerTitre}>Temps de repos</Text>
-            <Text style={styles.timerValeur}>
-              {Math.floor(tempsRestant / 60).toString().padStart(2, '0')}:{(tempsRestant % 60).toString().padStart(2, '0')}
-            </Text>
-          </View>
-
-          <View style={styles.timerPresets}>
-            {[30, 60, 90, 120].map((secondes) => (
-              <TouchableOpacity
-                key={secondes}
-                style={[
-                  styles.timerPreset,
-                  tempsReposDefaut === secondes && styles.timerPresetActif,
-                ]}
-                onPress={() => {
-                  setTempsReposDefaut(secondes);
-                  if (!timerActif) setTempsRestant(secondes);
-                }}
-              >
-                <Text style={styles.timerPresetTexte}>
-                  {secondes >= 60 ? secondes / 60 + ' min' : secondes + ' s'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <View style={styles.timerActions}>
-            <TouchableOpacity
-              style={styles.timerAction}
-              onPress={() => setTempsRestant((ancien) => Math.max(0, ancien - 15))}
-            >
-              <Text style={styles.timerActionTexte}>−15 s</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.timerActionPrincipal}
-              onPress={() => {
-                if (tempsRestant === 0) {
-                  setTempsRestant(tempsReposDefaut);
-                  setTimerPause(false);
-                  setTimerActif(true);
-                } else {
-                  setTimerPause((ancien) => !ancien);
-                  setTimerActif(true);
-                }
-              }}
-            >
-              <Text style={styles.timerActionPrincipalTexte}>
-                {tempsRestant === 0 ? 'Démarrer' : timerPause ? 'Reprendre' : 'Pause'}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.timerAction}
-              onPress={() => setTempsRestant((ancien) => ancien + 15)}
-            >
-              <Text style={styles.timerActionTexte}>+15 s</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.timerPasser}
-              onPress={() => {
-                setTempsRestant(0);
-                setTimerActif(false);
-                setTimerPause(false);
-              }}
-            >
-              <Text style={styles.timerPasserTexte}>Passer</Text>
-            </TouchableOpacity>
-          </View>
-
-          <Text style={styles.timerInfo}>
-            Le repos démarre automatiquement après chaque série validée.
-          </Text>
-        </View>
 
         {exercices.map((exercice) => (
           <View
             key={exercice.id}
             style={styles.exerciceBloc}
           >
-            <View style={styles.exerciceCarte}>
+            <View
+              style={styles.exerciceCarte}
+            >
               <Text style={styles.exercice}>
                 {exercice.nom}
               </Text>
@@ -769,7 +745,11 @@ export default function SeanceScreen() {
                 Série
               </Text>
 
-              <Text style={styles.headerPrevious}>
+              <Text
+                style={
+                  styles.headerPrevious
+                }
+              >
                 Previous
               </Text>
 
@@ -782,90 +762,165 @@ export default function SeanceScreen() {
               </Text>
 
               <Text style={styles.headerTexte}>
-                ?
+                ✓
               </Text>
             </View>
 
             {exercice.series.map((serie) => (
-              <View
-                key={serie.id}
-                style={[
-                  styles.serie,
-                  serie.terminee &&
-                    styles.serieTerminee,
-                ]}
-              >
-                <Text style={styles.numero}>
-                  {serie.id}
-                </Text>
-
-                <Text style={styles.previous}>
-                  {previous[exercice.nom]?.[
-                    serie.id - 1
-                  ]
-                    ? `${previous[exercice.nom][serie.id - 1].poids} kg × ${previous[exercice.nom][serie.id - 1].repetitions}`
-                    : '—'}
-                </Text>
-
-                <TextInput
-                  style={styles.input}
-                  value={serie.poids}
-                  keyboardType="numeric"
-                  editable={!terminee}
-                  onChangeText={(texte) =>
-                    modifierPoids(
-                      exercice.id,
-                      serie.id,
-                      texte
-                    )
-                  }
-                />
-
-                <TextInput
-                  style={styles.input}
-                  value={serie.reps}
-                  keyboardType="numeric"
-                  editable={!terminee}
-                  onChangeText={(texte) =>
-                    modifierReps(
-                      exercice.id,
-                      serie.id,
-                      texte
-                    )
-                  }
-                />
-
-                <TouchableOpacity
+              <View key={serie.id}>
+                <View
                   style={[
-                    styles.checkbox,
+                    styles.serie,
                     serie.terminee &&
-                      styles.checkboxActive,
+                      styles.serieTerminee,
                   ]}
-                  disabled={terminee}
-                  onPress={() =>
-                    terminerSerie(
-                      exercice.id,
-                      serie.id
-                    )
-                  }
                 >
-                  {serie.terminee && (
-                    <Text style={styles.check}>
-                      ✓
-                    </Text>
+                  <Text style={styles.numero}>
+                    {serie.id}
+                  </Text>
+
+                  <Text style={styles.previous}>
+                    {previous[
+                      exercice.nom
+                    ]?.[serie.id - 1]
+                      ? `${previous[exercice.nom][serie.id - 1].poids} kg × ${previous[exercice.nom][serie.id - 1].repetitions}`
+                      : '—'}
+                  </Text>
+
+                  <TextInput
+                    style={styles.input}
+                    value={serie.poids}
+                    keyboardType="numeric"
+                    editable={!terminee}
+                    onChangeText={(texte) =>
+                      modifierPoids(
+                        exercice.id,
+                        serie.id,
+                        texte
+                      )
+                    }
+                  />
+
+                  <TextInput
+                    style={styles.input}
+                    value={serie.reps}
+                    keyboardType="numeric"
+                    editable={!terminee}
+                    onChangeText={(texte) =>
+                      modifierReps(
+                        exercice.id,
+                        serie.id,
+                        texte
+                      )
+                    }
+                  />
+
+                  <TouchableOpacity
+                    style={[
+                      styles.checkbox,
+                      serie.terminee &&
+                        styles.checkboxActive,
+                    ]}
+                    disabled={terminee}
+                    onPress={() =>
+                      terminerSerie(
+                        exercice.id,
+                        serie.id
+                      )
+                    }
+                  >
+                    {serie.terminee && (
+                      <Text style={styles.check}>
+                        ✓
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+
+                  {!serie.terminee && (
+                    <TouchableOpacity
+                      style={styles.supprimerSerie}
+                      disabled={terminee}
+                      onPress={() =>
+                        Alert.alert(
+                          'Supprimer la série',
+                          'Voulez-vous supprimer cette série ?',
+                          [
+                            {
+                              text: 'Annuler',
+                              style: 'cancel',
+                            },
+                            {
+                              text: 'Supprimer',
+                              style: 'destructive',
+                              onPress: () =>
+                                supprimerSerie(
+                                  exercice.id,
+                                  serie.id
+                                ),
+                            },
+                          ]
+                        )
+                      }
+                    >
+                      <Text
+                        style={
+                          styles.supprimerSerieTexte
+                        }
+                      >
+                        ×
+                      </Text>
+                    </TouchableOpacity>
                   )}
-                </TouchableOpacity>
+                </View>
+
+                {timerActif &&
+                  timerExerciceId === exercice.id &&
+                  timerSerieId === serie.id && (
+                    <View style={styles.timerCompact}>
+                      <Text
+                        style={
+                          styles.timerCompactTitre
+                        }
+                      >
+                        Repos
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.timerCompactValeur
+                        }
+                      >
+                        {Math.floor(
+                          tempsRestant / 60
+                        )
+                          .toString()
+                          .padStart(2, '0')}
+                        :
+                        {(tempsRestant % 60)
+                          .toString()
+                          .padStart(2, '0')}
+                      </Text>
+                    </View>
+                  )}
               </View>
             ))}
 
             <TouchableOpacity
-              style={styles.boutonAjouterSerie}
+              style={
+                styles.boutonAjouterSerie
+              }
               disabled={terminee}
               onPress={() =>
-                ajouterSerie(exercice.id)
+                ajouterSerie(
+                  exercice.id
+                )
               }
             >
-              <Text style={styles.boutonAjouterTexte}>
+              <Text
+                style={
+                  styles.boutonAjouterTexte
+                }
+              >
                 + Ajouter une série
               </Text>
             </TouchableOpacity>
@@ -873,13 +928,21 @@ export default function SeanceScreen() {
         ))}
 
         <TouchableOpacity
-          style={styles.boutonAjouterExercice}
+          style={
+            styles.boutonAjouterExercice
+          }
           disabled={terminee}
           onPress={() =>
-            setMenuExercices(!menuExercices)
+            setMenuExercices(
+              !menuExercices
+            )
           }
         >
-          <Text style={styles.boutonAjouterExerciceTexte}>
+          <Text
+            style={
+              styles.boutonAjouterExerciceTexte
+            }
+          >
             ＋ AJOUTER UN EXERCICE
           </Text>
         </TouchableOpacity>
@@ -893,8 +956,10 @@ export default function SeanceScreen() {
             {exercicesDisponibles.map(
               (exercice) => (
                 <TouchableOpacity
-                  key={exercice.nom}
-                  style={styles.optionExercice}
+                  key={`${exercice.backendId}-${exercice.nom}`}
+                  style={
+                    styles.optionExercice
+                  }
                   onPress={() =>
                     ajouterExercice(
                       exercice.nom,
@@ -904,11 +969,19 @@ export default function SeanceScreen() {
                   }
                 >
                   <View>
-                    <Text style={styles.optionNom}>
+                    <Text
+                      style={
+                        styles.optionNom
+                      }
+                    >
                       {exercice.nom}
                     </Text>
 
-                    <Text style={styles.optionMuscle}>
+                    <Text
+                      style={
+                        styles.optionMuscle
+                      }
+                    >
                       {exercice.muscle}
                     </Text>
                   </View>
@@ -925,15 +998,19 @@ export default function SeanceScreen() {
         <TouchableOpacity
           style={[
             styles.boutonTerminer,
-            terminee &&
-              styles.boutonTerminee,
+            terminaisonEnCours &&
+              styles.boutonTerminerDesactive,
           ]}
-          disabled={terminee}
+          disabled={terminaisonEnCours}
           onPress={terminerSeance}
         >
-          <Text style={styles.boutonTerminerTexte}>
-            {terminee
-              ? 'SÉANCE TERMINÉE ✓'
+          <Text
+            style={
+              styles.boutonTerminerTexte
+            }
+          >
+            {terminaisonEnCours
+              ? 'ENREGISTREMENT...'
               : 'TERMINER LA SÉANCE'}
           </Text>
         </TouchableOpacity>
@@ -977,114 +1054,6 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
 
-  timerCarte: {
-    backgroundColor: '#1C1C1E',
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 24,
-  },
-
-  timerEntete: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-
-  timerTitre: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-
-  timerValeur: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    fontVariant: ['tabular-nums'],
-  },
-
-  timerPresets: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 14,
-    gap: 6,
-  },
-
-  timerPreset: {
-    flex: 1,
-    backgroundColor: '#2C2C2E',
-    borderRadius: 9,
-    paddingVertical: 9,
-    alignItems: 'center',
-  },
-
-  timerPresetActif: {
-    backgroundColor: '#0A84FF',
-  },
-
-  timerPresetTexte: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-
-  timerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 12,
-    flexWrap: 'wrap',
-  },
-
-  timerAction: {
-    backgroundColor: '#2C2C2E',
-    borderRadius: 10,
-    minWidth: 64,
-    paddingVertical: 11,
-    alignItems: 'center',
-  },
-
-  timerActionTexte: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-
-  timerActionPrincipal: {
-    backgroundColor: '#0A84FF',
-    borderRadius: 10,
-    minWidth: 82,
-    paddingVertical: 11,
-    alignItems: 'center',
-  },
-
-  timerActionPrincipalTexte: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-
-  timerPasser: {
-    backgroundColor: '#3A3A3C',
-    borderRadius: 10,
-    minWidth: 64,
-    paddingVertical: 11,
-    alignItems: 'center',
-  },
-
-  timerPasserTexte: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-
-  timerInfo: {
-    color: '#AEAEB2',
-    fontSize: 12,
-    marginTop: 12,
-    lineHeight: 17,
-  },
-
   exerciceBloc: {
     marginBottom: 28,
   },
@@ -1110,13 +1079,14 @@ const styles = StyleSheet.create({
 
   headerSeries: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 6,
     marginBottom: 8,
   },
 
   headerTexte: {
-    width: 70,
+    width: 50,
     textAlign: 'center',
     fontSize: 13,
     fontWeight: '600',
@@ -1155,7 +1125,7 @@ const styles = StyleSheet.create({
   },
 
   numero: {
-    width: 50,
+    width: 40,
     textAlign: 'center',
     fontSize: 16,
     fontWeight: '600',
@@ -1163,7 +1133,7 @@ const styles = StyleSheet.create({
   },
 
   input: {
-    width: 70,
+    width: 60,
     height: 42,
     backgroundColor: '#F2F2F7',
     borderRadius: 8,
@@ -1193,6 +1163,47 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '700',
+  },
+
+  supprimerSerie: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  supprimerSerieTexte: {
+    color: '#FF3B30',
+    fontSize: 25,
+    fontWeight: '400',
+    lineHeight: 27,
+  },
+
+  timerCompact: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1C1C1E',
+    borderRadius: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 13,
+    marginTop: 0,
+    marginBottom: 8,
+  },
+
+  timerCompactTitre: {
+    color: '#AEAEB2',
+    fontSize: 12,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+
+  timerCompactValeur: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '800',
+    fontVariant: ['tabular-nums'],
   },
 
   boutonAjouterSerie: {
@@ -1275,8 +1286,8 @@ const styles = StyleSheet.create({
     marginTop: 30,
   },
 
-  boutonTerminee: {
-    backgroundColor: '#34C759',
+  boutonTerminerDesactive: {
+    opacity: 0.6,
   },
 
   boutonTerminerTexte: {
