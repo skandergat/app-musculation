@@ -115,6 +115,7 @@ export default function SeanceScreen() {
   const [timerType, setTimerType] = useState<'serie' | 'exercice' | null>(null);
   const [timerExerciceId, setTimerExerciceId] = useState<number | null>(null);
   const [timerSerieId, setTimerSerieId] = useState<number | null>(null);
+  const [minuteursTermines, setMinuteursTermines] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setAudioModeAsync({
@@ -181,6 +182,18 @@ export default function SeanceScreen() {
           clearInterval(interval);
 
           setTimerActif(false);
+
+          const timerTermineKey =
+            timerType === 'serie'
+              ? 'serie-' + timerExerciceId + '-' + timerSerieId
+              : 'exercice-' + timerExerciceId;
+
+          setMinuteursTermines((anciens) => {
+            const nouveau = new Set(anciens);
+            nouveau.add(timerTermineKey);
+            return nouveau;
+          });
+
           setTimerType(null);
           setTimerExerciceId(null);
           setTimerSerieId(null);
@@ -608,6 +621,15 @@ export default function SeanceScreen() {
       return tempsRestant;
     }
 
+    const timerTermineKey =
+      type === 'serie'
+        ? 'serie-' + exerciceId + '-' + serieId
+        : 'exercice-' + exerciceId;
+
+    if (minuteursTermines.has(timerTermineKey)) {
+      return 0;
+    }
+
     return type === 'serie'
       ? tempsReposSerie
       : tempsReposExercice;
@@ -705,12 +727,24 @@ export default function SeanceScreen() {
       toutesLesSeriesTerminees &&
       exerciceSuivantExiste
     ) {
+      setMinuteursTermines((anciens) => {
+        const nouveau = new Set(anciens);
+        nouveau.delete('exercice-' + exerciceId);
+        return nouveau;
+      });
+
       setTempsRestant(tempsReposExercice);
       setTimerType('exercice');
       setTimerExerciceId(exerciceId);
       setTimerSerieId(null);
       setTimerActif(true);
     } else {
+      setMinuteursTermines((anciens) => {
+        const nouveau = new Set(anciens);
+        nouveau.delete('serie-' + exerciceId + '-' + serieId);
+        return nouveau;
+      });
+
       setTempsRestant(tempsReposSerie);
       setTimerType('serie');
       setTimerExerciceId(exerciceId);
@@ -765,6 +799,7 @@ export default function SeanceScreen() {
       setTimerType(null);
       setTimerExerciceId(null);
       setTimerSerieId(null);
+      setMinuteursTermines(new Set());
 
       const exercicesReset =
         exercicesInitiaux.map(
