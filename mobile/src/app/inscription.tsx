@@ -77,12 +77,12 @@ export default function InscriptionScreen() {
           style={styles.retour}
           onPress={() => router.back()}
         >
-          <Text style={styles.retourTexte}>‹ {t("back")}</Text>
+          <Text style={[styles.retourTexte, dark && styles.textDark]}>‹ {t("back")}</Text>
         </Pressable>
 
         <Text style={[styles.titre, dark && styles.textDark]}>{t("createAccount")}</Text>
 
-        <Text style={styles.sousTitre}>
+        <Text style={[styles.sousTitre, dark && styles.mutedDark]}>
           {t("registerSubtitle")}
         </Text>
 
@@ -96,9 +96,9 @@ export default function InscriptionScreen() {
         />
 
         <TextInput
-          style={styles.input}
+          style={[styles.input, dark && styles.inputDark]}
           placeholder={t("email")}
-          placeholderTextColor="#8A8A8E"
+          placeholderTextColor={dark ? '#8E8E93' : '#8A8A8E'}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -142,7 +142,7 @@ export default function InscriptionScreen() {
         </Pressable>
 
         <View style={styles.connexionContainer}>
-          <Text style={styles.question}>
+          <Text style={[styles.question, dark && styles.mutedDark]}>
             {t("hasAccount")}
           </Text>
 
