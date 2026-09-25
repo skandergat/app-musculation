@@ -8,7 +8,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  View,
+  View, useColorScheme,
 } from 'react-native';
 import { router } from 'expo-router';
 
@@ -18,6 +18,7 @@ import { useI18n } from '@/context/I18nContext';
 export default function InscriptionScreen() {
   const { register } = useAuth();
   const { t } = useI18n();
+  const dark = useColorScheme() === 'dark';
 
   const [nom, setNom] = useState('');
   const [email, setEmail] = useState('');
@@ -68,7 +69,7 @@ export default function InscriptionScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, dark && styles.containerDark]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.contenu}>
@@ -79,16 +80,16 @@ export default function InscriptionScreen() {
           <Text style={styles.retourTexte}>‹ {t("back")}</Text>
         </Pressable>
 
-        <Text style={styles.titre}>{t("createAccount")}</Text>
+        <Text style={[styles.titre, dark && styles.textDark]}>{t("createAccount")}</Text>
 
         <Text style={styles.sousTitre}>
           {t("registerSubtitle")}
         </Text>
 
         <TextInput
-          style={styles.input}
+          style={[styles.input, dark && styles.inputDark]}
           placeholder={t("name")}
-          placeholderTextColor="#8A8A8E"
+          placeholderTextColor={dark ? '#8E8E93' : '#8A8A8E'}
           value={nom}
           onChangeText={setNom}
           autoCapitalize="words"
@@ -161,6 +162,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F7',
   },
+  containerDark: { backgroundColor: '#0B0B0D' },
+  textDark: { color: '#FFFFFF' },
+  inputDark: { backgroundColor: '#1C1C1E', color: '#FFFFFF' },
   contenu: {
     flex: 1,
     justifyContent: 'center',
