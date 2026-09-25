@@ -887,7 +887,7 @@ export default function SeanceScreen() {
 
         <View style={styles.chargement}>
           <Text style={styles.chargementTexte}>
-            Démarrage de la séance...
+            {t('startup')}
           </Text>
         </View>
       </SafeAreaView>
@@ -902,11 +902,11 @@ export default function SeanceScreen() {
         contentContainerStyle={styles.contenu}
       >
         <Text style={[styles.titre, dark && styles.textDark]}>
-          Séance
+          {t('workout')}
         </Text>
 
         <Text style={[styles.sousTitre, dark && styles.mutedDark]}>
-          Ma séance du jour
+          {t('todaysWorkout')}
         </Text>
 
         {exercices.map((exercice) => (
@@ -928,7 +928,7 @@ export default function SeanceScreen() {
 
             <View style={styles.headerSeries}>
               <Text style={styles.headerTexte}>
-                Série
+                {t('set')}
               </Text>
 
               <Text
@@ -940,7 +940,7 @@ export default function SeanceScreen() {
               </Text>
 
               <Text style={styles.headerTexte}>
-                Poids
+                {t('weight')}
               </Text>
 
               <Text style={styles.headerTexte}>
@@ -1067,7 +1067,7 @@ export default function SeanceScreen() {
 
                   <View style={styles.timerValeurBloc}>
                     <Text style={styles.timerCompactTitre}>
-                      Repos
+                      {t('rest')}
                     </Text>
                     <Text style={styles.timerCompactValeur}>
                       {Math.floor(
@@ -1145,7 +1145,7 @@ export default function SeanceScreen() {
         {menuExercices && !terminee && (
           <View style={styles.menu}>
             <Text style={styles.menuTitre}>
-              Choisir un exercice
+              {t('chooseExercise')}
             </Text>
 
             {exercicesDisponibles.map(
