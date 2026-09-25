@@ -27,8 +27,8 @@ export default function ConnexionScreen() {
   const seConnecter = async () => {
     if (!email.trim() || !password) {
       Alert.alert(
-        'Champs manquants',
-        'Entre ton email et ton mot de passe.'
+        t('missingFields'),
+        t('fillAllFields')
       );
       return;
     }
@@ -41,8 +41,8 @@ export default function ConnexionScreen() {
       router.replace('/');
     } catch (error: any) {
       Alert.alert(
-        'Connexion impossible',
-        error.message || 'Une erreur est survenue.'
+        t('connectionImpossible'),
+        error.message || t('unexpectedError')
       );
     } finally {
       setLoading(false);
