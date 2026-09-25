@@ -928,7 +928,7 @@ export default function SeanceScreen() {
                     {previous[
                       exercice.nom
                     ]?.[serie.id - 1]
-                      ? \`${previous[exercice.nom][serie.id - 1].poids} kg × ${previous[exercice.nom][serie.id - 1].repetitions}\`
+                      ? `${previous[exercice.nom][serie.id - 1].poids} kg × ${previous[exercice.nom][serie.id - 1].repetitions}`
                       : '—'}
                   </Text>
 
