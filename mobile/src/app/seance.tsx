@@ -545,6 +545,72 @@ export default function SeanceScreen() {
     }
   };
 
+
+  const modifierTempsReposSerie = (delta: number) => {
+    const base =
+      timerActif && timerType === 'serie'
+        ? tempsRestant
+        : tempsReposSerie;
+
+    const nouveauTemps = Math.max(15, base + delta);
+
+    setTempsRestant(nouveauTemps);
+    setTempsReposSerie(nouveauTemps);
+
+    if (user?.id) {
+      AsyncStorage.setItem(
+        `${TIMER_SERIE_KEY}_${user.id}`,
+        String(nouveauTemps)
+      ).catch((error) =>
+        console.error(
+          'Erreur sauvegarde timer série :',
+          error
+        )
+      );
+    }
+  };
+
+  const modifierTempsReposExercice = (delta: number) => {
+    const base =
+      timerActif && timerType === 'exercice'
+        ? tempsRestant
+        : tempsReposExercice;
+
+    const nouveauTemps = Math.max(15, base + delta);
+
+    setTempsRestant(nouveauTemps);
+    setTempsReposExercice(nouveauTemps);
+
+    if (user?.id) {
+      AsyncStorage.setItem(
+        `${TIMER_EXERCICE_KEY}_${user.id}`,
+        String(nouveauTemps)
+      ).catch((error) =>
+        console.error(
+          'Erreur sauvegarde timer exercice :',
+          error
+        )
+      );
+    }
+  };
+
+  const afficherTemps = (
+    type: 'serie' | 'exercice',
+    exerciceId: number
+  ) => {
+    if (
+      timerActif &&
+      timerType === type &&
+      timerExerciceId === exerciceId
+    ) {
+      return tempsRestant;
+    }
+
+    return type === 'serie'
+      ? tempsReposSerie
+      : tempsReposExercice;
+  };
+
   const terminerSerie = async (
     exerciceId: number,
     serieId: number
@@ -1034,6 +1100,43 @@ export default function SeanceScreen() {
               </View>
             ))}
 
+            <View style={styles.timerCompact}>
+              <TouchableOpacity
+                style={styles.timerBouton}
+                onPress={() => modifierTempsReposSerie(-15)}
+              >
+                <Text style={styles.timerBoutonTexte}>
+                  −15s
+                </Text>
+              </TouchableOpacity>
+
+              <View style={styles.timerValeurBloc}>
+                <Text style={styles.timerCompactTitre}>
+                  Repos série
+                </Text>
+                <Text style={styles.timerCompactValeur}>
+                  {Math.floor(
+                    afficherTemps('serie', exercice.id) / 60
+                  )
+                    .toString()
+                    .padStart(2, '0')}
+                  :
+                  {(afficherTemps('serie', exercice.id) % 60)
+                    .toString()
+                    .padStart(2, '0')}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.timerBouton}
+                onPress={() => modifierTempsReposSerie(15)}
+              >
+                <Text style={styles.timerBoutonTexte}>
+                  +15s
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             <TouchableOpacity
               style={
                 styles.boutonAjouterSerie
@@ -1134,6 +1237,45 @@ export default function SeanceScreen() {
               )}
           </View>
         ))}
+
+            {exercices.indexOf(exercice) < exercices.length - 1 && (
+              <View style={styles.timerCompact}>
+                <TouchableOpacity
+                  style={styles.timerBouton}
+                  onPress={() => modifierTempsReposExercice(-15)}
+                >
+                  <Text style={styles.timerBoutonTexte}>
+                    −15s
+                  </Text>
+                </TouchableOpacity>
+
+                <View style={styles.timerValeurBloc}>
+                  <Text style={styles.timerCompactTitre}>
+                    Repos exercice
+                  </Text>
+                  <Text style={styles.timerCompactValeur}>
+                    {Math.floor(
+                      afficherTemps('exercice', exercice.id) / 60
+                    )
+                      .toString()
+                      .padStart(2, '0')}
+                    :
+                    {(afficherTemps('exercice', exercice.id) % 60)
+                      .toString()
+                      .padStart(2, '0')}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.timerBouton}
+                  onPress={() => modifierTempsReposExercice(15)}
+                >
+                  <Text style={styles.timerBoutonTexte}>
+                    +15s
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
         <TouchableOpacity
           style={
@@ -1388,48 +1530,48 @@ const styles = StyleSheet.create({
   },
 
   timerCompact: {
-    alignSelf: 'center',
+    width: '100%',
+    height: 36,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     backgroundColor: '#1C1C1E',
-    borderRadius: 10,
-    paddingVertical: 7,
-    paddingHorizontal: 8,
-    marginTop: 0,
-    marginBottom: 8,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    marginTop: 2,
+    marginBottom: 10,
   },
 
   timerBouton: {
-    minWidth: 48,
-    paddingVertical: 5,
-    paddingHorizontal: 5,
+    width: 72,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   timerBoutonTexte: {
     color: '#0A84FF',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
   },
 
   timerValeurBloc: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
-    minWidth: 72,
-    marginHorizontal: 2,
+    justifyContent: 'center',
+    gap: 7,
   },
 
   timerCompactTitre: {
     color: '#AEAEB2',
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
-    marginBottom: 1,
   },
 
   timerCompactValeur: {
     color: '#FFFFFF',
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '800',
     fontVariant: ['tabular-nums'],
   },
