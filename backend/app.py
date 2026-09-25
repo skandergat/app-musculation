@@ -1443,20 +1443,29 @@ def liste_exercices():
 
     conn = get_db()
 
-    categorie = request.args.get("categorie", "gym").strip().lower()
+    categorie = request.args.get("categorie", "all").strip().lower()
 
-    if categorie not in ("gym", "calisthenics"):
-        categorie = "gym"
+    if categorie not in ("gym", "calisthenics", "all"):
+        categorie = "all"
 
-    exercices = conn.execute(
-        """
-        SELECT *
-        FROM exercices
-        WHERE categorie = ?
-        ORDER BY id ASC
-        """,
-        (categorie,),
-    ).fetchall()
+    if categorie == "all":
+        exercices = conn.execute(
+            """
+            SELECT *
+            FROM exercices
+            ORDER BY id ASC
+            """
+        ).fetchall()
+    else:
+        exercices = conn.execute(
+            """
+            SELECT *
+            FROM exercices
+            WHERE categorie = ?
+            ORDER BY id ASC
+            """,
+            (categorie,),
+        ).fetchall()
 
     conn.close()
 
