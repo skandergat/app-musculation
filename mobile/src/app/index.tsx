@@ -61,11 +61,11 @@ export default function HomeScreen() {
     );
 
     if (erreur) return (
-      <SafeAreaView style={styles.centered}>
-        <Pressable style={styles.boutonRetourErreur} onPress={fermerCategorie}>
+      <SafeAreaView style={[styles.centered, dark && styles.containerDark]}>
+        <Pressable style={[styles.boutonRetourErreur, dark && styles.cardDark]} onPress={fermerCategorie}>
           <Text style={styles.retour}>‹</Text>
         </Pressable>
-        <Text style={styles.erreurTitre}>{t('connectionImpossible')}</Text>
+        <Text style={[styles.erreurTitre, dark && styles.textDark]}>{t('connectionImpossible')}</Text>
         <Text style={styles.erreurTexte}>{erreur}</Text>
         <Pressable style={styles.boutonReessayer} onPress={() => { setLoading(true); chargerExercices(categorieOuverte); }}>
           <Text style={styles.texteReessayer}>{t('retry')}</Text>
@@ -75,12 +75,12 @@ export default function HomeScreen() {
 
     return (
       <SafeAreaView style={[styles.container, dark && styles.containerDark]}>
-        <StatusBar barStyle="dark-content" />
+        <StatusBar barStyle={dark ? 'light-content' : 'dark-content'} />
         <View style={styles.entete}>
-          <Pressable style={styles.boutonRetour} onPress={fermerCategorie}><Text style={styles.retour}>‹</Text></Pressable>
+          <Pressable style={[styles.boutonRetour, dark && styles.cardDark]} onPress={fermerCategorie}><Text style={styles.retour}>‹</Text></Pressable>
           <View>
             <Text style={[styles.titre, dark && styles.textDark]}>{nomCategorie}</Text>
-            <Text style={styles.sousTitre}>{exercices.length} {t('exercises')}</Text>
+            <Text style={[styles.sousTitre, dark && styles.mutedDark]}>{exercices.length} {t('exercises')}</Text>
           </View>
         </View>
         <FlatList
@@ -97,7 +97,7 @@ export default function HomeScreen() {
               </View>
             </View>
           )}
-          ListEmptyComponent={<Text style={styles.vide}>{t('noExercises')}</Text>}
+          ListEmptyComponent={<Text style={[styles.vide, dark && styles.mutedDark]}>{t('noExercises')}</Text>}
         />
       </SafeAreaView>
     );
