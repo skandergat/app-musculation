@@ -65,7 +65,7 @@ const calculerDuree = (debut: string, fin: string) => {
   );
 
   if (minutes < 60) {
-    return `${minutes} ${t('durationMinutes')}`;
+    return `${minutes} {t('durationMinutes')}`;
   }
 
   const heures = Math.floor(minutes / 60);
@@ -97,7 +97,7 @@ const grouperParExercice = (
   return groupes;
 };
 
-export default function ${t('history')}Screen() {
+export default function {t('history')}Screen() {
   const { token } = useAuth();
   const { t } = useI18n();
   const dark = useColorScheme() === 'dark';
@@ -134,7 +134,7 @@ export default function ${t('history')}Screen() {
       setSeances(data);
     } catch (error: any) {
       setErreur(
-        error?.message ?? '${t('connectionImpossible')}'
+        error?.message ?? t('connectionImpossible')
       );
     } finally {
       setChargement(false);
@@ -212,7 +212,7 @@ export default function ${t('history')}Screen() {
           </TouchableOpacity>
 
           <Text style={styles.detailTitre}>
-            ${t('sessionDetails')}
+            {t('sessionDetails')}
           </Text>
         </View>
 
@@ -250,7 +250,7 @@ export default function ${t('history')}Screen() {
                   </Text>
 
                   <Text style={styles.statLabel}>
-                    ${t('exercisesLabel')}
+                    {t('exercisesLabel')}
                   </Text>
                 </View>
 
@@ -262,7 +262,7 @@ export default function ${t('history')}Screen() {
                   </Text>
 
                   <Text style={styles.statLabel}>
-                    ${t('setsLabel')}
+                    {t('setsLabel')}
                   </Text>
                 </View>
               </View>
@@ -321,7 +321,7 @@ export default function ${t('history')}Screen() {
           ListFooterComponent={
             <View style={styles.finDetail}>
               <Text style={styles.finDetailTexte}>
-                ${t('endOfWorkout')}
+                {t('endOfWorkout')}
               </Text>
             </View>
           }
@@ -467,7 +467,7 @@ export default function ${t('history')}Screen() {
                   <Text
                     style={styles.ouvrirTexte}
                   >
-                    ${t('seeDetails')}
+                    {t('seeDetails')}
                   </Text>
 
                   <Text
