@@ -6,6 +6,7 @@ import { useColorScheme, View, ActivityIndicator } from 'react-native';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { I18nProvider } from '@/context/I18nContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -42,13 +43,15 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <AuthProvider>
+    <I18nProvider>
+      <AuthProvider>
       <ThemeProvider
         value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}
       >
         <AnimatedSplashOverlay />
         <Navigation />
       </ThemeProvider>
-    </AuthProvider>
+      </AuthProvider>
+    </I18nProvider>
   );
 }
