@@ -7,11 +7,11 @@ import {
   RefreshControl,
   SafeAreaView,
   StatusBar,
-  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  useColorScheme,
 } from 'react-native';
 
 const API_URL = 'http://192.168.100.200:5001';
@@ -55,7 +55,7 @@ const formaterHeure = (iso: string) =>
     minute: '2-digit',
   });
 
-const calculerDuree = (debut: string, fin: string) => {
+const calculerDuree = (debut: string, fin: string, minuteLabel: string) => {
   const ms =
     new Date(fin).getTime() -
     new Date(debut).getTime();
@@ -66,7 +66,7 @@ const calculerDuree = (debut: string, fin: string) => {
   );
 
   if (minutes < 60) {
-    return `${minutes} {t('durationMinutes')}`;
+    return `${minutes} ${minuteLabel}`;
   }
 
   const heures = Math.floor(minutes / 60);
@@ -98,7 +98,7 @@ const grouperParExercice = (
   return groupes;
 };
 
-export default function {t('history')}Screen() {
+export default function HistoriqueScreen() {
   const { token } = useAuth();
   const { t } = useI18n();
   const dark = useColorScheme() === 'dark';
@@ -167,7 +167,7 @@ export default function {t('history')}Screen() {
     return (
       <SafeAreaView style={styles.centre}>
         <Text style={styles.erreurTitre}>
-          Connexion impossible
+          {t('connectionImpossible')}
         </Text>
 
         <Text style={styles.erreurTexte}>
@@ -194,7 +194,6 @@ export default function {t('history')}Screen() {
     return (
       <SafeAreaView style={[styles.container, dark && styles.containerDark]}>
         <StatusBar barStyle={dark ? 'light-content' : 'dark-content'} />
-        <StatusBar barStyle="dark-content" />
 
         <View style={styles.detailHeader}>
           <TouchableOpacity
@@ -240,7 +239,8 @@ export default function {t('history')}Screen() {
                 {seanceSelectionnee.date_fin
                   ? `  ·  ${calculerDuree(
                       seanceSelectionnee.date_debut,
-                      seanceSelectionnee.date_fin
+                      seanceSelectionnee.date_fin,
+                      t('durationMinutes')
                     )}`
                   : ''}
               </Text>
@@ -313,7 +313,7 @@ export default function {t('history')}Screen() {
                     <Text
                       style={styles.serieReps}
                     >
-                      {serie.repetitions} reps
+                      {serie.repetitions} {t('reps')}
                     </Text>
                   </View>
                 )
@@ -337,10 +337,10 @@ export default function {t('history')}Screen() {
    */
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={dark ? 'light-content' : 'dark-content'} />
 
       <Text style={[styles.titre, dark && styles.textDark]}>
-        Historique
+        {t('history')}
       </Text>
 
       <FlatList
@@ -357,8 +357,7 @@ export default function {t('history')}Screen() {
         }
         ListEmptyComponent={
           <Text style={styles.videTexte}>
-            Aucune séance terminée pour
-            l'instant.
+            {t('noCompletedWorkouts')}
           </Text>
         }
         renderItem={({ item }) => {
@@ -389,7 +388,8 @@ export default function {t('history')}Screen() {
                     <Text style={styles.duree}>
                       {calculerDuree(
                         item.date_debut,
-                        item.date_fin
+                        item.date_fin,
+                        t('durationMinutes')
                       )}
                     </Text>
                   ) : null}
@@ -402,15 +402,9 @@ export default function {t('history')}Screen() {
                     item.date_debut
                   )}
                   {'  ·  '}
-                  {groupes.length} exercice
-                  {groupes.length > 1
-                    ? 's'
-                    : ''}
+                  {groupes.length} {t('exercisesLabel')}
                   {'  ·  '}
-                  {totalSeries} série
-                  {totalSeries > 1
-                    ? 's'
-                    : ''}
+                  {totalSeries} {t('setsLabel')}
                 </Text>
 
                 {groupes
@@ -451,15 +445,7 @@ export default function {t('history')}Screen() {
                       styles.plusExercices
                     }
                   >
-                    + {groupes.length - 3}{' '}
-                    autre
-                    {groupes.length - 3 > 1
-                      ? 's'
-                      : ''}{' '}
-                    exercice
-                    {groupes.length - 3 > 1
-                      ? 's'
-                      : ''}
+                    + {groupes.length - 3} {t('otherExercises')}
                   </Text>
                 )}
 
