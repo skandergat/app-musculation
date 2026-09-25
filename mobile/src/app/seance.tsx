@@ -23,7 +23,6 @@ const SON_FIN_TIMER =
   'https://raw.githubusercontent.com/TaterTotterson/microWakeWords/main/wakeSounds/notification-ding.wav';
 
 const TIMER_SERIE_KEY = '@app_musculation_timer_serie';
-const TIMER_EXERCICE_KEY = '@app_musculation_timer_exercice';
 
 type Serie = {
   id: number;
@@ -113,10 +112,9 @@ export default function SeanceScreen() {
   >([]);
 
   const [tempsReposSerie, setTempsReposSerie] = useState(60);
-  const [tempsReposExercice, setTempsReposExercice] = useState(120);
   const [timerActif, setTimerActif] = useState(false);
   const [tempsRestant, setTempsRestant] = useState(0);
-  const [timerType, setTimerType] = useState<'serie' | 'exercice' | null>(null);
+  const [timerType, setTimerType] = useState<'serie' | null>(null);
   const [timerExerciceId, setTimerExerciceId] = useState<number | null>(null);
   const [timerSerieId, setTimerSerieId] = useState<number | null>(null);
   const [minuteursTermines, setMinuteursTermines] = useState<Set<string>>(new Set());
@@ -136,15 +134,9 @@ export default function SeanceScreen() {
       }
 
       try {
-        const [serieSauvegardee, exerciceSauvegarde] =
-          await Promise.all([
-            AsyncStorage.getItem(
-              `${TIMER_SERIE_KEY}_${user.id}`
-            ),
-            AsyncStorage.getItem(
-              `${TIMER_EXERCICE_KEY}_${user.id}`
-            ),
-          ]);
+        const serieSauvegardee = await AsyncStorage.getItem(
+          `${TIMER_SERIE_KEY}_${user.id}`
+        );
 
         if (serieSauvegardee) {
           const valeur = parseInt(serieSauvegardee, 10);
@@ -587,56 +579,23 @@ export default function SeanceScreen() {
     }
   };
 
-  const modifierTempsReposExercice = (delta: number) => {
-    const base =
-      timerActif && timerType === 'exercice'
-        ? tempsRestant
-        : tempsReposExercice;
-
-    const nouveauTemps = Math.max(15, base + delta);
-
-    setTempsRestant(nouveauTemps);
-    setTempsReposExercice(nouveauTemps);
-
-    if (user?.id) {
-      AsyncStorage.setItem(
-        `${TIMER_EXERCICE_KEY}_${user.id}`,
-        String(nouveauTemps)
-      ).catch((error) =>
-        console.error(
-          'Erreur sauvegarde timer exercice :',
-          error
-        )
-      );
-    }
-  };
-
-  const afficherTemps = (
-    type: 'serie' | 'exercice',
-    exerciceId: number,
-    serieId?: number
-  ) => {
+  const afficherTemps = (exerciceId: number, serieId: number) => {
     if (
       timerActif &&
-      timerType === type &&
+      timerType === 'serie' &&
       timerExerciceId === exerciceId &&
-      (type === 'exercice' || timerSerieId === serieId)
+      timerSerieId === serieId
     ) {
       return tempsRestant;
     }
 
-    const timerTermineKey =
-      type === 'serie'
-        ? 'serie-' + exerciceId + '-' + serieId
-        : 'exercice-' + exerciceId;
+    const timerTermineKey = 'serie-' + exerciceId + '-' + serieId;
 
     if (minuteursTermines.has(timerTermineKey)) {
       return 0;
     }
 
-    return type === 'serie'
-      ? tempsReposSerie
-      : tempsReposExercice;
+    return tempsReposSerie;
   };
 
   const terminerSerie = async (
@@ -714,47 +673,17 @@ export default function SeanceScreen() {
       })
     );
 
-    const toutesLesSeriesTerminees =
-      exercice.series.every((s) =>
-        s.id === serieId ? true : s.terminee
-      );
+    setMinuteursTermines((anciens) => {
+      const nouveau = new Set(anciens);
+      nouveau.delete('serie-' + exerciceId + '-' + serieId);
+      return nouveau;
+    });
 
-    const indexExercice = exercices.findIndex(
-      (item) => item.id === exerciceId
-    );
-
-    const exerciceSuivantExiste =
-      indexExercice >= 0 &&
-      indexExercice < exercices.length - 1;
-
-    if (
-      toutesLesSeriesTerminees &&
-      exerciceSuivantExiste
-    ) {
-      setMinuteursTermines((anciens) => {
-        const nouveau = new Set(anciens);
-        nouveau.delete('exercice-' + exerciceId);
-        return nouveau;
-      });
-
-      setTempsRestant(tempsReposExercice);
-      setTimerType('exercice');
-      setTimerExerciceId(exerciceId);
-      setTimerSerieId(null);
-      setTimerActif(true);
-    } else {
-      setMinuteursTermines((anciens) => {
-        const nouveau = new Set(anciens);
-        nouveau.delete('serie-' + exerciceId + '-' + serieId);
-        return nouveau;
-      });
-
-      setTempsRestant(tempsReposSerie);
-      setTimerType('serie');
-      setTimerExerciceId(exerciceId);
-      setTimerSerieId(serieId);
-      setTimerActif(true);
-    }
+    setTempsRestant(tempsReposSerie);
+    setTimerType('serie');
+    setTimerExerciceId(exerciceId);
+    setTimerSerieId(serieId);
+    setTimerActif(true);
   };
 
   const terminerSeance = async () => {
@@ -1071,12 +1000,12 @@ export default function SeanceScreen() {
                     </Text>
                     <Text style={styles.timerCompactValeur}>
                       {Math.floor(
-                        afficherTemps('serie', exercice.id, serie.id) / 60
+                        afficherTemps(exercice.id, serie.id) / 60
                       )
                         .toString()
                         .padStart(2, '0')}
                       :
-                      {(afficherTemps('serie', exercice.id, serie.id) % 60)
+                      {(afficherTemps(exercice.id, serie.id) % 60)
                         .toString()
                         .padStart(2, '0')}
                     </Text>
