@@ -59,6 +59,7 @@ export default function ParametresScreen() {
 
   return (
     <SafeAreaView style={[styles.container, dark && styles.containerDark]}>
+        <StatusBar barStyle={dark ? 'light-content' : 'dark-content'} />
       <View style={styles.contenu}>
         <Text style={[styles.titre, dark && styles.textDark]}>{t('settings')}</Text>
 
