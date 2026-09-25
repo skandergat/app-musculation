@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Vibration } from 'react-native';
 import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { useAuth } from '@/context/AuthContext';
+import { useI18n } from '@/context/I18nContext';
 import {
   SafeAreaView,
   StatusBar,
@@ -13,6 +14,7 @@ import {
   ScrollView,
   TextInput,
   Alert,
+  useColorScheme,
 } from 'react-native';
 
 const API_URL = 'http://192.168.100.200:5001';
@@ -82,6 +84,8 @@ const exercicesInitiaux: Exercice[] = [
 
 export default function SeanceScreen() {
   const { token, user } = useAuth();
+  const { t } = useI18n();
+  const dark = useColorScheme() === 'dark';
 
   const sonFinTimer = useAudioPlayer(SON_FIN_TIMER);
 
@@ -121,7 +125,7 @@ export default function SeanceScreen() {
     setAudioModeAsync({
       playsInSilentMode: true,
     }).catch((error) => {
-      console.error('Erreur configuration audio :', error);
+      console.error(t('error') + ' :', error);
     });
   }, []);
 
@@ -222,7 +226,7 @@ export default function SeanceScreen() {
       const response = await fetch(`${API_URL}/exercices?categorie=all`);
 
       if (!response.ok) {
-        throw new Error('Impossible de récupérer les exercices');
+        throw new Error(t('connectionImpossible'));
       }
 
       const data = await response.json();
@@ -491,7 +495,7 @@ export default function SeanceScreen() {
 
       if (!exercicesResponse.ok) {
         throw new Error(
-          'Impossible de récupérer les exercices'
+          t('connectionImpossible')
         );
       }
 
@@ -506,7 +510,7 @@ export default function SeanceScreen() {
 
       if (!exerciceBackend) {
         Alert.alert(
-          'Exercice introuvable',
+          t('exerciseNotFound'),
           `${exercice.nom} n'existe pas encore dans la base Flask.`
         );
 
@@ -761,7 +765,7 @@ export default function SeanceScreen() {
     if (!seanceId) {
       Alert.alert(
         'Erreur',
-        'Aucune séance active.'
+        t('noActiveWorkout')
       );
 
       return;
@@ -785,7 +789,7 @@ export default function SeanceScreen() {
 
       if (!response.ok) {
         throw new Error(
-          'Impossible de terminer la séance'
+          t('unableFinishWorkout')
         );
       }
 
@@ -830,7 +834,7 @@ export default function SeanceScreen() {
 
       if (!nouvelleSeanceResponse.ok) {
         throw new Error(
-          'Impossible de démarrer la nouvelle séance'
+          t('unableStartNew')
         );
       }
 
@@ -856,12 +860,12 @@ export default function SeanceScreen() {
       );
 
       Alert.alert(
-        'Séance terminée',
-        'La séance a été enregistrée. Une nouvelle séance est prête.'
+        t('workoutFinished'),
+        t('workoutSavedNewReady')
       );
     } catch (error) {
       console.error(
-        'Erreur terminaison séance :',
+        t('error') + ' :',
         error
       );
 
@@ -869,7 +873,7 @@ export default function SeanceScreen() {
 
       Alert.alert(
         'Erreur',
-        'Impossible de terminer la séance.'
+        t('unableFinishWorkout')
       );
     } finally {
       setTerminaisonEnCours(false);
@@ -878,7 +882,7 @@ export default function SeanceScreen() {
 
   if (chargement) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, dark && styles.containerDark]}>
         <StatusBar barStyle="dark-content" />
 
         <View style={styles.chargement}>
@@ -897,11 +901,11 @@ export default function SeanceScreen() {
       <ScrollView
         contentContainerStyle={styles.contenu}
       >
-        <Text style={styles.titre}>
+        <Text style={[styles.titre, dark && styles.textDark]}>
           Séance
         </Text>
 
-        <Text style={styles.sousTitre}>
+        <Text style={[styles.sousTitre, dark && styles.mutedDark]}>
           Ma séance du jour
         </Text>
 
@@ -1024,15 +1028,15 @@ export default function SeanceScreen() {
                       disabled={terminee}
                       onPress={() =>
                         Alert.alert(
-                          'Supprimer la série',
-                          'Voulez-vous supprimer cette série ?',
+                          t('deleteSet'),
+                          t('deleteSetQuestion'),
                           [
                             {
                               text: 'Annuler',
                               style: 'cancel',
                             },
                             {
-                              text: 'Supprimer',
+                              text: t('delete'),
                               style: 'destructive',
                               onPress: () =>
                                 supprimerSerie(
@@ -1201,8 +1205,8 @@ export default function SeanceScreen() {
             }
           >
             {terminaisonEnCours
-              ? 'ENREGISTREMENT...'
-              : 'TERMINER LA SÉANCE'}
+              ? t('saving').toUpperCase()
+              : t('finishWorkout').toUpperCase()}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -1215,6 +1219,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F7',
   },
+  containerDark: { backgroundColor: '#0B0B0D' },
+  textDark: { color: '#FFFFFF' },
+  mutedDark: { color: '#A1A1A6' },
 
   contenu: {
     padding: 20,
