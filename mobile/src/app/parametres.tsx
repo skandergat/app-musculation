@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Appearance, Pressable, SafeAreaView, StyleSheet, Switch, Text, View, useColorScheme,
+  ActivityIndicator, Alert, Appearance, Pressable, SafeAreaView, StatusBar, StyleSheet, Switch, Text, View, useColorScheme,
 } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { Language, useI18n } from '@/context/I18nContext';
