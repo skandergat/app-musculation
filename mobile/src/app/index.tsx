@@ -150,7 +150,11 @@ export default function HomeScreen() {
           onPress={ouvrirGym}
         >
           <View style={styles.icone}>
-            <Text style={styles.iconeTexte}>GYM</Text>
+            <View style={styles.halteres}>
+              <View style={styles.plateGauche} />
+              <View style={styles.barreHalteres} />
+              <View style={styles.plateDroite} />
+            </View>
           </View>
 
           <View style={styles.texteCarte}>
@@ -211,11 +215,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  iconeTexte: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: 1,
+  halteres: {
+    width: 52,
+    height: 34,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  plateGauche: {
+    width: 10,
+    height: 28,
+    borderRadius: 3,
+    backgroundColor: '#FFFFFF',
+  },
+  barreHalteres: {
+    width: 26,
+    height: 7,
+    borderRadius: 3,
+    backgroundColor: '#FFFFFF',
+  },
+  plateDroite: {
+    width: 10,
+    height: 28,
+    borderRadius: 3,
+    backgroundColor: '#FFFFFF',
   },
   texteCarte: {
     flex: 1,
