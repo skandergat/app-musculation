@@ -13,9 +13,11 @@ import {
 import { router } from 'expo-router';
 
 import { useAuth } from '@/context/AuthContext';
+import { useI18n } from '@/context/I18nContext';
 
 export default function InscriptionScreen() {
   const { register } = useAuth();
+  const { t } = useI18n();
 
   const [nom, setNom] = useState('');
   const [email, setEmail] = useState('');
@@ -74,18 +76,18 @@ export default function InscriptionScreen() {
           style={styles.retour}
           onPress={() => router.back()}
         >
-          <Text style={styles.retourTexte}>‹ Retour</Text>
+          <Text style={styles.retourTexte}>‹ {t("back")}</Text>
         </Pressable>
 
-        <Text style={styles.titre}>Créer un compte</Text>
+        <Text style={styles.titre}>{t("createAccount")}</Text>
 
         <Text style={styles.sousTitre}>
-          Crée ton compte pour sauvegarder tes séances et ton historique.
+          {t("registerSubtitle")}
         </Text>
 
         <TextInput
           style={styles.input}
-          placeholder="Nom"
+          placeholder={t("name")}
           placeholderTextColor="#8A8A8E"
           value={nom}
           onChangeText={setNom}
@@ -94,7 +96,7 @@ export default function InscriptionScreen() {
 
         <TextInput
           style={styles.input}
-          placeholder="Email"
+          placeholder={t("email")}
           placeholderTextColor="#8A8A8E"
           value={email}
           onChangeText={setEmail}
@@ -105,7 +107,7 @@ export default function InscriptionScreen() {
 
         <TextInput
           style={styles.input}
-          placeholder="Mot de passe"
+          placeholder={t("password")}
           placeholderTextColor="#8A8A8E"
           value={password}
           onChangeText={setPassword}
@@ -115,7 +117,7 @@ export default function InscriptionScreen() {
 
         <TextInput
           style={styles.input}
-          placeholder="Confirmer le mot de passe"
+          placeholder={t("confirmPassword")}
           placeholderTextColor="#8A8A8E"
           value={confirmation}
           onChangeText={setConfirmation}
@@ -134,21 +136,19 @@ export default function InscriptionScreen() {
           {loading ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text style={styles.boutonTexte}>
-              Créer mon compte
-            </Text>
+            <Text style={styles.boutonTexte}>{t("createAccountButton")}</Text>
           )}
         </Pressable>
 
         <View style={styles.connexionContainer}>
           <Text style={styles.question}>
-            Tu as déjà un compte ?
+            {t("hasAccount")}
           </Text>
 
           <Pressable
             onPress={() => router.replace('/connexion')}
           >
-            <Text style={styles.lien}>Se connecter</Text>
+            <Text style={styles.lien}>{t("loginButton")}</Text>
           </Pressable>
         </View>
       </View>
