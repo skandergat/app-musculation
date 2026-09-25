@@ -886,7 +886,7 @@ export default function SeanceScreen() {
         <StatusBar barStyle="dark-content" />
 
         <View style={styles.chargement}>
-          <Text style={styles.chargementTexte}>
+          <Text style={[styles.chargementTexte, dark && styles.mutedDark]}>
             {t('startup')}
           </Text>
         </View>
@@ -915,7 +915,7 @@ export default function SeanceScreen() {
             style={styles.exerciceBloc}
           >
             <View
-              style={styles.exerciceCarte}
+              style={[styles.exerciceCarte, dark && styles.cardDark]}
             >
               <Text style={styles.exercice}>
                 {exercice.nom}
@@ -974,7 +974,7 @@ export default function SeanceScreen() {
                   </Text>
 
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, dark && styles.inputDark]}
                     value={serie.poids}
                     keyboardType="numeric"
                     editable={!terminee}
@@ -1143,7 +1143,7 @@ export default function SeanceScreen() {
         </TouchableOpacity>
 
         {menuExercices && !terminee && (
-          <View style={styles.menu}>
+          <View style={[styles.menu, dark && styles.cardDark]}>
             <Text style={styles.menuTitre}>
               {t('chooseExercise')}
             </Text>
@@ -1220,6 +1220,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F7',
   },
   containerDark: { backgroundColor: '#0B0B0D' },
+  cardDark: { backgroundColor: '#1C1C1E' },
+  inputDark: { backgroundColor: '#2C2C2E', color: '#FFFFFF' },
   textDark: { color: '#FFFFFF' },
   mutedDark: { color: '#A1A1A6' },
 
