@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-export type Language = 'fr' | 'en' | 'ar';
+export type Language = 'fr' | 'en' | 'ar' | 'de';
 
 type Dictionary = {
   [key: string]: string;
@@ -85,6 +85,9 @@ const translations: Record<Language, Dictionary> = {
     confirmPassword: 'Confirm password',
     createAccountButton: 'Create my account',
     hasAccount: 'Already have an account?',
+    darkMode: 'Dark mode', darkModeDescription: 'Use a dark interface', on: 'On', off: 'Off',
+    missingFields: 'Missing information', fillAllFields: 'Please fill in all fields.', passwordTitle: 'Password', passwordMin: 'Your password must contain at least 8 characters.', passwordsMismatch: 'The two passwords do not match.', creationImpossible: 'Unable to create account', unexpectedError: 'Something went wrong.',
+    workout: 'Workout', todaysWorkout: 'Today’s workout', set: 'Set', previous: 'Previous', weight: 'Weight', reps: 'Reps', rest: 'Rest', addSet: 'Add a set', addExercise: 'Add an exercise', chooseExercise: 'Choose an exercise', finishWorkout: 'Finish workout', saving: 'Saving…', deleteSet: 'Delete set', deleteSetQuestion: 'Do you want to delete this set?', delete: 'Delete', error: 'Error', noActiveWorkout: 'No active workout.', unableFinishWorkout: 'Unable to finish the workout.', workoutFinished: 'Workout finished', workoutSavedNewReady: 'The workout has been saved. A new workout is ready.', startup: 'Starting workout…', exerciseNotFound: 'Exercise not found.', cannotSaveSet: 'Unable to save the set.', unableStartNew: 'Unable to start the new workout.', connectionServerHelp: 'Check that the Flask server is running and that the server address is correct.', sessionDetails: 'Workout details', noCompletedWorkouts: 'No completed workouts yet.', durationMinutes: 'min', exercisesLabel: 'Exercises', setsLabel: 'Sets', endOfWorkout: 'End of workout', seeDetails: 'View details', other: 'other', others: 'others', exerciseCount: 'exercise', exercisesCount: 'exercises', setCount: 'set', setsCount: 'sets',
   },
   ar: {
     home: 'الرئيسية',
@@ -124,6 +127,38 @@ const translations: Record<Language, Dictionary> = {
     confirmPassword: 'تأكيد كلمة المرور',
     createAccountButton: 'إنشاء حسابي',
     hasAccount: 'لديك حساب بالفعل؟',
+    darkMode: 'الوضع الداكن', darkModeDescription: 'استخدام واجهة داكنة', on: 'مفعّل', off: 'متوقف',
+    missingFields: 'حقول مطلوبة', fillAllFields: 'يرجى ملء جميع الحقول.', passwordTitle: 'كلمة المرور', passwordMin: 'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.', passwordsMismatch: 'كلمتا المرور غير متطابقتين.', creationImpossible: 'تعذر إنشاء الحساب', unexpectedError: 'حدث خطأ غير متوقع.',
+    workout: 'التمرين', todaysWorkout: 'تمرين اليوم', set: 'المجموعة', previous: 'السابق', weight: 'الوزن', reps: 'التكرارات', rest: 'الراحة', addSet: 'إضافة مجموعة', addExercise: 'إضافة تمرين', chooseExercise: 'اختر تمرينًا', finishWorkout: 'إنهاء التمرين', saving: 'جارٍ الحفظ…', deleteSet: 'حذف المجموعة', deleteSetQuestion: 'هل تريد حذف هذه المجموعة؟', delete: 'حذف', error: 'خطأ', noActiveWorkout: 'لا يوجد تمرين نشط.', unableFinishWorkout: 'تعذر إنهاء التمرين.', workoutFinished: 'اكتمل التمرين', workoutSavedNewReady: 'تم حفظ التمرين. تمرين جديد جاهز.', startup: 'جارٍ بدء التمرين…', exerciseNotFound: 'تعذر العثور على التمرين.', cannotSaveSet: 'تعذر حفظ المجموعة.', unableStartNew: 'تعذر بدء التمرين الجديد.', connectionServerHelp: 'تحقق من تشغيل خادم Flask ومن صحة عنوان الخادم.', sessionDetails: 'تفاصيل التمرين', noCompletedWorkouts: 'لا توجد تمارين مكتملة حتى الآن.', durationMinutes: 'د', exercisesLabel: 'تمارين', setsLabel: 'مجموعات', endOfWorkout: 'نهاية التمرين', seeDetails: 'عرض التفاصيل', other: 'آخر', others: 'أخرى', exerciseCount: 'تمرين', exercisesCount: 'تمارين', setCount: 'مجموعة', setsCount: 'مجموعات',
+  },
+  },
+  de: {
+    home: 'Startseite', chooseWorkout: 'Wähle dein Training', gym: 'GYM', gymDescription: 'Alle Krafttrainingsübungen',
+    calisthenics: 'CALISTHENICS', calisthenicsDescription: 'Körpergewichtsübungen und Skills', exercises: 'Übungen', back: 'Zurück',
+    connectionImpossible: 'Verbindung nicht möglich', retry: 'Erneut versuchen', settings: 'Einstellungen', profile: 'Profil',
+    language: 'Sprache', french: 'Français', english: 'English', arabic: 'العربية', german: 'Deutsch', logout: 'Abmelden',
+    logoutQuestion: 'Möchtest du dich wirklich abmelden?', cancel: 'Abbrechen', user: 'Benutzer', session: 'Training', history: 'Verlauf',
+    account: 'Konto', noExercises: 'Noch keine Übungen vorhanden.', exercise: 'Übung', login: 'Anmelden',
+    loginSubtitle: 'Melde dich an, um deine Trainings und deinen Verlauf zu sehen.', email: 'E-Mail-Adresse', password: 'Passwort',
+    loginButton: 'Anmelden', noAccount: 'Noch kein Konto?', createAccount: 'Konto erstellen',
+    registerSubtitle: 'Erstelle ein Konto, um deine Trainings und deinen Verlauf zu speichern.', name: 'Name',
+    confirmPassword: 'Passwort bestätigen', createAccountButton: 'Mein Konto erstellen', hasAccount: 'Du hast bereits ein Konto?',
+    missingFields: 'Fehlende Angaben', fillAllFields: 'Bitte fülle alle Felder aus.', passwordTitle: 'Passwort',
+    passwordMin: 'Das Passwort muss mindestens 8 Zeichen enthalten.', passwordsMismatch: 'Die beiden Passwörter stimmen nicht überein.',
+    creationImpossible: 'Konto konnte nicht erstellt werden', unexpectedError: 'Ein unerwarteter Fehler ist aufgetreten.',
+    workout: 'Training', todaysWorkout: 'Heutiges Training', set: 'Satz', previous: 'Letztes Mal', weight: 'Gewicht', reps: 'Wdh.',
+    rest: 'Pause', addSet: 'Satz hinzufügen', addExercise: 'Übung hinzufügen', chooseExercise: 'Übung auswählen',
+    finishWorkout: 'Training beenden', saving: 'Wird gespeichert…', deleteSet: 'Satz löschen',
+    deleteSetQuestion: 'Möchtest du diesen Satz löschen?', delete: 'Löschen', error: 'Fehler', noActiveWorkout: 'Kein aktives Training.',
+    unableFinishWorkout: 'Das Training konnte nicht beendet werden.', workoutFinished: 'Training beendet',
+    workoutSavedNewReady: 'Das Training wurde gespeichert. Ein neues Training ist bereit.', startup: 'Training wird gestartet…',
+    exerciseNotFound: 'Übung nicht gefunden.', cannotSaveSet: 'Der Satz konnte nicht gespeichert werden.',
+    unableStartNew: 'Das neue Training konnte nicht gestartet werden.',
+    connectionServerHelp: 'Prüfe, ob der Flask-Server läuft und die Serveradresse korrekt ist.',
+    sessionDetails: 'Trainingsdetails', noCompletedWorkouts: 'Noch keine abgeschlossenen Trainings.', durationMinutes: 'Min.',
+    exercisesLabel: 'Übungen', setsLabel: 'Sätze', endOfWorkout: 'Ende des Trainings', seeDetails: 'Details anzeigen',
+    other: 'weitere', others: 'weitere', exerciseCount: 'Übung', exercisesCount: 'Übungen', setCount: 'Satz', setsCount: 'Sätze',
+    darkMode: 'Dunkelmodus', darkModeDescription: 'Dunkles Erscheinungsbild verwenden', on: 'Ein', off: 'Aus',
   },
 };
 
@@ -142,7 +177,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     AsyncStorage.getItem(LANGUAGE_KEY).then((value) => {
-      if (value === 'fr' || value === 'en' || value === 'ar') {
+      if (value === 'fr' || value === 'en' || value === 'ar' || value === 'de') {
         setLanguageState(value);
       }
     });
