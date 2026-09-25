@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useI18n } from '@/context/I18nContext';
 import {
   ActivityIndicator,
   FlatList,
@@ -98,6 +99,8 @@ const grouperParExercice = (
 
 export default function HistoriqueScreen() {
   const { token } = useAuth();
+  const { t } = useI18n();
+  const dark = useColorScheme() === 'dark';
   const [seances, setSeances] = useState<Seance[]>([]);
   const [chargement, setChargement] = useState(true);
   const [rafraichissement, setRafraichissement] =
@@ -188,7 +191,7 @@ export default function HistoriqueScreen() {
     );
 
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, dark && styles.containerDark]}>
         <StatusBar barStyle="dark-content" />
 
         <View style={styles.detailHeader}>
@@ -487,6 +490,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F7',
   },
+  containerDark: { backgroundColor: '#0B0B0D' },
+  cardDark: { backgroundColor: '#1C1C1E' },
+  textDark: { color: '#FFFFFF' },
+  mutedDark: { color: '#A1A1A6' },
 
   centre: {
     flex: 1,
