@@ -1,7 +1,7 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { Slot, Redirect } from 'expo-router';
-import { Appearance, useColorScheme, View, ActivityIndicator } from 'react-native';
+import { Appearance, useColorScheme, View, ActivityIndicator, StatusBar } from 'react-native';
 import { useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -56,6 +56,7 @@ export default function RootLayout() {
       <ThemeProvider
         value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}
       >
+        <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
         <AnimatedSplashOverlay />
         <Navigation />
       </ThemeProvider>
