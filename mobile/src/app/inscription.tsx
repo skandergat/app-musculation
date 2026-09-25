@@ -29,24 +29,24 @@ export default function InscriptionScreen() {
   const creerCompte = async () => {
     if (!nom.trim() || !email.trim() || !password || !confirmation) {
       Alert.alert(
-        'Champs manquants',
-        'Remplis tous les champs.'
+        t('missingFields'),
+        t('fillAllFields')
       );
       return;
     }
 
     if (password.length < 8) {
       Alert.alert(
-        'Mot de passe',
-        'Le mot de passe doit contenir au moins 8 caractères.'
+        t('passwordTitle'),
+        t('passwordMin')
       );
       return;
     }
 
     if (password !== confirmation) {
       Alert.alert(
-        'Mot de passe',
-        'Les deux mots de passe ne correspondent pas.'
+        t('passwordTitle'),
+        t('passwordsMismatch')
       );
       return;
     }
@@ -59,8 +59,8 @@ export default function InscriptionScreen() {
       router.replace('/');
     } catch (error: any) {
       Alert.alert(
-        'Création impossible',
-        error.message || 'Une erreur est survenue.'
+        t('creationImpossible'),
+        error.message || t('unexpectedError')
       );
     } finally {
       setLoading(false);
