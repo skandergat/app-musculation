@@ -11,7 +11,7 @@ type Dictionary = {
 const translations: Record<Language, Dictionary> = {
   fr: {
     home: 'Accueil',
-    chooseWorkout: 'Choisis ton entraînement',
+    chooseWorkout: 'Choisissez votre entraînement',
     gym: 'GYM',
     gymDescription: 'Tous les exercices de musculation',
     calisthenics: 'CALISTHÉNIE',
