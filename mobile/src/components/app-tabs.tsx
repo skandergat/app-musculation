@@ -16,22 +16,22 @@ export default function AppTabs() {
     >
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>{t('home')}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon src={require('@/assets/images/tabIcons/home.png')} renderingMode="template" />
+        <NativeTabs.Trigger.Icon sf="house.fill" md="home" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="seance">
         <NativeTabs.Trigger.Label>{t('session')}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon src={require('@/assets/images/tabIcons/explore.png')} renderingMode="template" />
+        <NativeTabs.Trigger.Icon sf="dumbbell.fill" md="fitness_center" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="historique">
         <NativeTabs.Trigger.Label>{t('history')}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon src={require('@/assets/images/tabIcons/explore.png')} renderingMode="template" />
+        <NativeTabs.Trigger.Icon sf="clock.arrow.circlepath" md="history" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="parametres">
         <NativeTabs.Trigger.Label>{t('settings')}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon src={require('@/assets/images/tabIcons/explore.png')} renderingMode="template" />
+        <NativeTabs.Trigger.Icon sf="gearshape.fill" md="settings" />
       </NativeTabs.Trigger>
     </NativeTabs>
   );
