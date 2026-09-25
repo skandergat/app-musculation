@@ -8,7 +8,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  View,
+  View, useColorScheme,
 } from 'react-native';
 import { router } from 'expo-router';
 
@@ -18,6 +18,7 @@ import { useI18n } from '@/context/I18nContext';
 export default function ConnexionScreen() {
   const { login } = useAuth();
   const { t } = useI18n();
+  const dark = useColorScheme() === 'dark';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -50,22 +51,22 @@ export default function ConnexionScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, dark && styles.containerDark]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.contenu}>
-        <Text style={styles.logo}>Musculation</Text>
+        <Text style={[styles.logo, dark && styles.textDark]}>Musculation</Text>
 
-        <Text style={styles.titre}>{t("login")}</Text>
+        <Text style={[styles.titre, dark && styles.textDark]}>{t("login")}</Text>
 
         <Text style={styles.sousTitre}>
           {t("loginSubtitle")}
         </Text>
 
         <TextInput
-          style={styles.input}
+          style={[styles.input, dark && styles.inputDark]}
           placeholder={t("email")}
-          placeholderTextColor="#8A8A8E"
+          placeholderTextColor={dark ? '#8E8E93' : '#8A8A8E'}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -119,6 +120,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F7',
   },
+  containerDark: { backgroundColor: '#0B0B0D' },
+  textDark: { color: '#FFFFFF' },
+  inputDark: { backgroundColor: '#1C1C1E', color: '#FFFFFF' },
   contenu: {
     flex: 1,
     justifyContent: 'center',
