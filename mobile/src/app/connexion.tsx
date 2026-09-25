@@ -122,6 +122,7 @@ const styles = StyleSheet.create({
   },
   containerDark: { backgroundColor: '#0B0B0D' },
   textDark: { color: '#FFFFFF' },
+  mutedDark: { color: '#A1A1A6' },
   inputDark: { backgroundColor: '#1C1C1E', color: '#FFFFFF' },
   contenu: {
     flex: 1,
