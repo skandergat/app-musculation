@@ -928,7 +928,7 @@ export default function SeanceScreen() {
                     {previous[
                       exercice.nom
                     ]?.[serie.id - 1]
-                      ? `${previous[exercice.nom][serie.id - 1].poids} kg × ${previous[exercice.nom][serie.id - 1].repetitions}`
+                      ? \`${previous[exercice.nom][serie.id - 1].poids} kg × ${previous[exercice.nom][serie.id - 1].repetitions}\`
                       : '—'}
                   </Text>
 
@@ -1007,57 +1007,51 @@ export default function SeanceScreen() {
                         )
                       }
                     >
-                      <Text
-                        style={
-                          styles.supprimerSerieTexte
-                        }
-                      >
+                      <Text style={styles.supprimerSerieTexte}>
                         ×
                       </Text>
                     </TouchableOpacity>
                   )}
                 </View>
 
+                <View style={styles.timerCompact}>
+                  <TouchableOpacity
+                    style={styles.timerBouton}
+                    onPress={() => modifierTempsReposSerie(-15)}
+                  >
+                    <Text style={styles.timerBoutonTexte}>
+                      −15s
+                    </Text>
+                  </TouchableOpacity>
 
+                  <View style={styles.timerValeurBloc}>
+                    <Text style={styles.timerCompactTitre}>
+                      Repos
+                    </Text>
+                    <Text style={styles.timerCompactValeur}>
+                      {Math.floor(
+                        afficherTemps('serie', exercice.id) / 60
+                      )
+                        .toString()
+                        .padStart(2, '0')}
+                      :
+                      {(afficherTemps('serie', exercice.id) % 60)
+                        .toString()
+                        .padStart(2, '0')}
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.timerBouton}
+                    onPress={() => modifierTempsReposSerie(15)}
+                  >
+                    <Text style={styles.timerBoutonTexte}>
+                      +15s
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ))}
-
-            <View style={styles.timerCompact}>
-              <TouchableOpacity
-                style={styles.timerBouton}
-                onPress={() => modifierTempsReposSerie(-15)}
-              >
-                <Text style={styles.timerBoutonTexte}>
-                  −15s
-                </Text>
-              </TouchableOpacity>
-
-              <View style={styles.timerValeurBloc}>
-                <Text style={styles.timerCompactTitre}>
-                  Repos série
-                </Text>
-                <Text style={styles.timerCompactValeur}>
-                  {Math.floor(
-                    afficherTemps('serie', exercice.id) / 60
-                  )
-                    .toString()
-                    .padStart(2, '0')}
-                  :
-                  {(afficherTemps('serie', exercice.id) % 60)
-                    .toString()
-                    .padStart(2, '0')}
-                </Text>
-              </View>
-
-              <TouchableOpacity
-                style={styles.timerBouton}
-                onPress={() => modifierTempsReposSerie(15)}
-              >
-                <Text style={styles.timerBoutonTexte}>
-                  +15s
-                </Text>
-              </TouchableOpacity>
-            </View>
 
             <TouchableOpacity
               style={
