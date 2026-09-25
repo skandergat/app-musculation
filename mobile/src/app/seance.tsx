@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Vibration } from 'react-native';
 import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { useAuth } from '@/context/AuthContext';
@@ -18,6 +19,9 @@ const API_URL = 'http://192.168.100.200:5001';
 
 const SON_FIN_TIMER =
   'https://raw.githubusercontent.com/TaterTotterson/microWakeWords/main/wakeSounds/notification-ding.wav';
+
+const TIMER_SERIE_KEY = '@app_musculation_timer_serie';
+const TIMER_EXERCICE_KEY = '@app_musculation_timer_exercice';
 
 type Serie = {
   id: number;
@@ -77,7 +81,7 @@ const exercicesInitiaux: Exercice[] = [
 ];
 
 export default function SeanceScreen() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
   const sonFinTimer = useAudioPlayer(SON_FIN_TIMER);
 
@@ -104,9 +108,11 @@ export default function SeanceScreen() {
     { nom: string; muscle: string; backendId: number }[]
   >([]);
 
-  const [tempsReposDefaut] = useState(30);
+  const [tempsReposSerie, setTempsReposSerie] = useState(60);
+  const [tempsReposExercice, setTempsReposExercice] = useState(120);
   const [timerActif, setTimerActif] = useState(false);
   const [tempsRestant, setTempsRestant] = useState(0);
+  const [timerType, setTimerType] = useState<'serie' | 'exercice' | null>(null);
   const [timerExerciceId, setTimerExerciceId] = useState<number | null>(null);
   const [timerSerieId, setTimerSerieId] = useState<number | null>(null);
 
@@ -119,6 +125,52 @@ export default function SeanceScreen() {
   }, []);
 
   useEffect(() => {
+    const chargerPreferencesTimer = async () => {
+      if (!user?.id) {
+        return;
+      }
+
+      try {
+        const [serieSauvegardee, exerciceSauvegarde] =
+          await Promise.all([
+            AsyncStorage.getItem(
+              `${TIMER_SERIE_KEY}_${user.id}`
+            ),
+            AsyncStorage.getItem(
+              `${TIMER_EXERCICE_KEY}_${user.id}`
+            ),
+          ]);
+
+        if (serieSauvegardee) {
+          const valeur = parseInt(serieSauvegardee, 10);
+
+          if (Number.isFinite(valeur) && valeur > 0) {
+            setTempsReposSerie(valeur);
+          }
+        }
+
+        if (exerciceSauvegarde) {
+          const valeur = parseInt(
+            exerciceSauvegarde,
+            10
+          );
+
+          if (Number.isFinite(valeur) && valeur > 0) {
+            setTempsReposExercice(valeur);
+          }
+        }
+      } catch (error) {
+        console.error(
+          'Erreur chargement préférences timer :',
+          error
+        );
+      }
+    };
+
+    chargerPreferencesTimer();
+  }, [user?.id]);
+
+  useEffect(() => {
     if (!timerActif) {
       return;
     }
@@ -129,6 +181,7 @@ export default function SeanceScreen() {
           clearInterval(interval);
 
           setTimerActif(false);
+          setTimerType(null);
           setTimerExerciceId(null);
           setTimerSerieId(null);
 
@@ -567,10 +620,35 @@ export default function SeanceScreen() {
       })
     );
 
-    setTempsRestant(tempsReposDefaut);
-    setTimerExerciceId(exerciceId);
-    setTimerSerieId(serieId);
-    setTimerActif(true);
+    const toutesLesSeriesTerminees =
+      exercice.series.every((s) =>
+        s.id === serieId ? true : s.terminee
+      );
+
+    const indexExercice = exercices.findIndex(
+      (item) => item.id === exerciceId
+    );
+
+    const exerciceSuivantExiste =
+      indexExercice >= 0 &&
+      indexExercice < exercices.length - 1;
+
+    if (
+      toutesLesSeriesTerminees &&
+      exerciceSuivantExiste
+    ) {
+      setTempsRestant(tempsReposExercice);
+      setTimerType('exercice');
+      setTimerExerciceId(exerciceId);
+      setTimerSerieId(null);
+      setTimerActif(true);
+    } else {
+      setTempsRestant(tempsReposSerie);
+      setTimerType('serie');
+      setTimerExerciceId(exerciceId);
+      setTimerSerieId(serieId);
+      setTimerActif(true);
+    }
   };
 
   const terminerSeance = async () => {
@@ -616,6 +694,7 @@ export default function SeanceScreen() {
 
       setTimerActif(false);
       setTempsRestant(0);
+      setTimerType(null);
       setTimerExerciceId(null);
       setTimerSerieId(null);
 
@@ -874,32 +953,82 @@ export default function SeanceScreen() {
                 </View>
 
                 {timerActif &&
+                  timerType === 'serie' &&
                   timerExerciceId === exercice.id &&
                   timerSerieId === serie.id && (
                     <View style={styles.timerCompact}>
-                      <Text
-                        style={
-                          styles.timerCompactTitre
-                        }
-                      >
-                        Repos
-                      </Text>
+                      <TouchableOpacity
+                        style={styles.timerBouton}
+                        onPress={() => {
+                          const nouveauTemps = Math.max(
+                            15,
+                            tempsRestant - 15
+                          );
 
-                      <Text
-                        style={
-                          styles.timerCompactValeur
-                        }
+                          setTempsRestant(nouveauTemps);
+                          setTempsReposSerie(nouveauTemps);
+
+                          if (user?.id) {
+                            AsyncStorage.setItem(
+                              `${TIMER_SERIE_KEY}_${user.id}`,
+                              String(nouveauTemps)
+                            ).catch((error) =>
+                              console.error(
+                                'Erreur sauvegarde timer série :',
+                                error
+                              )
+                            );
+                          }
+                        }}
                       >
-                        {Math.floor(
-                          tempsRestant / 60
-                        )
-                          .toString()
-                          .padStart(2, '0')}
-                        :
-                        {(tempsRestant % 60)
-                          .toString()
-                          .padStart(2, '0')}
-                      </Text>
+                        <Text style={styles.timerBoutonTexte}>
+                          −15s
+                        </Text>
+                      </TouchableOpacity>
+
+                      <View style={styles.timerValeurBloc}>
+                        <Text style={styles.timerCompactTitre}>
+                          Repos
+                        </Text>
+                        <Text style={styles.timerCompactValeur}>
+                          {Math.floor(
+                            tempsRestant / 60
+                          )
+                            .toString()
+                            .padStart(2, '0')}
+                          :
+                          {(tempsRestant % 60)
+                            .toString()
+                            .padStart(2, '0')}
+                        </Text>
+                      </View>
+
+                      <TouchableOpacity
+                        style={styles.timerBouton}
+                        onPress={() => {
+                          const nouveauTemps =
+                            tempsRestant + 15;
+
+                          setTempsRestant(nouveauTemps);
+                          setTempsReposSerie(nouveauTemps);
+
+                          if (user?.id) {
+                            AsyncStorage.setItem(
+                              `${TIMER_SERIE_KEY}_${user.id}`,
+                              String(nouveauTemps)
+                            ).catch((error) =>
+                              console.error(
+                                'Erreur sauvegarde timer série :',
+                                error
+                              )
+                            );
+                          }
+                        }}
+                      >
+                        <Text style={styles.timerBoutonTexte}>
+                          +15s
+                        </Text>
+                      </TouchableOpacity>
                     </View>
                   )}
               </View>
@@ -924,6 +1053,85 @@ export default function SeanceScreen() {
                 + Ajouter une série
               </Text>
             </TouchableOpacity>
+
+            {timerActif &&
+              timerType === 'exercice' &&
+              timerExerciceId === exercice.id && (
+                <View style={styles.timerCompact}>
+                  <TouchableOpacity
+                    style={styles.timerBouton}
+                    onPress={() => {
+                      const nouveauTemps = Math.max(
+                        15,
+                        tempsRestant - 15
+                      );
+
+                      setTempsRestant(nouveauTemps);
+                      setTempsReposExercice(nouveauTemps);
+
+                      if (user?.id) {
+                        AsyncStorage.setItem(
+                          `${TIMER_EXERCICE_KEY}_${user.id}`,
+                          String(nouveauTemps)
+                        ).catch((error) =>
+                          console.error(
+                            'Erreur sauvegarde timer exercice :',
+                            error
+                          )
+                        );
+                      }
+                    }}
+                  >
+                    <Text style={styles.timerBoutonTexte}>
+                      −15s
+                    </Text>
+                  </TouchableOpacity>
+
+                  <View style={styles.timerValeurBloc}>
+                    <Text style={styles.timerCompactTitre}>
+                      Repos exercice
+                    </Text>
+                    <Text style={styles.timerCompactValeur}>
+                      {Math.floor(
+                        tempsRestant / 60
+                      )
+                        .toString()
+                        .padStart(2, '0')}
+                      :
+                      {(tempsRestant % 60)
+                        .toString()
+                        .padStart(2, '0')}
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.timerBouton}
+                    onPress={() => {
+                      const nouveauTemps =
+                        tempsRestant + 15;
+
+                      setTempsRestant(nouveauTemps);
+                      setTempsReposExercice(nouveauTemps);
+
+                      if (user?.id) {
+                        AsyncStorage.setItem(
+                          `${TIMER_EXERCICE_KEY}_${user.id}`,
+                          String(nouveauTemps)
+                        ).catch((error) =>
+                          console.error(
+                            'Erreur sauvegarde timer exercice :',
+                            error
+                          )
+                        );
+                      }
+                    }}
+                  >
+                    <Text style={styles.timerBoutonTexte}>
+                      +15s
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
           </View>
         ))}
 
@@ -1187,16 +1395,36 @@ const styles = StyleSheet.create({
     backgroundColor: '#1C1C1E',
     borderRadius: 10,
     paddingVertical: 7,
-    paddingHorizontal: 13,
+    paddingHorizontal: 8,
     marginTop: 0,
     marginBottom: 8,
   },
 
+  timerBouton: {
+    minWidth: 48,
+    paddingVertical: 5,
+    paddingHorizontal: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  timerBoutonTexte: {
+    color: '#0A84FF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  timerValeurBloc: {
+    alignItems: 'center',
+    minWidth: 72,
+    marginHorizontal: 2,
+  },
+
   timerCompactTitre: {
     color: '#AEAEB2',
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '600',
-    marginRight: 8,
+    marginBottom: 1,
   },
 
   timerCompactValeur: {
