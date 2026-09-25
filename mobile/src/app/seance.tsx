@@ -1111,44 +1111,7 @@ export default function SeanceScreen() {
             </TouchableOpacity>
 
 
-          {exercices.indexOf(exercice) < exercices.length - 1 && (
-            <View style={styles.timerCompact}>
-              <TouchableOpacity
-                style={styles.timerBouton}
-                onPress={() => modifierTempsReposExercice(-15)}
-              >
-                <Text style={styles.timerBoutonTexte}>
-                  −15s
-                </Text>
-              </TouchableOpacity>
-
-              <View style={styles.timerValeurBloc}>
-                <Text style={styles.timerCompactTitre}>
-                  Repos exercice
-                </Text>
-                <Text style={styles.timerCompactValeur}>
-                  {Math.floor(
-                    afficherTemps('exercice', exercice.id) / 60
-                  )
-                    .toString()
-                    .padStart(2, '0')}
-                  :
-                  {(afficherTemps('exercice', exercice.id) % 60)
-                    .toString()
-                    .padStart(2, '0')}
-                </Text>
-              </View>
-
-              <TouchableOpacity
-                style={styles.timerBouton}
-                onPress={() => modifierTempsReposExercice(15)}
-              >
-                <Text style={styles.timerBoutonTexte}>
-                  +15s
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          
 
           </View>
         ))}
