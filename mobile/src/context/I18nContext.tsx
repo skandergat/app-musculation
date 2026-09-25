@@ -131,7 +131,6 @@ const translations: Record<Language, Dictionary> = {
     missingFields: 'حقول مطلوبة', fillAllFields: 'يرجى ملء جميع الحقول.', passwordTitle: 'كلمة المرور', passwordMin: 'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.', passwordsMismatch: 'كلمتا المرور غير متطابقتين.', creationImpossible: 'تعذر إنشاء الحساب', unexpectedError: 'حدث خطأ غير متوقع.',
     workout: 'التمرين', todaysWorkout: 'تمرين اليوم', set: 'المجموعة', previous: 'السابق', weight: 'الوزن', reps: 'التكرارات', rest: 'الراحة', addSet: 'إضافة مجموعة', addExercise: 'إضافة تمرين', chooseExercise: 'اختر تمرينًا', finishWorkout: 'إنهاء التمرين', saving: 'جارٍ الحفظ…', deleteSet: 'حذف المجموعة', deleteSetQuestion: 'هل تريد حذف هذه المجموعة؟', delete: 'حذف', error: 'خطأ', noActiveWorkout: 'لا يوجد تمرين نشط.', unableFinishWorkout: 'تعذر إنهاء التمرين.', workoutFinished: 'اكتمل التمرين', workoutSavedNewReady: 'تم حفظ التمرين. تمرين جديد جاهز.', startup: 'جارٍ بدء التمرين…', exerciseNotFound: 'تعذر العثور على التمرين.', cannotSaveSet: 'تعذر حفظ المجموعة.', unableStartNew: 'تعذر بدء التمرين الجديد.', connectionServerHelp: 'تحقق من تشغيل خادم Flask ومن صحة عنوان الخادم.', sessionDetails: 'تفاصيل التمرين', noCompletedWorkouts: 'لا توجد تمارين مكتملة حتى الآن.', durationMinutes: 'د', exercisesLabel: 'تمارين', setsLabel: 'مجموعات', endOfWorkout: 'نهاية التمرين', seeDetails: 'عرض التفاصيل', other: 'آخر', others: 'أخرى', exerciseCount: 'تمرين', exercisesCount: 'تمارين', setCount: 'مجموعة', setsCount: 'مجموعات',
   },
-  },
   de: {
     home: 'Startseite', chooseWorkout: 'Wähle dein Training', gym: 'GYM', gymDescription: 'Alle Krafttrainingsübungen',
     calisthenics: 'CALISTHENICS', calisthenicsDescription: 'Körpergewichtsübungen und Skills', exercises: 'Übungen', back: 'Zurück',
@@ -179,6 +178,8 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.getItem(LANGUAGE_KEY).then((value) => {
       if (value === 'fr' || value === 'en' || value === 'ar' || value === 'de') {
         setLanguageState(value);
+        I18nManager.allowRTL(true);
+        I18nManager.forceRTL(value === 'ar');
       }
     });
   }, []);
@@ -186,6 +187,8 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const setLanguage = async (next: Language) => {
     setLanguageState(next);
     await AsyncStorage.setItem(LANGUAGE_KEY, next);
+    I18nManager.allowRTL(true);
+    I18nManager.forceRTL(next === 'ar');
   };
 
   const t = (key: string) => translations[language][key] ?? translations.fr[key] ?? key;
