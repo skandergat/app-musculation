@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   ActivityIndicator, FlatList, Pressable, RefreshControl, SafeAreaView,
-  StatusBar, StyleSheet, Text, View,
+  StatusBar, StyleSheet, Text, View, useColorScheme,
 } from 'react-native';
 import { useI18n } from '@/context/I18nContext';
 
@@ -11,6 +11,8 @@ type Exercice = { id:number; nom?:string; name?:string; groupe_musculaire?:strin
 
 export default function HomeScreen() {
   const { t } = useI18n();
+  const scheme = useColorScheme();
+  const dark = scheme === 'dark';
   const [categorieOuverte, setCategorieOuverte] = useState<Category|null>(null);
   const [exercices, setExercices] = useState<Exercice[]>([]);
   const [loading, setLoading] = useState(false);
@@ -53,7 +55,7 @@ export default function HomeScreen() {
     const nomCategorie = categorieOuverte === 'gym' ? t('gym') : t('calisthenics');
 
     if (loading) return (
-      <SafeAreaView style={styles.centered}>
+      <SafeAreaView style={[styles.centered, dark && styles.containerDark]}>
         <ActivityIndicator size="large" color="#0A84FF" />
       </SafeAreaView>
     );
@@ -72,12 +74,12 @@ export default function HomeScreen() {
     );
 
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, dark && styles.containerDark]}>
         <StatusBar barStyle="dark-content" />
         <View style={styles.entete}>
           <Pressable style={styles.boutonRetour} onPress={fermerCategorie}><Text style={styles.retour}>‹</Text></Pressable>
           <View>
-            <Text style={styles.titre}>{nomCategorie}</Text>
+            <Text style={[styles.titre, dark && styles.textDark]}>{nomCategorie}</Text>
             <Text style={styles.sousTitre}>{exercices.length} {t('exercises')}</Text>
           </View>
         </View>
@@ -86,12 +88,12 @@ export default function HomeScreen() {
           keyExtractor={(item) => String(item.id)}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={actualiser} />}
           contentContainerStyle={styles.liste}
-          renderItem={({item}) => (
-            <View style={styles.carteExercice}>
-              <View style={styles.numero}><Text style={styles.numeroTexte}>{item.id}</Text></View>
+          renderItem={({item, index}) => (
+            <View style={[styles.carteExercice, dark && styles.cardDark]}>
+              <View style={styles.numero}><Text style={styles.numeroTexte}>{index + 1}</Text></View>
               <View style={styles.exerciceInfo}>
-                <Text style={styles.nomExercice}>{item.nom ?? item.name ?? t('exercise')}</Text>
-                {!!item.groupe_musculaire && <Text style={styles.muscle}>{item.groupe_musculaire}</Text>}
+                <Text style={[styles.nomExercice, dark && styles.textDark]}>{item.nom ?? item.name ?? t('exercise')}</Text>
+                {!!item.groupe_musculaire && <Text style={[styles.muscle, dark && styles.mutedDark]}>{item.groupe_musculaire}</Text>}
               </View>
             </View>
           )}
@@ -105,8 +107,8 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.contenu}>
-        <Text style={styles.titreHome}>{t('home')}</Text>
-        <Text style={styles.sousTitreHome}>{t('chooseWorkout')}</Text>
+        <Text style={[styles.titreHome, dark && styles.textDark]}>{t('home')}</Text>
+        <Text style={[styles.sousTitreHome, dark && styles.mutedDark]}>{t('chooseWorkout')}</Text>
 
         <Pressable style={({pressed}) => [styles.carte, pressed && styles.presse]} onPress={() => ouvrirCategorie('gym')}>
           <View style={styles.icone}>
@@ -140,6 +142,10 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container:{flex:1,backgroundColor:'#F5F5F7'},
+  containerDark:{backgroundColor:'#0B0B0D'},
+  cardDark:{backgroundColor:'#1C1C1E'},
+  textDark:{color:'#FFFFFF'},
+  mutedDark:{color:'#A1A1A6'},
   centered:{flex:1,backgroundColor:'#F5F5F7',justifyContent:'center',alignItems:'center',padding:24},
   contenu:{flex:1,padding:20},
   titreHome:{fontSize:32,fontWeight:'700',color:'#111',marginTop:8},
