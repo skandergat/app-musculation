@@ -596,12 +596,14 @@ export default function SeanceScreen() {
 
   const afficherTemps = (
     type: 'serie' | 'exercice',
-    exerciceId: number
+    exerciceId: number,
+    serieId?: number
   ) => {
     if (
       timerActif &&
       timerType === type &&
-      timerExerciceId === exerciceId
+      timerExerciceId === exerciceId &&
+      (type === 'exercice' || timerSerieId === serieId)
     ) {
       return tempsRestant;
     }
@@ -1030,12 +1032,12 @@ export default function SeanceScreen() {
                     </Text>
                     <Text style={styles.timerCompactValeur}>
                       {Math.floor(
-                        afficherTemps('serie', exercice.id) / 60
+                        afficherTemps('serie', exercice.id, serie.id) / 60
                       )
                         .toString()
                         .padStart(2, '0')}
                       :
-                      {(afficherTemps('serie', exercice.id) % 60)
+                      {(afficherTemps('serie', exercice.id, serie.id) % 60)
                         .toString()
                         .padStart(2, '0')}
                     </Text>
