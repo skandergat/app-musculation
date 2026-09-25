@@ -138,9 +138,22 @@ def assurer_base():
         CREATE TABLE IF NOT EXISTS exercices (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nom TEXT NOT NULL,
-            groupe_musculaire TEXT
+            groupe_musculaire TEXT,
+            categorie TEXT NOT NULL DEFAULT 'gym'
         )
     """)
+
+    # Migration : catégorie de pratique (gym / calisthenics)
+    colonnes_exercices = cursor.execute(
+        "PRAGMA table_info(exercices)"
+    ).fetchall()
+
+    noms_colonnes_exercices = [colonne[1] for colonne in colonnes_exercices]
+
+    if "categorie" not in noms_colonnes_exercices:
+        cursor.execute(
+            "ALTER TABLE exercices ADD COLUMN categorie TEXT NOT NULL DEFAULT 'gym'"
+        )
 
     # --------------------------------------------------------
     # UTILISATEURS
@@ -962,6 +975,167 @@ def assurer_base():
           ]
 ]
 
+    # --------------------------------------------------------
+    # BIBLIOTHÈQUE CALISTHENICS
+    # --------------------------------------------------------
+    # Bibliothèque large de mouvements au poids du corps, statiques,
+    # skills et progressions. Les exercices déjà présents dans GYM
+    # restent dans GYM même si un mouvement similaire existe ici.
+    exercices_calisthenics = [
+        ("Pompes", "Pectoraux"),
+        ("Pompes diamant", "Pectoraux"),
+        ("Pompes larges", "Pectoraux"),
+        ("Pompes serrées", "Pectoraux"),
+        ("Pompes déclinées", "Pectoraux"),
+        ("Pompes inclinées", "Pectoraux"),
+        ("Pompes archer", "Pectoraux"),
+        ("Pompes pseudo-planche", "Pectoraux"),
+        ("Pompes hindoues", "Pectoraux"),
+        ("Pompes dive bomber", "Pectoraux"),
+        ("Pompes explosives", "Pectoraux"),
+        ("Clap push-ups", "Pectoraux"),
+        ("One-arm push-up", "Pectoraux"),
+        ("One-arm push-up assistée", "Pectoraux"),
+        ("Dips", "Triceps"),
+        ("Dips lestés", "Triceps"),
+        ("Dips sur banc", "Triceps"),
+        ("Bench dips", "Triceps"),
+        ("Extensions triceps au poids du corps", "Triceps"),
+        ("Tractions pronation", "Dos"),
+        ("Tractions supination", "Dos"),
+        ("Tractions prise neutre", "Dos"),
+        ("Tractions larges", "Dos"),
+        ("Tractions serrées", "Dos"),
+        ("Tractions archer", "Dos"),
+        ("Tractions explosives", "Dos"),
+        ("Chest-to-bar pull-up", "Dos"),
+        ("Commando pull-up", "Dos"),
+        ("Typewriter pull-up", "Dos"),
+        ("Muscle-up", "Dos"),
+        ("Muscle-up strict", "Dos"),
+        ("Muscle-up explosif", "Dos"),
+        ("Australian pull-up", "Dos"),
+        ("Australian pull-up pieds surélevés", "Dos"),
+        ("Scapular pull-up", "Dos"),
+        ("Dead hang", "Dos"),
+        ("Active hang", "Dos"),
+        ("Skin the cat", "Épaules"),
+        ("Front lever tuck", "Dos"),
+        ("Advanced tuck front lever", "Dos"),
+        ("Straddle front lever", "Dos"),
+        ("Front lever", "Dos"),
+        ("Front lever raises", "Dos"),
+        ("Front lever pulls", "Dos"),
+        ("Back lever tuck", "Dos"),
+        ("Advanced tuck back lever", "Dos"),
+        ("Straddle back lever", "Dos"),
+        ("Back lever", "Dos"),
+        ("Handstand", "Épaules"),
+        ("Handstand hold", "Épaules"),
+        ("Wall handstand", "Épaules"),
+        ("Handstand shoulder taps", "Épaules"),
+        ("Handstand push-up", "Épaules"),
+        ("Handstand push-up assisté", "Épaules"),
+        ("Pike push-up", "Épaules"),
+        ("Elevated pike push-up", "Épaules"),
+        ("Pseudo planche lean", "Épaules"),
+        ("Planche tuck", "Épaules"),
+        ("Advanced tuck planche", "Épaules"),
+        ("Straddle planche", "Épaules"),
+        ("Planche", "Épaules"),
+        ("Planche lean", "Épaules"),
+        ("L-sit", "Abdominaux"),
+        ("Tuck L-sit", "Abdominaux"),
+        ("Advanced tuck L-sit", "Abdominaux"),
+        ("L-sit raises", "Abdominaux"),
+        ("V-sit", "Abdominaux"),
+        ("V-sit progression", "Abdominaux"),
+        ("Hanging knee raises", "Abdominaux"),
+        ("Hanging leg raises", "Abdominaux"),
+        ("Toes-to-bar", "Abdominaux"),
+        ("Strict toes-to-bar", "Abdominaux"),
+        ("Knees-to-elbows", "Abdominaux"),
+        ("Dragon flag", "Abdominaux"),
+        ("Dragon flag négatif", "Abdominaux"),
+        ("Hollow body hold", "Abdominaux"),
+        ("Hollow rocks", "Abdominaux"),
+        ("Arch body hold", "Abdominaux"),
+        ("Arch rocks", "Abdominaux"),
+        ("Plank", "Abdominaux"),
+        ("Side plank", "Abdominaux"),
+        ("RKC plank", "Abdominaux"),
+        ("Reverse plank", "Abdominaux"),
+        ("Mountain climbers", "Abdominaux"),
+        ("Pistol squat", "Jambes"),
+        ("Pistol squat assisté", "Jambes"),
+        ("Shrimp squat", "Jambes"),
+        ("Cossack squat", "Jambes"),
+        ("Sissy squat", "Jambes"),
+        ("Squat au poids du corps", "Jambes"),
+        ("Squat jump", "Jambes"),
+        ("Split squat", "Jambes"),
+        ("Bulgarian split squat", "Jambes"),
+        ("Fentes avant", "Jambes"),
+        ("Fentes arrière", "Jambes"),
+        ("Fentes marchées", "Jambes"),
+        ("Nordic hamstring curl", "Ischio-jambiers"),
+        ("Nordic curl assisté", "Ischio-jambiers"),
+        ("Glute bridge", "Fessiers"),
+        ("Single-leg glute bridge", "Fessiers"),
+        ("Hip thrust au poids du corps", "Fessiers"),
+        ("Single-leg calf raise", "Mollets"),
+        ("Calf raise", "Mollets"),
+        ("Box jump", "Jambes"),
+        ("Broad jump", "Jambes"),
+        ("Burpees", "Full body"),
+        ("Burpee pull-up", "Full body"),
+        ("Muscle-up transition", "Full body"),
+        ("Handstand kick-up", "Épaules"),
+        ("Handstand walk", "Épaules"),
+        ("Handstand press", "Épaules"),
+        ("Press to handstand", "Épaules"),
+        ("Tuck press to handstand", "Épaules"),
+        ("Human flag", "Abdominaux"),
+        ("Human flag tuck", "Abdominaux"),
+        ("Human flag progression", "Abdominaux"),
+        ("One-arm pull-up progression", "Dos"),
+        ("One-arm pull-up assistée", "Dos"),
+        ("One-arm chin-up progression", "Dos"),
+        ("Impossible dip", "Triceps"),
+        ("Korean dip", "Triceps"),
+        ("Tiger bend", "Triceps"),
+        ("90 degree hold", "Épaules"),
+        ("Maltese lean", "Épaules"),
+        ("Maltese progression", "Épaules"),
+        ("Victorian progression", "Dos"),
+        ("Inverted hang", "Dos"),
+        ("Hanging windshield wipers", "Abdominaux"),
+        ("Windshield wipers", "Abdominaux"),
+        ("Bar L-sit", "Abdominaux"),
+        ("Ring L-sit", "Abdominaux"),
+        ("Ring push-up", "Pectoraux"),
+        ("Ring dip", "Triceps"),
+        ("Ring pull-up", "Dos"),
+        ("Ring muscle-up", "Dos"),
+        ("Ring row", "Dos"),
+        ("Ring support hold", "Épaules"),
+        ("Ring push-up archer", "Pectoraux"),
+        ("Support hold", "Épaules"),
+        ("Top support", "Épaules"),
+        ("Tuck hold", "Abdominaux"),
+        ("Compression hold", "Abdominaux"),
+        ("Seated leg lift", "Abdominaux"),
+        ("Reverse Nordic curl", "Quadriceps"),
+        ("Calf raise unilatéral", "Mollets"),
+        ("Wall sit", "Jambes"),
+        ("Bear crawl", "Full body"),
+        ("Crab walk", "Full body"),
+        ("Inchworm", "Full body"),
+        ("Spiderman push-up", "Pectoraux"),
+        ("Hindu squat", "Jambes"),
+        ("Jumping lunges", "Jambes"),
+    ]
+
     for nom, groupe in exercices_gym:
         existe = cursor.execute(
             "SELECT id FROM exercices WHERE nom = ?",
@@ -972,8 +1146,29 @@ def assurer_base():
             cursor.execute(
                 """
                 INSERT INTO exercices
-                (nom, groupe_musculaire)
-                VALUES (?, ?)
+                (nom, groupe_musculaire, categorie)
+                VALUES (?, ?, 'gym')
+                """,
+                (nom, groupe),
+            )
+
+    # Les anciennes lignes de la base restent explicitement GYM.
+    cursor.execute(
+        "UPDATE exercices SET categorie = 'gym' WHERE categorie IS NULL OR categorie = ''"
+    )
+
+    for nom, groupe in exercices_calisthenics:
+        existe = cursor.execute(
+            "SELECT id FROM exercices WHERE nom = ? AND categorie = 'calisthenics'",
+            (nom,),
+        ).fetchone()
+
+        if not existe:
+            cursor.execute(
+                """
+                INSERT INTO exercices
+                (nom, groupe_musculaire, categorie)
+                VALUES (?, ?, 'calisthenics')
                 """,
                 (nom, groupe),
             )
@@ -1248,12 +1443,19 @@ def liste_exercices():
 
     conn = get_db()
 
+    categorie = request.args.get("categorie", "gym").strip().lower()
+
+    if categorie not in ("gym", "calisthenics"):
+        categorie = "gym"
+
     exercices = conn.execute(
         """
         SELECT *
         FROM exercices
+        WHERE categorie = ?
         ORDER BY id ASC
-        """
+        """,
+        (categorie,),
     ).fetchall()
 
     conn.close()
