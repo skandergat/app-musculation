@@ -211,7 +211,7 @@ export default function {t('history')}Screen() {
             </Text>
           </TouchableOpacity>
 
-          <Text style={styles.detailTitre}>
+          <Text style={[styles.detailTitre, dark && styles.textDark]}>
             {t('sessionDetails')}
           </Text>
         </View>
@@ -223,8 +223,8 @@ export default function {t('history')}Screen() {
             styles.detailListe
           }
           ListHeaderComponent={
-            <View style={styles.resumeCarte}>
-              <Text style={styles.dateDetail}>
+            <View style={[styles.resumeCarte, dark && styles.cardDark]}>
+              <Text style={[styles.dateDetail, dark && styles.textDark]}>
                 {formaterDate(
                   seanceSelectionnee.date_debut
                 )}
@@ -245,7 +245,7 @@ export default function {t('history')}Screen() {
 
               <View style={styles.statsLigne}>
                 <View style={styles.stat}>
-                  <Text style={styles.statValeur}>
+                  <Text style={[styles.statValeur, dark && styles.textDark]}>
                     {groupes.length}
                   </Text>
 
@@ -269,8 +269,8 @@ export default function {t('history')}Screen() {
             </View>
           }
           renderItem={({ item }) => (
-            <View style={styles.exerciceCarte}>
-              <Text style={styles.exerciceNom}>
+            <View style={[styles.exerciceCarte, dark && styles.cardDark]}>
+              <Text style={[styles.exerciceNom, dark && styles.textDark]}>
                 {item.nom}
               </Text>
 
@@ -337,7 +337,7 @@ export default function {t('history')}Screen() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
 
-      <Text style={styles.titre}>
+      <Text style={[styles.titre, dark && styles.textDark]}>
         Historique
       </Text>
 
@@ -373,7 +373,7 @@ export default function {t('history')}Screen() {
                 setSeanceSelectionnee(item);
               }}
             >
-              <View style={styles.carte}>
+              <View style={[styles.carte, dark && styles.cardDark]}>
                 <View
                   style={styles.carteEntete}
                 >
