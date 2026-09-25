@@ -1018,85 +1018,7 @@ export default function SeanceScreen() {
                   )}
                 </View>
 
-                {timerActif &&
-                  timerType === 'serie' &&
-                  timerExerciceId === exercice.id &&
-                  timerSerieId === serie.id && (
-                    <View style={styles.timerCompact}>
-                      <TouchableOpacity
-                        style={styles.timerBouton}
-                        onPress={() => {
-                          const nouveauTemps = Math.max(
-                            15,
-                            tempsRestant - 15
-                          );
 
-                          setTempsRestant(nouveauTemps);
-                          setTempsReposSerie(nouveauTemps);
-
-                          if (user?.id) {
-                            AsyncStorage.setItem(
-                              `${TIMER_SERIE_KEY}_${user.id}`,
-                              String(nouveauTemps)
-                            ).catch((error) =>
-                              console.error(
-                                'Erreur sauvegarde timer série :',
-                                error
-                              )
-                            );
-                          }
-                        }}
-                      >
-                        <Text style={styles.timerBoutonTexte}>
-                          −15s
-                        </Text>
-                      </TouchableOpacity>
-
-                      <View style={styles.timerValeurBloc}>
-                        <Text style={styles.timerCompactTitre}>
-                          Repos
-                        </Text>
-                        <Text style={styles.timerCompactValeur}>
-                          {Math.floor(
-                            tempsRestant / 60
-                          )
-                            .toString()
-                            .padStart(2, '0')}
-                          :
-                          {(tempsRestant % 60)
-                            .toString()
-                            .padStart(2, '0')}
-                        </Text>
-                      </View>
-
-                      <TouchableOpacity
-                        style={styles.timerBouton}
-                        onPress={() => {
-                          const nouveauTemps =
-                            tempsRestant + 15;
-
-                          setTempsRestant(nouveauTemps);
-                          setTempsReposSerie(nouveauTemps);
-
-                          if (user?.id) {
-                            AsyncStorage.setItem(
-                              `${TIMER_SERIE_KEY}_${user.id}`,
-                              String(nouveauTemps)
-                            ).catch((error) =>
-                              console.error(
-                                'Erreur sauvegarde timer série :',
-                                error
-                              )
-                            );
-                          }
-                        }}
-                      >
-                        <Text style={styles.timerBoutonTexte}>
-                          +15s
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
               </View>
             ))}
 
@@ -1157,125 +1079,50 @@ export default function SeanceScreen() {
               </Text>
             </TouchableOpacity>
 
-            {timerActif &&
-              timerType === 'exercice' &&
-              timerExerciceId === exercice.id && (
-                <View style={styles.timerCompact}>
-                  <TouchableOpacity
-                    style={styles.timerBouton}
-                    onPress={() => {
-                      const nouveauTemps = Math.max(
-                        15,
-                        tempsRestant - 15
-                      );
 
-                      setTempsRestant(nouveauTemps);
-                      setTempsReposExercice(nouveauTemps);
+          {exercices.indexOf(exercice) < exercices.length - 1 && (
+            <View style={styles.timerCompact}>
+              <TouchableOpacity
+                style={styles.timerBouton}
+                onPress={() => modifierTempsReposExercice(-15)}
+              >
+                <Text style={styles.timerBoutonTexte}>
+                  −15s
+                </Text>
+              </TouchableOpacity>
 
-                      if (user?.id) {
-                        AsyncStorage.setItem(
-                          `${TIMER_EXERCICE_KEY}_${user.id}`,
-                          String(nouveauTemps)
-                        ).catch((error) =>
-                          console.error(
-                            'Erreur sauvegarde timer exercice :',
-                            error
-                          )
-                        );
-                      }
-                    }}
-                  >
-                    <Text style={styles.timerBoutonTexte}>
-                      −15s
-                    </Text>
-                  </TouchableOpacity>
+              <View style={styles.timerValeurBloc}>
+                <Text style={styles.timerCompactTitre}>
+                  Repos exercice
+                </Text>
+                <Text style={styles.timerCompactValeur}>
+                  {Math.floor(
+                    afficherTemps('exercice', exercice.id) / 60
+                  )
+                    .toString()
+                    .padStart(2, '0')}
+                  :
+                  {(afficherTemps('exercice', exercice.id) % 60)
+                    .toString()
+                    .padStart(2, '0')}
+                </Text>
+              </View>
 
-                  <View style={styles.timerValeurBloc}>
-                    <Text style={styles.timerCompactTitre}>
-                      Repos exercice
-                    </Text>
-                    <Text style={styles.timerCompactValeur}>
-                      {Math.floor(
-                        tempsRestant / 60
-                      )
-                        .toString()
-                        .padStart(2, '0')}
-                      :
-                      {(tempsRestant % 60)
-                        .toString()
-                        .padStart(2, '0')}
-                    </Text>
-                  </View>
+              <TouchableOpacity
+                style={styles.timerBouton}
+                onPress={() => modifierTempsReposExercice(15)}
+              >
+                <Text style={styles.timerBoutonTexte}>
+                  +15s
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
-                  <TouchableOpacity
-                    style={styles.timerBouton}
-                    onPress={() => {
-                      const nouveauTemps =
-                        tempsRestant + 15;
-
-                      setTempsRestant(nouveauTemps);
-                      setTempsReposExercice(nouveauTemps);
-
-                      if (user?.id) {
-                        AsyncStorage.setItem(
-                          `${TIMER_EXERCICE_KEY}_${user.id}`,
-                          String(nouveauTemps)
-                        ).catch((error) =>
-                          console.error(
-                            'Erreur sauvegarde timer exercice :',
-                            error
-                          )
-                        );
-                      }
-                    }}
-                  >
-                    <Text style={styles.timerBoutonTexte}>
-                      +15s
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
           </View>
         ))}
 
-            {exercices.indexOf(exercice) < exercices.length - 1 && (
-              <View style={styles.timerCompact}>
-                <TouchableOpacity
-                  style={styles.timerBouton}
-                  onPress={() => modifierTempsReposExercice(-15)}
-                >
-                  <Text style={styles.timerBoutonTexte}>
-                    −15s
-                  </Text>
-                </TouchableOpacity>
 
-                <View style={styles.timerValeurBloc}>
-                  <Text style={styles.timerCompactTitre}>
-                    Repos exercice
-                  </Text>
-                  <Text style={styles.timerCompactValeur}>
-                    {Math.floor(
-                      afficherTemps('exercice', exercice.id) / 60
-                    )
-                      .toString()
-                      .padStart(2, '0')}
-                    :
-                    {(afficherTemps('exercice', exercice.id) % 60)
-                      .toString()
-                      .padStart(2, '0')}
-                  </Text>
-                </View>
-
-                <TouchableOpacity
-                  style={styles.timerBouton}
-                  onPress={() => modifierTempsReposExercice(15)}
-                >
-                  <Text style={styles.timerBoutonTexte}>
-                    +15s
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
 
         <TouchableOpacity
           style={
