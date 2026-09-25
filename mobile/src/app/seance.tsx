@@ -219,7 +219,7 @@ export default function SeanceScreen() {
 
   const chargerExercicesDisponibles = async () => {
     try {
-      const response = await fetch(`${API_URL}/exercices`);
+      const response = await fetch(`${API_URL}/exercices?categorie=all`);
 
       if (!response.ok) {
         throw new Error('Impossible de récupérer les exercices');
