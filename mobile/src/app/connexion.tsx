@@ -59,7 +59,7 @@ export default function ConnexionScreen() {
 
         <Text style={[styles.titre, dark && styles.textDark]}>{t("login")}</Text>
 
-        <Text style={styles.sousTitre}>
+        <Text style={[styles.sousTitre, dark && styles.mutedDark]}>
           {t("loginSubtitle")}
         </Text>
 
@@ -75,9 +75,9 @@ export default function ConnexionScreen() {
         />
 
         <TextInput
-          style={styles.input}
+          style={[styles.input, dark && styles.inputDark]}
           placeholder={t("password")}
-          placeholderTextColor="#8A8A8E"
+          placeholderTextColor={dark ? '#8E8E93' : '#8A8A8E'}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -100,7 +100,7 @@ export default function ConnexionScreen() {
         </Pressable>
 
         <View style={styles.inscriptionContainer}>
-          <Text style={styles.question}>
+          <Text style={[styles.question, dark && styles.mutedDark]}>
             {t("noAccount")}
           </Text>
 
