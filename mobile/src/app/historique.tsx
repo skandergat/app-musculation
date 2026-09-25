@@ -7,6 +7,7 @@ import {
   RefreshControl,
   SafeAreaView,
   StatusBar,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -192,6 +193,7 @@ export default function {t('history')}Screen() {
 
     return (
       <SafeAreaView style={[styles.container, dark && styles.containerDark]}>
+        <StatusBar barStyle={dark ? 'light-content' : 'dark-content'} />
         <StatusBar barStyle="dark-content" />
 
         <View style={styles.detailHeader}>
@@ -249,7 +251,7 @@ export default function {t('history')}Screen() {
                     {groupes.length}
                   </Text>
 
-                  <Text style={styles.statLabel}>
+                  <Text style={[styles.statLabel, dark && styles.mutedDark]}>
                     {t('exercisesLabel')}
                   </Text>
                 </View>
@@ -377,7 +379,7 @@ export default function {t('history')}Screen() {
                 <View
                   style={styles.carteEntete}
                 >
-                  <Text style={styles.date}>
+                  <Text style={[styles.date, dark && styles.mutedDark]}>
                     {formaterDate(
                       item.date_debut
                     )}
