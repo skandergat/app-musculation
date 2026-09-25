@@ -936,7 +936,7 @@ export default function SeanceScreen() {
                   styles.headerPrevious
                 }
               >
-                Previous
+                {t('previous')}
               </Text>
 
               <Text style={styles.headerTexte}>
@@ -944,7 +944,7 @@ export default function SeanceScreen() {
               </Text>
 
               <Text style={styles.headerTexte}>
-                Reps
+                {t('reps')}
               </Text>
 
               <Text style={styles.headerTexte}>
