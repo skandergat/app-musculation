@@ -65,7 +65,7 @@ const calculerDuree = (debut: string, fin: string) => {
   );
 
   if (minutes < 60) {
-    return `${minutes} min`;
+    return `${minutes} ${t('durationMinutes')}`;
   }
 
   const heures = Math.floor(minutes / 60);
@@ -97,7 +97,7 @@ const grouperParExercice = (
   return groupes;
 };
 
-export default function HistoriqueScreen() {
+export default function ${t('history')}Screen() {
   const { token } = useAuth();
   const { t } = useI18n();
   const dark = useColorScheme() === 'dark';
@@ -134,7 +134,7 @@ export default function HistoriqueScreen() {
       setSeances(data);
     } catch (error: any) {
       setErreur(
-        error?.message ?? 'Connexion impossible'
+        error?.message ?? '${t('connectionImpossible')}'
       );
     } finally {
       setChargement(false);
@@ -212,7 +212,7 @@ export default function HistoriqueScreen() {
           </TouchableOpacity>
 
           <Text style={styles.detailTitre}>
-            Détail de la séance
+            ${t('sessionDetails')}
           </Text>
         </View>
 
@@ -250,7 +250,7 @@ export default function HistoriqueScreen() {
                   </Text>
 
                   <Text style={styles.statLabel}>
-                    Exercices
+                    ${t('exercisesLabel')}
                   </Text>
                 </View>
 
@@ -262,7 +262,7 @@ export default function HistoriqueScreen() {
                   </Text>
 
                   <Text style={styles.statLabel}>
-                    Séries
+                    ${t('setsLabel')}
                   </Text>
                 </View>
               </View>
@@ -321,7 +321,7 @@ export default function HistoriqueScreen() {
           ListFooterComponent={
             <View style={styles.finDetail}>
               <Text style={styles.finDetailTexte}>
-                Fin de la séance
+                ${t('endOfWorkout')}
               </Text>
             </View>
           }
@@ -467,7 +467,7 @@ export default function HistoriqueScreen() {
                   <Text
                     style={styles.ouvrirTexte}
                   >
-                    Voir le détail
+                    ${t('seeDetails')}
                   </Text>
 
                   <Text
