@@ -98,3 +98,7 @@ jobs:
       - name: TypeScript typecheck
         working-directory: mobile
         run: npx tsc --noEmit
+
+      - name: Expo doctor
+        working-directory: mobile
+        run: npx expo-doctor
