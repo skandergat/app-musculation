@@ -107,7 +107,7 @@ export default function InscriptionScreen() {
         />
 
         <TextInput
-          style={styles.input}
+          style={[styles.input, dark && styles.inputDark]}
           placeholder={t("password")}
           placeholderTextColor="#8A8A8E"
           value={password}
@@ -117,7 +117,7 @@ export default function InscriptionScreen() {
         />
 
         <TextInput
-          style={styles.input}
+          style={[styles.input, dark && styles.inputDark]}
           placeholder={t("confirmPassword")}
           placeholderTextColor="#8A8A8E"
           value={confirmation}
