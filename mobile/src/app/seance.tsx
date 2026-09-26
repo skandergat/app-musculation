@@ -4,6 +4,7 @@ import { Vibration } from 'react-native';
 import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { useAuth } from '@/context/AuthContext';
 import { useI18n } from '@/context/I18nContext';
+import { API_URL } from '@/config/api';
 import {
   SafeAreaView,
   StatusBar,
@@ -17,7 +18,6 @@ import {
   useColorScheme,
 } from 'react-native';
 
-const API_URL = 'http://192.168.100.200:5001';
 
 const SON_FIN_TIMER =
   'https://raw.githubusercontent.com/TaterTotterson/microWakeWords/main/wakeSounds/notification-ding.wav';
