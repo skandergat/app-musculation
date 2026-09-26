@@ -25,11 +25,11 @@ function RootNavigator() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={loading || !!user}>
+      <Stack.Protected guard={!loading && !!user}>
         <Stack.Screen name="(app)" />
       </Stack.Protected>
 
-      <Stack.Protected guard={loading || !user}>
+      <Stack.Protected guard={!loading && !user}>
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
     </Stack>
