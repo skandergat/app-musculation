@@ -165,7 +165,7 @@ export default function SeanceScreen() {
   const [terminaisonEnCours, setTerminaisonEnCours] = useState(false);
 
   const [previous, setPrevious] = useState<
-    Record<string, PreviousSerie[]>
+    Record<number, PreviousSerie[]>
   >({});
 
   const [exercicesDisponibles, setExercicesDisponibles] =
@@ -319,7 +319,7 @@ export default function SeanceScreen() {
 
       setPrevious((ancien) => ({
         ...ancien,
-        [exercice.nom]: data,
+        [exercice.backendId]: data,
       }));
     } catch (error) {
       console.error('Erreur chargement Previous :', error);
@@ -1008,10 +1008,8 @@ export default function SeanceScreen() {
                   </Text>
 
                   <Text style={[styles.previous, dark && styles.mutedDark]}>
-                    {previous[
-                      exercice.nom
-                    ]?.[serie.id - 1]
-                      ? `${previous[exercice.nom][serie.id - 1].poids} kg × ${previous[exercice.nom][serie.id - 1].repetitions}`
+                    {exercice.backendId && previous[exercice.backendId]?.[serieIndex]
+                      ? `${previous[exercice.backendId][serieIndex].poids} kg × ${previous[exercice.backendId][serieIndex].repetitions}`
                       : '—'}
                   </Text>
 
