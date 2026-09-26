@@ -281,7 +281,7 @@ export default function HistoriqueScreen() {
           }
           renderItem={({ item }) => (
             <View style={[styles.exerciceCarte, dark && styles.cardDark]}>
-              <Text style={[styles.exerciceNom, dark && styles.textDark]}>
+              <Text style={[styles.exerciceNomDetail, dark && styles.textDark]}>
                 {exerciseName(item.nom)}
               </Text>
 
@@ -708,7 +708,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  exerciceNom: {
+  exerciceNomDetail: {
     fontSize: 18,
     fontWeight: '700',
     color: '#000000',
