@@ -8,6 +8,7 @@ import React, {
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { API_URL } from '@/config/api';
+import { useI18n } from '@/context/I18nContext';
 
 
 type User = {
@@ -83,6 +84,7 @@ export function AuthProvider({
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const { t } = useI18n();
 
   useEffect(() => {
     chargerSession();
@@ -150,7 +152,10 @@ export function AuthProvider({
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      throw new Error(data.error || 'Connexion impossible');
+      if (response.status === 401) {
+        throw new Error(t('invalidCredentials'));
+      }
+      throw new Error(t('connectionImpossible'));
     }
 
     await sauvegarderSession(data.token, data.user);
@@ -176,7 +181,10 @@ export function AuthProvider({
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      throw new Error(data.error || 'Création du compte impossible');
+      if (response.status === 409) {
+        throw new Error(t('emailAlreadyUsed'));
+      }
+      throw new Error(t('creationImpossible'));
     }
 
     await sauvegarderSession(data.token, data.user);
