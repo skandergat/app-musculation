@@ -854,7 +854,7 @@ export default function SeanceScreen() {
 
   return (
     <SafeAreaView style={[styles.container, dark && styles.containerDark]}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={dark ? "light-content" : "dark-content"} />
 
       <ScrollView
         contentContainerStyle={styles.contenu}
@@ -876,7 +876,7 @@ export default function SeanceScreen() {
               style={[styles.exerciceCarte, dark && styles.cardDark]}
             >
               <Text style={styles.exercice}>
-                {exercice.nom}
+                {exerciseName(exercice.nom)}
               </Text>
 
               <Text style={[styles.muscle, dark && styles.mutedDark]}>
@@ -890,22 +890,20 @@ export default function SeanceScreen() {
               </Text>
 
               <Text
-                style={
-                  styles.headerPrevious
-                }
+                style={[styles.headerPrevious, dark && styles.mutedDark]}
               >
                 {t('previous')}
               </Text>
 
-              <Text style={styles.headerTexte}>
+              <Text style={[styles.headerTexte, dark && styles.mutedDark]}>
                 {t('weight')}
               </Text>
 
-              <Text style={styles.headerTexte}>
+              <Text style={[styles.headerTexte, dark && styles.mutedDark]}>
                 {t('reps')}
               </Text>
 
-              <Text style={styles.headerTexte}>
+              <Text style={[styles.headerTexte, dark && styles.mutedDark]}>
                 ✓
               </Text>
             </View>
@@ -946,7 +944,7 @@ export default function SeanceScreen() {
                   />
 
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, dark && styles.inputDark]}
                     value={serie.reps}
                     keyboardType="numeric"
                     editable={!terminee}
@@ -1063,12 +1061,8 @@ export default function SeanceScreen() {
                 )
               }
             >
-              <Text
-                style={
-                  styles.boutonAjouterTexte
-                }
-              >
-                + Ajouter une série
+              <Text style={[styles.boutonAjouterTexte, dark && styles.textDark]}>
+                + {t('addSet')}
               </Text>
             </TouchableOpacity>
 
@@ -1091,12 +1085,8 @@ export default function SeanceScreen() {
             )
           }
         >
-          <Text
-            style={
-              styles.boutonAjouterExerciceTexte
-            }
-          >
-            ＋ AJOUTER UN EXERCICE
+          <Text style={styles.boutonAjouterExerciceTexte}>
+            ＋ {t('addExercise').toUpperCase()}
           </Text>
         </TouchableOpacity>
 
@@ -1123,17 +1113,13 @@ export default function SeanceScreen() {
                 >
                   <View>
                     <Text
-                      style={
-                        styles.optionNom
-                      }
+                      style={[styles.optionNom, dark && styles.textDark]}
                     >
                       {exercice.nom}
                     </Text>
 
                     <Text
-                      style={
-                        styles.optionMuscle
-                      }
+                      style={[styles.optionMuscle, dark && styles.mutedDark]}
                     >
                       {exercice.muscle}
                     </Text>
