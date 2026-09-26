@@ -32,6 +32,7 @@ type Seance = {
 };
 
 type ExerciceGroupe = {
+  id: number;
   nom: string;
   series: Serie[];
 };
@@ -95,13 +96,14 @@ const grouperParExercice = (
 
   series.forEach((serie) => {
     const groupe = groupes.find(
-      (g) => g.nom === serie.exercice_nom
+      (g) => g.id === serie.exercice_id
     );
 
     if (groupe) {
       groupe.series.push(serie);
     } else {
       groupes.push({
+        id: serie.exercice_id,
         nom: serie.exercice_nom,
         series: [serie],
       });
@@ -230,7 +232,7 @@ export default function HistoriqueScreen() {
 
         <FlatList
           data={groupes}
-          keyExtractor={(item) => item.nom}
+          keyExtractor={(item) => String(item.id)}
           contentContainerStyle={
             styles.detailListe
           }
@@ -415,7 +417,7 @@ export default function HistoriqueScreen() {
                   .slice(0, 3)
                   .map((groupe) => (
                     <View
-                      key={exerciseName(groupe.nom)}
+                      key={String(groupe.id)}
                       style={
                         styles.exerciceLigne
                       }
