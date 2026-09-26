@@ -1,5 +1,5 @@
-import { NativeTabsLayout } from '@/components/native-tabs-layout';
+import AppTabs from '@/components/app-tabs';
 
 export default function AppLayout() {
-  return <NativeTabsLayout />;
+  return <AppTabs />;
 }
