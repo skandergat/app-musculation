@@ -1004,7 +1004,7 @@ export default function SeanceScreen() {
                   ]}
                 >
                   <Text style={[styles.numero, dark && styles.textDark]}>
-                    {serie.id}
+                    {serieIndex + 1}
                   </Text>
 
                   <Text style={[styles.previous, dark && styles.mutedDark]}>
@@ -1074,7 +1074,7 @@ export default function SeanceScreen() {
                           t('deleteSetQuestion'),
                           [
                             {
-                              text: 'Annuler',
+                              text: t('cancel'),
                               style: 'cancel',
                             },
                             {
