@@ -100,7 +100,7 @@ const grouperParExercice = (
 
 export default function HistoriqueScreen() {
   const { token } = useAuth();
-  const { t } = useI18n();
+  const { t, exerciseName } = useI18n();
   const dark = useColorScheme() === 'dark';
   const [seances, setSeances] = useState<Seance[]>([]);
   const [chargement, setChargement] = useState(true);
@@ -154,7 +154,7 @@ export default function HistoriqueScreen() {
 
   if (chargement) {
     return (
-      <SafeAreaView style={styles.centre}>
+      <SafeAreaView style={[styles.centre, dark && styles.containerDark]}>
         <ActivityIndicator
           size="large"
           color="#0A84FF"
@@ -166,7 +166,7 @@ export default function HistoriqueScreen() {
   if (erreur) {
     return (
       <SafeAreaView style={styles.centre}>
-        <Text style={styles.erreurTitre}>
+        <Text style={[styles.erreurTitre, dark && styles.textDark]}>
           {t('connectionImpossible')}
         </Text>
 
@@ -174,7 +174,7 @@ export default function HistoriqueScreen() {
           {erreur}
         </Text>
 
-        <Text style={styles.erreurAide}>
+        <Text style={[styles.erreurAide, dark && styles.mutedDark]}>
           Vérifie que le serveur Flask tourne
           (python app.py) et que API_URL pointe
           vers l'IP locale de ton PC.
@@ -231,7 +231,7 @@ export default function HistoriqueScreen() {
                 )}
               </Text>
 
-              <Text style={styles.infoDetail}>
+              <Text style={[styles.infoDetail, dark && styles.mutedDark]}>
                 {formaterHeure(
                   seanceSelectionnee.date_debut
                 )}
@@ -259,11 +259,11 @@ export default function HistoriqueScreen() {
                 <View style={styles.separateur} />
 
                 <View style={styles.stat}>
-                  <Text style={styles.statValeur}>
+                  <Text style={[styles.statValeur, dark && styles.textDark]}>
                     {seanceSelectionnee.series.length}
                   </Text>
 
-                  <Text style={styles.statLabel}>
+                  <Text style={[styles.statLabel, dark && styles.mutedDark]}>
                     {t('setsLabel')}
                   </Text>
                 </View>
@@ -273,7 +273,7 @@ export default function HistoriqueScreen() {
           renderItem={({ item }) => (
             <View style={[styles.exerciceCarte, dark && styles.cardDark]}>
               <Text style={[styles.exerciceNom, dark && styles.textDark]}>
-                {item.nom}
+                {exerciseName(item.nom)}
               </Text>
 
               {item.series.map(
@@ -297,7 +297,7 @@ export default function HistoriqueScreen() {
                     </View>
 
                     <Text
-                      style={styles.seriePoids}
+                      style={[styles.seriePoids, dark && styles.textDark]}
                     >
                       {serie.poids} kg
                     </Text>
@@ -311,7 +311,7 @@ export default function HistoriqueScreen() {
                     </Text>
 
                     <Text
-                      style={styles.serieReps}
+                      style={[styles.serieReps, dark && styles.textDark]}
                     >
                       {serie.repetitions} {t('reps')}
                     </Text>
@@ -322,7 +322,7 @@ export default function HistoriqueScreen() {
           )}
           ListFooterComponent={
             <View style={styles.finDetail}>
-              <Text style={styles.finDetailTexte}>
+              <Text style={[styles.finDetailTexte, dark && styles.mutedDark]}>
                 {t('endOfWorkout')}
               </Text>
             </View>
@@ -356,7 +356,7 @@ export default function HistoriqueScreen() {
           />
         }
         ListEmptyComponent={
-          <Text style={styles.videTexte}>
+          <Text style={[styles.videTexte, dark && styles.mutedDark]}>
             {t('noCompletedWorkouts')}
           </Text>
         }
@@ -396,7 +396,7 @@ export default function HistoriqueScreen() {
                 </View>
 
                 <Text
-                  style={styles.sousTitre}
+                  style={[styles.sousTitre, dark && styles.mutedDark]}
                 >
                   {formaterHeure(
                     item.date_debut
@@ -411,7 +411,7 @@ export default function HistoriqueScreen() {
                   .slice(0, 3)
                   .map((groupe) => (
                     <View
-                      key={groupe.nom}
+                      key={exerciseName(groupe.nom)}
                       style={
                         styles.exerciceLigne
                       }
