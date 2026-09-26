@@ -83,7 +83,7 @@ const exercicesInitiaux: Exercice[] = [
 
 export default function SeanceScreen() {
   const { token, user } = useAuth();
-  const { t, exerciseName } = useI18n();
+  const { t, exerciseName, muscleGroupName } = useI18n();
   const dark = useColorScheme() === 'dark';
 
   const sonFinTimer = useAudioPlayer(SON_FIN_TIMER);
@@ -880,7 +880,7 @@ export default function SeanceScreen() {
               </Text>
 
               <Text style={[styles.muscle, dark && styles.mutedDark]}>
-                {exercice.muscle}
+                {muscleGroupName(exercice.muscle)}
               </Text>
             </View>
 
@@ -1117,7 +1117,7 @@ export default function SeanceScreen() {
                     <Text
                       style={[styles.optionMuscle, dark && styles.mutedDark]}
                     >
-                      {exercice.muscle}
+                      {muscleGroupName(exercice.muscle)}
                     </Text>
                   </View>
 
