@@ -104,15 +104,25 @@ function construireExercicesInitiaux(disponibles: ExerciceDisponible[]): Exercic
   });
 }
 
-function construireExercicesDepuisSeance(series: {
-  id: number;
-  exercice_id: number;
-  exercice_nom: string;
-  groupe_musculaire: string | null;
-  poids: number | null;
-  repetitions: number | null;
-}[]): Exercice[] {
+function construireExercicesDepuisSeance(
+  disponibles: ExerciceDisponible[],
+  series: {
+    id: number;
+    exercice_id: number;
+    exercice_nom: string;
+    groupe_musculaire: string | null;
+    poids: number | null;
+    repetitions: number | null;
+  }[]
+): Exercice[] {
+  const catalogue = construireExercicesInitiaux(disponibles);
   const exercicesParBackendId = new Map<number, Exercice>();
+
+  for (const exercice of catalogue) {
+    if (exercice.backendId) {
+      exercicesParBackendId.set(exercice.backendId, exercice);
+    }
+  }
 
   for (const serie of series) {
     const exerciceExistant = exercicesParBackendId.get(serie.exercice_id);
@@ -127,12 +137,16 @@ function construireExercicesDepuisSeance(series: {
     };
 
     if (exerciceExistant) {
-      exerciceExistant.series.push(nouvelleSerie);
+      if (!exerciceExistant.series.some((item) => item.terminee)) {
+        exerciceExistant.series = [nouvelleSerie];
+      } else {
+        exerciceExistant.series.push(nouvelleSerie);
+      }
       continue;
     }
 
     exercicesParBackendId.set(serie.exercice_id, {
-      id: serie.exercice_id,
+      id: Date.now() + serie.exercice_id,
       backendId: serie.exercice_id,
       nom: serie.exercice_nom,
       muscle: serie.groupe_musculaire ?? 'Autres',
@@ -351,7 +365,7 @@ export default function SeanceScreen() {
         const activeSeries = activeData.seance.series ?? [];
         const exercicesRestaures =
           activeSeries.length > 0
-            ? construireExercicesDepuisSeance(activeSeries)
+            ? construireExercicesDepuisSeance(disponibles, activeSeries)
             : construireExercicesInitiaux(disponibles);
 
         setExercices(exercicesRestaures);
@@ -861,9 +875,8 @@ export default function SeanceScreen() {
       setTimerSerieId(null);
       setMinuteursTermines(new Set());
 
-      const exercicesReset = construireExercicesInitiaux(exercicesDisponibles);
-
-      setExercices(exercicesReset);
+      setSeanceId(null);
+      setTerminee(true);
       setMenuExercices(false);
       setChargement(true);
 
@@ -885,9 +898,11 @@ export default function SeanceScreen() {
       const nouvelleSeance =
         await nouvelleSeanceResponse.json();
 
-      setSeanceId(
-        nouvelleSeance.seance_id
-      );
+      const exercicesReset =
+        construireExercicesInitiaux(exercicesDisponibles);
+
+      setExercices(exercicesReset);
+      setSeanceId(nouvelleSeance.seance_id);
 
       await Promise.all(
         exercicesReset.map((exercice) =>
@@ -1017,7 +1032,7 @@ export default function SeanceScreen() {
                     style={[styles.input, dark && styles.inputDark]}
                     value={serie.poids}
                     keyboardType="decimal-pad"
-                    editable={!terminee}
+                    editable={!terminee && !serie.terminee}
                     onChangeText={(texte) =>
                       modifierPoids(
                         exercice.id,
