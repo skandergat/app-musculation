@@ -157,7 +157,7 @@ const translations: Record<Language, Dictionary> = {
     sessionDetails: 'Trainingsdetails', noCompletedWorkouts: 'Noch keine abgeschlossenen Trainings.',
     durationMinutes: 'Min.', exercisesLabel: 'Übungen', setsLabel: 'Sätze',
     endOfWorkout: 'Ende des Trainings', seeDetails: 'Details anzeigen', other: 'weitere',
-    others: 'weitere', exerciseCount: 'Übung', exercisesCount: 'Übungen', setCount: 'Satz', setsCount: 'Sätze',
+    others: 'weitere', otherExercises: 'weitere Übungen', exerciseCount: 'Übung', exercisesCount: 'Übungen', setCount: 'Satz', setsCount: 'Sätze',
   },
 };
 
