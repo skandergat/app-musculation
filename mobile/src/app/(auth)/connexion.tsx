@@ -55,7 +55,7 @@ export default function ConnexionScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.contenu}>
-        <Text style={[styles.logo, dark && styles.textDark]}>Musculation</Text>
+        <Text style={[styles.logo, dark && styles.textDark]}>LIFTELY</Text>
 
         <Text style={[styles.titre, dark && styles.textDark]}>{t("login")}</Text>
 
