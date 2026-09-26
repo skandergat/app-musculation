@@ -1140,6 +1140,7 @@ const exerciseLanguageOverrides: Record<Language, Record<string, string>> = {
     'Chest press machine': 'Presse à pectoraux à la machine',
     'Chest press convergente': 'Presse à pectoraux convergente',
     'Farmer's walk': 'Marche du fermier',
+    "Farmer's walk": 'Marche du fermier',
   },
   en: {},
   de: {
@@ -1279,6 +1280,7 @@ const exerciseLanguageOverrides: Record<Language, Record<string, string>> = {
     'Kettlebell snatch': 'Kettlebell Reißen',
     'Dumbbell clean': 'Kurzhantel Umsetzen',
     'Dumbbell snatch': 'Kurzhantel Reißen',
+    "Farmer's walk": 'Farmer's Walk',
   },
   ar: {
     'Handstand press': 'الضغط إلى الوقوف على اليدين',
@@ -1293,6 +1295,7 @@ const exerciseLanguageOverrides: Record<Language, Record<string, string>> = {
     'Kettlebell snatch': 'سنتش بالكيتلبيل',
     'Dumbbell clean': 'كلين بالدمبل',
     'Dumbbell snatch': 'سنتش بالدمبل',
+    "Farmer's walk": 'مشي المزارع',
   },
 };
 
