@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Vibration } from 'react-native';
 import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
@@ -19,8 +19,7 @@ import {
 } from 'react-native';
 
 
-const SON_FIN_TIMER =
-  'https://raw.githubusercontent.com/TaterTotterson/microWakeWords/main/wakeSounds/notification-ding.wav';
+const SON_FIN_TIMER = require('../../assets/notification-ding.wav');
 
 const TIMER_SERIE_KEY = '@app_musculation_timer_serie';
 
@@ -119,6 +118,7 @@ export default function SeanceScreen() {
   const [timerExerciceId, setTimerExerciceId] = useState<number | null>(null);
   const [timerSerieId, setTimerSerieId] = useState<number | null>(null);
   const [minuteursTermines, setMinuteursTermines] = useState<Set<string>>(new Set());
+  const timerFinAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     setAudioModeAsync({
@@ -164,45 +164,52 @@ export default function SeanceScreen() {
     }
 
     const interval = setInterval(() => {
-      setTempsRestant((ancien) => {
-        if (ancien <= 1) {
-          clearInterval(interval);
+      const finAt = timerFinAtRef.current;
 
-          setTimerActif(false);
+      if (!finAt) {
+        return;
+      }
 
-          const timerTermineKey =
-            timerType === 'serie'
-              ? 'serie-' + timerExerciceId + '-' + timerSerieId
-              : 'exercice-' + timerExerciceId;
+      const restant = Math.max(
+        0,
+        Math.ceil((finAt - Date.now()) / 1000)
+      );
 
-          setMinuteursTermines((anciens) => {
-            const nouveau = new Set(anciens);
-            nouveau.add(timerTermineKey);
-            return nouveau;
-          });
+      setTempsRestant(restant);
 
-          setTimerType(null);
-          setTimerExerciceId(null);
-          setTimerSerieId(null);
+      if (restant === 0) {
+        clearInterval(interval);
+        timerFinAtRef.current = null;
+        setTimerActif(false);
 
-          Vibration.vibrate(500);
+        const timerTermineKey =
+          timerType === 'serie'
+            ? 'serie-' + timerExerciceId + '-' + timerSerieId
+            : 'exercice-' + timerExerciceId;
 
-          try {
-            sonFinTimer.seekTo(0);
-            sonFinTimer.play();
-          } catch (error) {
-            console.error('Erreur lecture son timer :', error);
-          }
+        setMinuteursTermines((anciens) => {
+          const nouveau = new Set(anciens);
+          nouveau.add(timerTermineKey);
+          return nouveau;
+        });
 
-          return 0;
+        setTimerType(null);
+        setTimerExerciceId(null);
+        setTimerSerieId(null);
+
+        Vibration.vibrate(500);
+
+        try {
+          sonFinTimer.seekTo(0);
+          sonFinTimer.play();
+        } catch (error) {
+          console.error('Erreur lecture son timer :', error);
         }
-
-        return ancien - 1;
-      });
-    }, 1000);
+      }
+    }, 250);
 
     return () => clearInterval(interval);
-  }, [timerActif, sonFinTimer]);
+  }, [timerActif, sonFinTimer, timerType, timerExerciceId, timerSerieId]);
 
   const chargerExercicesDisponibles = async () => {
     try {
@@ -559,6 +566,10 @@ export default function SeanceScreen() {
     setTempsRestant(nouveauTemps);
     setTempsReposSerie(nouveauTemps);
 
+    if (timerActif && timerType === 'serie') {
+      timerFinAtRef.current = Date.now() + nouveauTemps * 1000;
+    }
+
     if (user?.id) {
       AsyncStorage.setItem(
         `${TIMER_SERIE_KEY}_${user.id}`,
@@ -696,6 +707,7 @@ export default function SeanceScreen() {
     });
 
     setTempsRestant(tempsReposSerie);
+    timerFinAtRef.current = Date.now() + tempsReposSerie * 1000;
     setTimerType('serie');
     setTimerExerciceId(exerciceId);
     setTimerSerieId(serieId);
@@ -744,6 +756,7 @@ export default function SeanceScreen() {
       );
 
       setTimerActif(false);
+      timerFinAtRef.current = null;
       setTempsRestant(0);
       setTimerType(null);
       setTimerExerciceId(null);
