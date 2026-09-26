@@ -1139,7 +1139,6 @@ const exerciseLanguageOverrides: Record<Language, Record<string, string>> = {
     'Jumping lunges': 'Fentes sautées',
     'Chest press machine': 'Presse à pectoraux à la machine',
     'Chest press convergente': 'Presse à pectoraux convergente',
-    'Farmer's walk': 'Marche du fermier',
     "Farmer's walk": 'Marche du fermier',
   },
   en: {},
