@@ -105,7 +105,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={[styles.container, dark && styles.containerDark]}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={dark ? 'light-content' : 'dark-content'} />
       <View style={styles.contenu}>
         <Text style={[styles.titreHome, dark && styles.textDark]}>LIFTELY</Text>
         <Text style={[styles.sousTitreHome, dark && styles.mutedDark]}>{t('chooseWorkout')}</Text>
