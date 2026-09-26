@@ -19,7 +19,7 @@ import {
 } from 'react-native';
 
 
-const SON_FIN_TIMER = require('../../assets/notification-ding.wav');
+const SON_FIN_TIMER = require('../../../assets/notification-ding.wav');
 
 const TIMER_SERIE_KEY = '@app_musculation_timer_serie';
 
