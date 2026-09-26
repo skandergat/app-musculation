@@ -141,7 +141,7 @@ export default function HistoriqueScreen() {
       setChargement(false);
       setRafraichissement(false);
     }
-  }, []);
+  }, [token, t]);
 
   useEffect(() => {
     chargerHistorique();
