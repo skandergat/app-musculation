@@ -1274,7 +1274,7 @@ const exerciseLanguageOverrides: Record<Language, Record<string, string>> = {
     'Curl câble unilatéral': 'Einarmiger Kabel-Curl',
     'Hip thrust unilatéral': 'Einbeiniger Hip Thrust',
     'Calf raise à la presse': 'Wadenheben an der Beinpresse',
-    'Leg raise chaise romaine': 'Beinheben am Captain's Chair',
+    'Leg raise chaise romaine': "Beinheben am Captain's Chair",
     'Kettlebell clean': 'Kettlebell Umsetzen',
     'Kettlebell snatch': 'Kettlebell Reißen',
     'Dumbbell clean': 'Kurzhantel Umsetzen',
