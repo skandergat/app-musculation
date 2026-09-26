@@ -37,6 +37,13 @@ type PreviousSerie = {
   repetitions: number;
 };
 
+type ExerciceDisponible = {
+  nom: string;
+  muscle: string;
+  backendId: number;
+  categorie?: string;
+};
+
 type Exercice = {
   id: number;
   nom: string;
@@ -48,7 +55,6 @@ type Exercice = {
 const exercicesInitiaux: Exercice[] = [
   {
     id: 1,
-    backendId: 1,
     nom: 'Développé couché',
     muscle: 'Pectoraux',
     series: [
@@ -59,7 +65,6 @@ const exercicesInitiaux: Exercice[] = [
   },
   {
     id: 2,
-    backendId: 2,
     nom: 'Développé incliné haltères',
     muscle: 'Pectoraux',
     series: [
@@ -70,7 +75,6 @@ const exercicesInitiaux: Exercice[] = [
   },
   {
     id: 3,
-    backendId: 80,
     nom: 'Extension poulie corde',
     muscle: 'Triceps',
     series: [
@@ -81,6 +85,63 @@ const exercicesInitiaux: Exercice[] = [
   },
 ];
 
+function construireExercicesInitiaux(disponibles: ExerciceDisponible[]): Exercice[] {
+  return exercicesInitiaux.map((exercice) => {
+    const disponible = disponibles.find(
+      (item) => item.nom === exercice.nom && item.categorie === 'gym'
+    );
+
+    return {
+      ...exercice,
+      backendId: disponible?.backendId,
+      series: exercice.series.map((serie) => ({
+        ...serie,
+        terminee: false,
+        sauvegardee: false,
+        backendId: undefined,
+      })),
+    };
+  });
+}
+
+function construireExercicesDepuisSeance(series: {
+  id: number;
+  exercice_id: number;
+  exercice_nom: string;
+  groupe_musculaire: string | null;
+  poids: number | null;
+  repetitions: number | null;
+}[]): Exercice[] {
+  const exercicesParBackendId = new Map<number, Exercice>();
+
+  for (const serie of series) {
+    const exerciceExistant = exercicesParBackendId.get(serie.exercice_id);
+
+    const nouvelleSerie: Serie = {
+      id: (exerciceExistant?.series.length ?? 0) + 1,
+      poids: String(serie.poids ?? 0),
+      reps: String(serie.repetitions ?? 0),
+      terminee: true,
+      sauvegardee: true,
+      backendId: serie.id,
+    };
+
+    if (exerciceExistant) {
+      exerciceExistant.series.push(nouvelleSerie);
+      continue;
+    }
+
+    exercicesParBackendId.set(serie.exercice_id, {
+      id: serie.exercice_id,
+      backendId: serie.exercice_id,
+      nom: serie.exercice_nom,
+      muscle: serie.groupe_musculaire ?? 'Autres',
+      series: [nouvelleSerie],
+    });
+  }
+
+  return Array.from(exercicesParBackendId.values());
+}
 export default function SeanceScreen() {
   const { token, user } = useAuth();
   const { t, exerciseName, muscleGroupName } = useI18n();
@@ -211,31 +272,31 @@ export default function SeanceScreen() {
     return () => clearInterval(interval);
   }, [timerActif, sonFinTimer, timerType, timerExerciceId, timerSerieId]);
 
-  const chargerExercicesDisponibles = async () => {
+  const chargerExercicesDisponibles = async (): Promise<ExerciceDisponible[]> => {
     try {
-      const response = await fetch(`${API_URL}/exercices?categorie=all`);
+      const response = await fetch(
+        API_URL + '/exercices?categorie=all'
+      );
 
       if (!response.ok) {
         throw new Error(t('connectionImpossible'));
       }
 
       const data = await response.json();
+      const disponibles: ExerciceDisponible[] = data.map((e: any) => ({
+        nom: e.nom,
+        muscle: e.groupe_musculaire ?? '',
+        backendId: e.id,
+        categorie: e.categorie,
+      }));
 
-      setExercicesDisponibles(
-        data.map((e: any) => ({
-          nom: e.nom,
-          muscle: e.groupe_musculaire ?? '',
-          backendId: e.id,
-        }))
-      );
+      setExercicesDisponibles(disponibles);
+      return disponibles;
     } catch (error) {
-      console.error(
-        'Erreur chargement exercices disponibles :',
-        error
-      );
+      console.error('Erreur chargement exercices disponibles :', error);
+      throw error;
     }
   };
-
   const chargerPrevious = async (exercice: Exercice) => {
     try {
       if (!exercice.backendId) {
@@ -266,47 +327,86 @@ export default function SeanceScreen() {
     }
   };
 
-  const demarrerSeance = async () => {
+  const initialiserSeance = async () => {
     try {
-      const response = await fetch(`${API_URL}/seances`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      setChargement(true);
 
-      if (!response.ok) {
-        throw new Error('Impossible de démarrer la séance');
+      const disponibles = await chargerExercicesDisponibles();
+
+      const activeResponse = await fetch(
+        API_URL + '/seances/active',
+        {
+          headers: {
+            Authorization: 'Bearer ' + token,
+          },
+        }
+      );
+
+      if (!activeResponse.ok) {
+        throw new Error(t('connectionImpossible'));
       }
 
-      const data = await response.json();
+      const activeData = await activeResponse.json();
 
-      setSeanceId(data.seance_id);
+      if (activeData.seance) {
+        const activeSeries = activeData.seance.series ?? [];
+        const exercicesRestaures =
+          activeSeries.length > 0
+            ? construireExercicesDepuisSeance(activeSeries)
+            : construireExercicesInitiaux(disponibles);
+
+        setExercices(exercicesRestaures);
+        setSeanceId(activeData.seance.id);
+
+        await Promise.all(
+          exercicesRestaures.map((exercice) => chargerPrevious(exercice))
+        );
+      } else {
+        const response = await fetch(
+          API_URL + '/seances',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: 'Bearer ' + token,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(t('unableStartNew'));
+        }
+
+        const data = await response.json();
+        const exercicesNouveaux = construireExercicesInitiaux(disponibles);
+
+        setExercices(exercicesNouveaux);
+        setSeanceId(data.seance_id);
+
+        await Promise.all(
+          exercicesNouveaux.map((exercice) => chargerPrevious(exercice))
+        );
+      }
+
+      setTerminee(false);
       setChargement(false);
-
-      console.log('Séance créée avec ID :', data.seance_id);
     } catch (error) {
-      console.error('Erreur démarrage séance :', error);
-
+      console.error(t('error') + ' :', error);
       setChargement(false);
-
       Alert.alert(
-        'Erreur',
-        'Impossible de contacter le serveur Flask.'
+        t('connectionImpossible'),
+        t('connectionServerHelp')
       );
     }
   };
 
   useEffect(() => {
-    demarrerSeance();
-    chargerExercicesDisponibles();
+    if (!token) {
+      return;
+    }
 
-    exercicesInitiaux.forEach((exercice) => {
-      chargerPrevious(exercice);
-    });
-  }, []);
-
+    initialiserSeance();
+  }, [token]);
   const ajouterExercice = async (
     nom: string,
     muscle: string,
@@ -360,7 +460,11 @@ export default function SeanceScreen() {
           exercice.series[exercice.series.length - 1];
 
         const nouvelleSerie: Serie = {
-          id: exercice.series.length + 1,
+          id:
+            exercice.series.reduce(
+              (maximum, serie) => Math.max(maximum, serie.id),
+              0
+            ) + 1,
           poids: derniereSerie?.poids || '0',
           reps: derniereSerie?.reps || '10',
           terminee: false,
@@ -396,12 +500,9 @@ export default function SeanceScreen() {
           return exercice;
         }
 
-        const nouvellesSeries = exercice.series
-          .filter((serie) => serie.id !== serieId)
-          .map((serie, index) => ({
-            ...serie,
-            id: index + 1,
-          }));
+        const nouvellesSeries = exercice.series.filter(
+          (serie) => serie.id !== serieId
+        );
 
         return {
           ...exercice,
@@ -470,91 +571,63 @@ export default function SeanceScreen() {
     serie: Serie
   ): Promise<number | null> => {
     if (!seanceId) {
-      Alert.alert(
-        'Erreur',
-        'La séance n’a pas encore été créée.'
-      );
+      Alert.alert(t('error'), t('noActiveWorkout'));
+      return null;
+    }
 
+    if (!exercice.backendId) {
+      Alert.alert(t('exerciseNotFound'), t('exerciseNotFound'));
+      return null;
+    }
+
+    const poids = Number.parseFloat(serie.poids.replace(',', '.'));
+    const repetitions = Number.parseInt(serie.reps, 10);
+
+    if (!Number.isFinite(poids) || poids < 0) {
+      Alert.alert(t('weight'), t('invalidWeight'));
+      return null;
+    }
+
+    if (!Number.isInteger(repetitions) || repetitions < 1) {
+      Alert.alert(t('reps'), t('invalidReps'));
       return null;
     }
 
     try {
-      const exercicesResponse = await fetch(
-        `${API_URL}/exercices`
-      );
-
-      if (!exercicesResponse.ok) {
-        throw new Error(
-          t('connectionImpossible')
-        );
-      }
-
-      const exercicesBackend =
-        await exercicesResponse.json();
-
-      const exerciceBackend =
-        exercicesBackend.find(
-          (item: any) =>
-            item.nom === exercice.nom
-        );
-
-      if (!exerciceBackend) {
-        Alert.alert(
-          t('exerciseNotFound'),
-          `${exercice.nom} n'existe pas encore dans la base Flask.`
-        );
-
-        return null;
-      }
-
       const response = await fetch(
-        `${API_URL}/seances/${seanceId}/series`,
+        API_URL + '/seances/' + seanceId + '/series',
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
+            Authorization: 'Bearer ' + token,
           },
           body: JSON.stringify({
-            exercice_id: exerciceBackend.id,
-            poids: parseFloat(serie.poids) || 0,
-            repetitions: parseInt(serie.reps, 10) || 0,
+            exercice_id: exercice.backendId,
+            poids,
+            repetitions,
           }),
         }
       );
 
+      const data = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        throw new Error(
-          'Impossible de sauvegarder la série'
-        );
+        throw new Error(data.error || t('cannotSaveSet'));
       }
 
-      const data = await response.json();
-
-      console.log(
-        'Série sauvegardée :',
-        exercice.nom,
-        serie.poids,
-        serie.reps
-      );
-
-      return typeof data.series_id === 'number' ? data.series_id : null;
-    } catch (error) {
-      console.error(
-        'Erreur sauvegarde série :',
-        error
-      );
-
+      return typeof data.series_id === 'number'
+        ? data.series_id
+        : null;
+    } catch (error: any) {
+      console.error('Erreur sauvegarde série :', error);
       Alert.alert(
-        'Erreur',
-        'La série n’a pas pu être sauvegardée.'
+        t('error'),
+        error?.message || t('cannotSaveSet')
       );
-
       return null;
     }
   };
-
-
   const modifierTempsReposSerie = (delta: number) => {
     const base =
       timerActif && timerType === 'serie'
@@ -625,6 +698,20 @@ export default function SeanceScreen() {
     if (serie.terminee) {
       if (!serie.backendId || !seanceId) {
         return;
+      }
+
+      if (
+        timerActif &&
+        timerType === 'serie' &&
+        timerExerciceId === exerciceId &&
+        timerSerieId === serieId
+      ) {
+        timerFinAtRef.current = null;
+        setTimerActif(false);
+        setTempsRestant(0);
+        setTimerType(null);
+        setTimerExerciceId(null);
+        setTimerSerieId(null);
       }
 
       try {
@@ -775,19 +862,7 @@ export default function SeanceScreen() {
       setTimerSerieId(null);
       setMinuteursTermines(new Set());
 
-      const exercicesReset =
-        exercicesInitiaux.map(
-          (exercice) => ({
-            ...exercice,
-            series: exercice.series.map(
-              (serie) => ({
-                ...serie,
-                terminee: false,
-                sauvegardee: false,
-              })
-            ),
-          })
-        );
+      const exercicesReset = construireExercicesInitiaux(exercicesDisponibles);
 
       setExercices(exercicesReset);
       setMenuExercices(false);
@@ -920,7 +995,7 @@ export default function SeanceScreen() {
               </Text>
             </View>
 
-            {exercice.series.map((serie) => (
+            {exercice.series.map((serie, serieIndex) => (
               <View key={serie.id}>
                 <View
                   style={[
@@ -944,7 +1019,7 @@ export default function SeanceScreen() {
                   <TextInput
                     style={[styles.input, dark && styles.inputDark]}
                     value={serie.poids}
-                    keyboardType="numeric"
+                    keyboardType="decimal-pad"
                     editable={!terminee}
                     onChangeText={(texte) =>
                       modifierPoids(
@@ -958,7 +1033,7 @@ export default function SeanceScreen() {
                   <TextInput
                     style={[styles.input, dark && styles.inputDark]}
                     value={serie.reps}
-                    keyboardType="numeric"
+                    keyboardType="number-pad"
                     editable={!terminee}
                     onChangeText={(texte) =>
                       modifierReps(
