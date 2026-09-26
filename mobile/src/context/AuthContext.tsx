@@ -33,7 +33,7 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const TOKEN_KEY = '@app_musculation_token';
+const TOKEN_KEY = 'liftely.auth.token';
 const USER_KEY = '@app_musculation_user';
 
 async function getStoredToken(): Promise<string | null> {
