@@ -163,10 +163,34 @@ const translations: Record<Language, Dictionary> = {
 
 const LANGUAGE_KEY = '@app_musculation_language';
 
+const exerciseTranslations: Record<Language, Record<string, string>> = {
+  fr: {
+    'Développé couché': 'Développé couché',
+    'Développé incliné haltères': 'Développé incliné haltères',
+    'Extension poulie corde': 'Extension poulie corde',
+  },
+  en: {
+    'Développé couché': 'Barbell Bench Press',
+    'Développé incliné haltères': 'Incline Dumbbell Press',
+    'Extension poulie corde': 'Rope Triceps Pushdown',
+  },
+  de: {
+    'Développé couché': 'Bankdrücken mit Langhantel',
+    'Développé incliné haltères': 'Schrägbankdrücken mit Kurzhanteln',
+    'Extension poulie corde': 'Trizepsdrücken am Kabelzug mit Seil',
+  },
+  ar: {
+    'Développé couché': 'ضغط الصدر بالبار',
+    'Développé incliné haltères': 'ضغط الصدر المائل بالدمبل',
+    'Extension poulie corde': 'تمديد الترايسبس بالحبل',
+  },
+};
+
 type I18nContextType = {
   language: Language;
   setLanguage: (language: Language) => Promise<void>;
   t: (key: string) => string;
+  exerciseName: (name: string) => string;
 };
 
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
@@ -193,8 +217,11 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   const t = (key: string) => translations[language][key] ?? translations.fr[key] ?? key;
 
+  const exerciseName = (name: string) =>
+    exerciseTranslations[language][name] ?? name;
+
   return (
-    <I18nContext.Provider value={{ language, setLanguage, t }}>
+    <I18nContext.Provider value={{ language, setLanguage, t, exerciseName }}>
       {children}
     </I18nContext.Provider>
   );
