@@ -22,6 +22,68 @@ jobs:
       - name: Validate Python syntax
         run: python -m py_compile backend/app.py init_db.py
 
+      - name: Backend smoke test
+        env:
+          LIFTELY_DB_PATH: ${{ runner.temp }}/liftely-smoke.db
+        run: |
+          python - <<'PY'
+          import sqlite3
+          from backend import app
+
+          app.assurer_base()
+          conn = sqlite3.connect(app.DB_PATH)
+          gym = conn.execute(
+              "SELECT COUNT(*) FROM exercices WHERE categorie = 'gym' AND actif = 1"
+          ).fetchone()[0]
+          cal = conn.execute(
+              "SELECT COUNT(*) FROM exercices WHERE categorie = 'calisthenics' AND actif = 1"
+          ).fetchone()[0]
+          assert gym == 185, gym
+          assert cal == 152, cal
+          conn.close()
+
+          client = app.app.test_client()
+
+          response = client.post(
+              "/auth/register",
+              json={
+                  "nom": "CI Test",
+                  "email": "ci-test@example.com",
+                  "password": "TestPassword123!"
+              },
+          )
+          assert response.status_code == 201, response.data
+          token = response.get_json()["token"]
+          headers = {"Authorization": f"Bearer {token}"}
+
+          first_session = client.post("/seances", headers=headers)
+          assert first_session.status_code == 201, first_session.data
+          first_id = first_session.get_json()["seance_id"]
+
+          second_session = client.post("/seances", headers=headers)
+          assert second_session.status_code == 200, second_session.data
+          assert second_session.get_json()["seance_id"] == first_id
+          assert second_session.get_json()["reused"] is True
+
+          conn = sqlite3.connect(app.DB_PATH)
+          exercise_id = conn.execute("SELECT id FROM exercices WHERE actif = 1 ORDER BY id LIMIT 1").fetchone()[0]
+          conn.close()
+
+          series = client.post(f"/seances/{first_id}/series", headers=headers, json={"exercice_id": exercise_id, "poids": 20, "repetitions": 10})
+          assert series.status_code == 201, series.data
+
+          finished = client.post(f"/seances/{first_id}/terminer", headers=headers)
+          assert finished.status_code == 200, finished.data
+
+          rejected = client.post(f"/seances/{first_id}/series", headers=headers, json={"exercice_id": exercise_id, "poids": 20, "repetitions": 10})
+          assert rejected.status_code == 404, rejected.data
+
+          history = client.get("/historique", headers=headers)
+          assert history.status_code == 200, history.data
+          assert len(history.get_json()) == 1
+
+          print("LIFTELY backend smoke test: OK")
+          PY
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
