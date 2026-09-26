@@ -714,6 +714,18 @@ export default function SeanceScreen() {
     setTimerActif(true);
   };
 
+  const exercicesParGroupe = exercicesDisponibles.reduce<Record<string, { nom: string; muscle: string; backendId: number }[]>>(
+    (groupes, exercice) => {
+      const groupe = exercice.muscle || 'Autres';
+      if (!groupes[groupe]) {
+        groupes[groupe] = [];
+      }
+      groupes[groupe].push(exercice);
+      return groupes;
+    },
+    {}
+  );
+
   const terminerSeance = async () => {
     if (terminaisonEnCours) {
       return;
@@ -1092,41 +1104,49 @@ export default function SeanceScreen() {
               {t('chooseExercise')}
             </Text>
 
-            {exercicesDisponibles.map(
-              (exercice) => (
-                <TouchableOpacity
-                  key={`${exercice.backendId}-${exercice.nom}`}
-                  style={
-                    styles.optionExercice
-                  }
-                  onPress={() =>
-                    ajouterExercice(
-                      exercice.nom,
-                      exercice.muscle,
-                      exercice.backendId
-                    )
-                  }
-                >
-                  <View>
-                    <Text
-                      style={[styles.optionNom, dark && styles.textDark]}
-                    >
-                      {exercice.nom}
+            <ScrollView
+              style={styles.exercicesScroll}
+              nestedScrollEnabled
+              showsVerticalScrollIndicator
+              persistentScrollbar
+              indicatorStyle={dark ? 'white' : 'black'}
+            >
+              {Object.entries(exercicesParGroupe).map(
+                ([groupe, exercicesDuGroupe]) => (
+                  <View key={groupe} style={styles.groupeExercices}>
+                    <Text style={[styles.groupeTitre, dark && styles.textDark]}>
+                      {muscleGroupName(groupe)}
                     </Text>
 
-                    <Text
-                      style={[styles.optionMuscle, dark && styles.mutedDark]}
-                    >
-                      {muscleGroupName(exercice.muscle)}
-                    </Text>
+                    {exercicesDuGroupe.map((exercice) => (
+                      <TouchableOpacity
+                        key={`${exercice.backendId}-${exercice.nom}`}
+                        style={[styles.optionExercice, dark && styles.optionExerciceDark]}
+                        onPress={() =>
+                          ajouterExercice(
+                            exercice.nom,
+                            exercice.muscle,
+                            exercice.backendId
+                          )
+                        }
+                      >
+                        <View style={styles.optionTexte}>
+                          <Text style={[styles.optionNom, dark && styles.textDark]}>
+                            {exerciseName(exercice.nom)}
+                          </Text>
+
+                          <Text style={[styles.optionMuscle, dark && styles.mutedDark]}>
+                            {muscleGroupName(exercice.muscle)}
+                          </Text>
+                        </View>
+
+                        <Text style={styles.plus}>＋</Text>
+                      </TouchableOpacity>
+                    ))}
                   </View>
-
-                  <Text style={styles.plus}>
-                    ＋
-                  </Text>
-                </TouchableOpacity>
-              )
-            )}
+                )
+              )}
+            </ScrollView>
           </View>
         )}
 
@@ -1411,6 +1431,29 @@ const styles = StyleSheet.create({
     color: '#000000',
     padding: 12,
     marginBottom: 4,
+  },
+
+  exercicesScroll: {
+    maxHeight: 520,
+  },
+
+  groupeExercices: {
+    marginBottom: 8,
+  },
+
+  groupeTitre: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#8A8A8E',
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 6,
+    textTransform: 'uppercase',
+  },
+
+  optionTexte: {
+    flex: 1,
+    paddingRight: 12,
   },
 
   optionExercice: {
