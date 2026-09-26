@@ -875,7 +875,7 @@ export default function SeanceScreen() {
             <View
               style={[styles.exerciceCarte, dark && styles.cardDark]}
             >
-              <Text style={styles.exercice}>
+              <Text style={[styles.exercice, dark && styles.textDark]}>
                 {exerciseName(exercice.nom)}
               </Text>
 
