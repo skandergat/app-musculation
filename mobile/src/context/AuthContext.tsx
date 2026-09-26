@@ -34,6 +34,7 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const TOKEN_KEY = 'liftely.auth.token';
+const LEGACY_TOKEN_KEY = '@app_musculation_token';
 const USER_KEY = '@app_musculation_user';
 
 async function getStoredToken(): Promise<string | null> {
@@ -47,10 +48,10 @@ async function getStoredToken(): Promise<string | null> {
   }
 
   // Migrate a token from the old AsyncStorage location once.
-  const legacyToken = await AsyncStorage.getItem(TOKEN_KEY);
+  const legacyToken = await AsyncStorage.getItem(LEGACY_TOKEN_KEY);
   if (legacyToken) {
     await SecureStore.setItemAsync(TOKEN_KEY, legacyToken);
-    await AsyncStorage.removeItem(TOKEN_KEY);
+    await AsyncStorage.removeItem(LEGACY_TOKEN_KEY);
     return legacyToken;
   }
 
@@ -74,6 +75,7 @@ async function removeStoredToken(): Promise<void> {
 
   await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
   await AsyncStorage.removeItem(TOKEN_KEY).catch(() => {});
+  await AsyncStorage.removeItem(LEGACY_TOKEN_KEY).catch(() => {});
 }
 
 export function AuthProvider({
