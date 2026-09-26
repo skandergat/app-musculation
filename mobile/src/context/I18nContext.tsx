@@ -1414,10 +1414,10 @@ const localizedExerciseFallbacks: Record<Language, Record<string, string>> = {
 };
 
 const muscleGroupTranslations: Record<Language, Record<string, string>> = {
-  fr: { Pectoraux: 'Pectoraux', Dos: 'Dos', Trapèzes: 'Trapèzes', Épaules: 'Épaules', Biceps: 'Biceps', Triceps: 'Triceps', Quadriceps: 'Quadriceps', 'Ischio-jambiers': 'Ischio-jambiers', Fessiers: 'Fessiers', Mollets: 'Mollets', Abdominaux: 'Abdominaux', 'Avant-bras': 'Avant-bras', 'Full body': 'Full body', Jambes: 'Jambes' },
-  en: { Pectoraux: 'Chest', Dos: 'Back', Trapèzes: 'Traps', Épaules: 'Shoulders', Biceps: 'Biceps', Triceps: 'Triceps', Quadriceps: 'Quadriceps', 'Ischio-jambiers': 'Hamstrings', Fessiers: 'Glutes', Mollets: 'Calves', Abdominaux: 'Abs', 'Avant-bras': 'Forearms', 'Full body': 'Full Body', Jambes: 'Legs' },
-  de: { Pectoraux: 'Brust', Dos: 'Rücken', Trapèzes: 'Trapez', Épaules: 'Schultern', Biceps: 'Bizeps', Triceps: 'Trizeps', Quadriceps: 'Quadrizeps', 'Ischio-jambiers': 'Oberschenkelrückseite', Fessiers: 'Gesäß', Mollets: 'Waden', Abdominaux: 'Bauch', 'Avant-bras': 'Unterarme', 'Full body': 'Ganzkörper', Jambes: 'Beine' },
-  ar: { Pectoraux: 'الصدر', Dos: 'الظهر', Trapèzes: 'الترابيس', Épaules: 'الأكتاف', Biceps: 'البايسبس', Triceps: 'الترايسبس', Quadriceps: 'العضلات الرباعية', 'Ischio-jambiers': 'أوتار الركبة', Fessiers: 'الأرداف', Mollets: 'السمانة', Abdominaux: 'البطن', 'Avant-bras': 'الساعد', 'Full body': 'الجسم كامل', Jambes: 'الساقان' },
+  fr: { Autres: 'Autres', Pectoraux: 'Pectoraux', Dos: 'Dos', Trapèzes: 'Trapèzes', Épaules: 'Épaules', Biceps: 'Biceps', Triceps: 'Triceps', Quadriceps: 'Quadriceps', 'Ischio-jambiers': 'Ischio-jambiers', Fessiers: 'Fessiers', Mollets: 'Mollets', Abdominaux: 'Abdominaux', 'Avant-bras': 'Avant-bras', 'Full body': 'Full body', Jambes: 'Jambes' },
+  en: { Autres: 'Other', Pectoraux: 'Chest', Dos: 'Back', Trapèzes: 'Traps', Épaules: 'Shoulders', Biceps: 'Biceps', Triceps: 'Triceps', Quadriceps: 'Quadriceps', 'Ischio-jambiers': 'Hamstrings', Fessiers: 'Glutes', Mollets: 'Calves', Abdominaux: 'Abs', 'Avant-bras': 'Forearms', 'Full body': 'Full Body', Jambes: 'Legs' },
+  de: { Autres: 'Andere', Pectoraux: 'Brust', Dos: 'Rücken', Trapèzes: 'Trapez', Épaules: 'Schultern', Biceps: 'Bizeps', Triceps: 'Trizeps', Quadriceps: 'Quadrizeps', 'Ischio-jambiers': 'Oberschenkelrückseite', Fessiers: 'Gesäß', Mollets: 'Waden', Abdominaux: 'Bauch', 'Avant-bras': 'Unterarme', 'Full body': 'Ganzkörper', Jambes: 'Beine' },
+  ar: { Autres: 'أخرى', Pectoraux: 'الصدر', Dos: 'الظهر', Trapèzes: 'الترابيس', Épaules: 'الأكتاف', Biceps: 'البايسبس', Triceps: 'الترايسبس', Quadriceps: 'العضلات الرباعية', 'Ischio-jambiers': 'أوتار الركبة', Fessiers: 'الأرداف', Mollets: 'السمانة', Abdominaux: 'البطن', 'Avant-bras': 'الساعد', 'Full body': 'الجسم كامل', Jambes: 'الساقان' },
 };
 
 function normalizeExerciseName(name: string) {
