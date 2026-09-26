@@ -244,6 +244,35 @@ def assurer_base():
             "ALTER TABLE seances ADD COLUMN user_id INTEGER"
         )
 
+    # Une seule séance active par utilisateur. Les anciennes séances
+    # actives en double sont clôturées en conservant la plus récente.
+    maintenant = datetime.now().isoformat()
+    cursor.execute(
+        """
+        UPDATE seances
+        SET date_fin = ?
+        WHERE date_fin IS NULL
+          AND user_id IS NOT NULL
+          AND id NOT IN (
+              SELECT MAX(id)
+              FROM seances
+              WHERE date_fin IS NULL
+                AND user_id IS NOT NULL
+              GROUP BY user_id
+          )
+        """,
+        (maintenant,),
+    )
+
+    cursor.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_seances_active_user
+        ON seances(user_id)
+        WHERE date_fin IS NULL
+          AND user_id IS NOT NULL
+        """
+    )
+
     # --------------------------------------------------------
     # SERIES
     # --------------------------------------------------------
