@@ -74,9 +74,10 @@ def email_valide(email):
 
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA busy_timeout = 5000")
     return conn
 
 
@@ -1305,6 +1306,11 @@ def register():
     if len(password) < 8:
         return jsonify({
             "error": "Le mot de passe doit contenir au moins 8 caractères"
+        }), 400
+
+    if len(password) > 256:
+        return jsonify({
+            "error": "Le mot de passe est trop long"
         }), 400
 
     conn = get_db()
