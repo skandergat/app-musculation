@@ -336,7 +336,7 @@ export default function HistoriqueScreen() {
    * ÉCRAN HISTORIQUE
    */
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, dark && styles.containerDark]}>
       <StatusBar barStyle={dark ? 'light-content' : 'dark-content'} />
 
       <Text style={[styles.titre, dark && styles.textDark]}>
@@ -417,17 +417,19 @@ export default function HistoriqueScreen() {
                       }
                     >
                       <Text
-                        style={
-                          styles.exerciceNom
-                        }
+                        style={[
+                          styles.exerciceNom,
+                          dark && styles.textDark,
+                        ]}
                       >
                         {groupe.nom}
                       </Text>
 
                       <Text
-                        style={
-                          styles.exerciceDetail
-                        }
+                        style={[
+                          styles.exerciceDetail,
+                          dark && styles.mutedDark,
+                        ]}
                       >
                         {groupe.series
                           .map(
