@@ -23,7 +23,7 @@ export default function HomeScreen() {
     try {
       setErreur(null);
       const response = await fetch(API_URL + '/exercices?categorie=' + categorie);
-      if (!response.ok) throw new Error('Erreur ' + response.status);
+      if (!response.ok) throw new Error(t('connectionImpossible'));
       setExercices(await response.json());
     } catch (err:any) {
       setErreur(err?.message ?? t('connectionImpossible'));
