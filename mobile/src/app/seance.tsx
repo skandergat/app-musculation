@@ -4,6 +4,7 @@ import { Vibration } from 'react-native';
 import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { useAuth } from '@/context/AuthContext';
 import { useI18n } from '@/context/I18nContext';
+import { API_URL } from '@/config/api';
 import {
   SafeAreaView,
   StatusBar,
@@ -17,7 +18,6 @@ import {
   useColorScheme,
 } from 'react-native';
 
-const API_URL = 'http://192.168.100.200:5001';
 
 const SON_FIN_TIMER =
   'https://raw.githubusercontent.com/TaterTotterson/microWakeWords/main/wakeSounds/notification-ding.wav';
@@ -30,6 +30,7 @@ type Serie = {
   reps: string;
   terminee: boolean;
   sauvegardee?: boolean;
+  backendId?: number;
 };
 
 type PreviousSerie = {
@@ -460,14 +461,14 @@ export default function SeanceScreen() {
   const sauvegarderSerie = async (
     exercice: Exercice,
     serie: Serie
-  ) => {
+  ): Promise<number | null> => {
     if (!seanceId) {
       Alert.alert(
         'Erreur',
         'La séance n’a pas encore été créée.'
       );
 
-      return false;
+      return null;
     }
 
     try {
@@ -496,7 +497,7 @@ export default function SeanceScreen() {
           `${exercice.nom} n'existe pas encore dans la base Flask.`
         );
 
-        return false;
+        return null;
       }
 
       const response = await fetch(
@@ -521,6 +522,8 @@ export default function SeanceScreen() {
         );
       }
 
+      const data = await response.json();
+
       console.log(
         'Série sauvegardée :',
         exercice.nom,
@@ -528,7 +531,7 @@ export default function SeanceScreen() {
         serie.reps
       );
 
-      return true;
+      return typeof data.series_id === 'number' ? data.series_id : null;
     } catch (error) {
       console.error(
         'Erreur sauvegarde série :',
@@ -540,7 +543,7 @@ export default function SeanceScreen() {
         'La série n’a pas pu être sauvegardée.'
       );
 
-      return false;
+      return null;
     }
   };
 
@@ -609,36 +612,58 @@ export default function SeanceScreen() {
     }
 
     if (serie.terminee) {
-      setExercices((anciens) =>
-        anciens.map((item) => {
-          if (item.id !== exerciceId) {
-            return item;
-          }
+      if (!serie.backendId || !seanceId) {
+        return;
+      }
 
-          return {
-            ...item,
-            series: item.series.map((s) =>
-              s.id === serieId
-                ? {
-                    ...s,
-                    terminee: false,
-                  }
-                : s
-            ),
-          };
-        })
-      );
+      try {
+        const response = await fetch(
+          API_URL + '/seances/' + seanceId + '/series/' + serie.backendId,
+          {
+            method: 'DELETE',
+            headers: {
+              Authorization: 'Bearer ' + token,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Impossible de supprimer la série');
+        }
+
+        setExercices((anciens) =>
+          anciens.map((item) =>
+            item.id !== exerciceId
+              ? item
+              : {
+                  ...item,
+                  series: item.series.map((s) =>
+                    s.id === serieId
+                      ? {
+                          ...s,
+                          terminee: false,
+                          sauvegardee: false,
+                          backendId: undefined,
+                        }
+                      : s
+                  ),
+                }
+          )
+        );
+      } catch (error) {
+        console.error('Erreur suppression série :', error);
+        Alert.alert('Erreur', 'La série n’a pas pu être supprimée.');
+      }
 
       return;
     }
 
-    const sauvegardeReussie =
-      await sauvegarderSerie(
-        exercice,
-        serie
-      );
+    const seriesBackendId = await sauvegarderSerie(
+      exercice,
+      serie
+    );
 
-    if (!sauvegardeReussie) {
+    if (seriesBackendId === null) {
       return;
     }
 
@@ -656,6 +681,7 @@ export default function SeanceScreen() {
                   ...s,
                   terminee: true,
                   sauvegardee: true,
+                  backendId: seriesBackendId,
                 }
               : s
           ),

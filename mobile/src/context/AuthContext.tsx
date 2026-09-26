@@ -5,8 +5,8 @@ import React, {
   useEffect,
   useState,
 } from 'react';
+import { API_URL } from '@/config/api';
 
-const API_URL = 'http://192.168.100.200:5001';
 
 type User = {
   id: number;

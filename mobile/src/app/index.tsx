@@ -4,8 +4,8 @@ import {
   StatusBar, StyleSheet, Text, View, useColorScheme,
 } from 'react-native';
 import { useI18n } from '@/context/I18nContext';
+import { API_URL } from '@/config/api';
 
-const API_URL = 'http://192.168.100.200:5001';
 type Category = 'gym' | 'calisthenics';
 type Exercice = { id:number; nom?:string; name?:string; groupe_musculaire?:string; categorie?:Category };
 
