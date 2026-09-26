@@ -1,11 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, {
-import { API_URL } from '@/config/api';
   createContext,
   useContext,
   useEffect,
   useState,
 } from 'react';
+import { API_URL } from '@/config/api';
 
 
 type User = {
