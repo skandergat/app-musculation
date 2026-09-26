@@ -45,7 +45,7 @@ const translations: Record<Language, Dictionary> = {
     sessionDetails: 'Détails de la séance', noCompletedWorkouts: 'Aucune séance terminée.',
     durationMinutes: 'min', exercisesLabel: 'Exercices', setsLabel: 'Séries',
     endOfWorkout: 'Fin de la séance', seeDetails: 'Voir les détails',
-    other: 'autre', others: 'autres', exerciseCount: 'exercice', exercisesCount: 'exercices',
+    other: 'autre', others: 'autres', otherExercises: 'autres exercices', exerciseCount: 'exercice', exercisesCount: 'exercices',
     setCount: 'série', setsCount: 'séries',
   },
 
@@ -83,7 +83,7 @@ const translations: Record<Language, Dictionary> = {
     sessionDetails: 'Workout details', noCompletedWorkouts: 'No completed workouts yet.',
     durationMinutes: 'min', exercisesLabel: 'Exercises', setsLabel: 'Sets',
     endOfWorkout: 'End of workout', seeDetails: 'View details',
-    other: 'other', others: 'others', exerciseCount: 'exercise', exercisesCount: 'exercises',
+    other: 'other', others: 'others', otherExercises: 'other exercises', exerciseCount: 'exercise', exercisesCount: 'exercises',
     setCount: 'set', setsCount: 'sets',
   },
 
@@ -119,7 +119,7 @@ const translations: Record<Language, Dictionary> = {
     sessionDetails: 'تفاصيل التمرين', noCompletedWorkouts: 'لا توجد تمارين مكتملة حتى الآن.',
     durationMinutes: 'د', exercisesLabel: 'تمارين', setsLabel: 'مجموعات',
     endOfWorkout: 'نهاية التمرين', seeDetails: 'عرض التفاصيل', other: 'آخر', others: 'أخرى',
-    exerciseCount: 'تمرين', exercisesCount: 'تمارين', setCount: 'مجموعة', setsCount: 'مجموعات',
+    otherExercises: 'تمارين أخرى', exerciseCount: 'تمارين', setCount: 'مجموعة', setsCount: 'مجموعات',
   },
 
   de: {
