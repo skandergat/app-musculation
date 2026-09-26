@@ -1,51 +1,48 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import {
+  DarkTheme,
+  DefaultTheme,
+  Stack,
+  ThemeProvider,
+} from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { Slot, Redirect } from 'expo-router';
-import { Appearance, useColorScheme, View, ActivityIndicator, StatusBar } from 'react-native';
+import { Appearance, StatusBar, useColorScheme } from 'react-native';
 import { useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { I18nProvider } from '@/context/I18nContext';
 
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
-function Navigation() {
+function RootNavigator() {
   const { user, loading } = useAuth();
 
-  if (loading) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}
-      >
-        <ActivityIndicator size="large" color="#0A84FF" />
-      </View>
-    );
-  }
+  useEffect(() => {
+    if (!loading) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [loading]);
 
-  if (!user) {
-    return (
-      <>
-        <Slot />
-        <Redirect href="/connexion" />
-      </>
-    );
-  }
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Protected guard={loading || !!user}>
+        <Stack.Screen name="(app)" />
+      </Stack.Protected>
 
-  return <AppTabs />;
+      <Stack.Protected guard={loading || !user}>
+        <Stack.Screen name="(auth)" />
+      </Stack.Protected>
+    </Stack>
+  );
 }
 
 export default function RootLayout() {
   useEffect(() => {
-    AsyncStorage.getItem('@app_musculation_dark_mode').then((value) => {
-      Appearance.setColorScheme(value === 'true' ? 'dark' : 'light');
-    });
+    AsyncStorage.getItem('@app_musculation_dark_mode')
+      .then((value) => {
+        Appearance.setColorScheme(value === 'true' ? 'dark' : 'light');
+      })
+      .catch(() => {});
   }, []);
 
   const colorScheme = useColorScheme();
@@ -53,13 +50,18 @@ export default function RootLayout() {
   return (
     <I18nProvider>
       <AuthProvider>
-      <ThemeProvider
-        value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}
-      >
-        <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
-        <AnimatedSplashOverlay />
-        <Navigation />
-      </ThemeProvider>
+        <ThemeProvider
+          value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}
+        >
+          <StatusBar
+            barStyle={
+              colorScheme === 'dark'
+                ? 'light-content'
+                : 'dark-content'
+            }
+          />
+          <RootNavigator />
+        </ThemeProvider>
       </AuthProvider>
     </I18nProvider>
   );
