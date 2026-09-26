@@ -146,16 +146,6 @@ export default function SeanceScreen() {
           }
         }
 
-        if (exerciceSauvegarde) {
-          const valeur = parseInt(
-            exerciceSauvegarde,
-            10
-          );
-
-          if (Number.isFinite(valeur) && valeur > 0) {
-            setTempsReposExercice(valeur);
-          }
-        }
       } catch (error) {
         console.error(
           'Erreur chargement préférences timer :',
