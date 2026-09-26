@@ -40,5 +40,18 @@
       "typedRoutes": true,
       "reactCompiler": true
     }
-  }
+  },
+  "plugins": [
+    "expo-router",
+    [
+      "expo-splash-screen",
+      {
+        "backgroundColor": "#0B0B0D",
+        "imageWidth": 76
+      }
+    ],
+    "expo-audio",
+    "expo-asset",
+    "expo-secure-store"
+  ]
 }
