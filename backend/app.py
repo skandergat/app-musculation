@@ -1,13 +1,17 @@
 ﻿from flask import Flask, jsonify, request
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 import hashlib
 import secrets
 import re
 
 app = Flask(__name__)
 
-DB_PATH = "musculation.db"
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+DB_PATH = str(BASE_DIR / "musculation.db")
+SESSION_DURATION_DAYS = 30
 
 
 # ============================================================
@@ -107,8 +111,9 @@ def get_user_from_request():
         FROM sessions
         JOIN users ON users.id = sessions.user_id
         WHERE sessions.token_hash = ?
+          AND sessions.date_expiration > ?
         """,
-        (token_hash,),
+        (token_hash, datetime.now().isoformat()),
     ).fetchone()
 
     conn.close()
@@ -178,9 +183,27 @@ def assurer_base():
             token_hash TEXT PRIMARY KEY,
             user_id INTEGER NOT NULL,
             date_creation TEXT NOT NULL,
+            date_expiration TEXT NOT NULL,
             FOREIGN KEY (user_id) REFERENCES users (id)
         )
     """)
+
+    # Migration : expiration des sessions pour les bases existantes
+    colonnes_sessions = cursor.execute(
+        "PRAGMA table_info(sessions)"
+    ).fetchall()
+    noms_colonnes_sessions = [colonne[1] for colonne in colonnes_sessions]
+    if "date_expiration" not in noms_colonnes_sessions:
+        cursor.execute(
+            "ALTER TABLE sessions ADD COLUMN date_expiration TEXT"
+        )
+        expiration_defaut = (
+            datetime.now() + timedelta(days=SESSION_DURATION_DAYS)
+        ).isoformat()
+        cursor.execute(
+            "UPDATE sessions SET date_expiration = ? WHERE date_expiration IS NULL",
+            (expiration_defaut,),
+        )
 
     # --------------------------------------------------------
     # SEANCES
@@ -1270,13 +1293,14 @@ def register():
     cursor.execute(
         """
         INSERT INTO sessions
-        (token_hash, user_id, date_creation)
-        VALUES (?, ?, ?)
+        (token_hash, user_id, date_creation, date_expiration)
+        VALUES (?, ?, ?, ?)
         """,
         (
             token_hash,
             user_id,
             date_creation,
+            (datetime.now() + timedelta(days=SESSION_DURATION_DAYS)).isoformat(),
         ),
     )
 
@@ -1343,17 +1367,22 @@ def login():
     # Nouveau token de session
     token = secrets.token_urlsafe(32)
     token_hash = hash_token(token)
+    date_creation = datetime.now().isoformat()
+    date_expiration = (
+        datetime.now() + timedelta(days=SESSION_DURATION_DAYS)
+    ).isoformat()
 
     conn.execute(
         """
         INSERT INTO sessions
-        (token_hash, user_id, date_creation)
-        VALUES (?, ?, ?)
+        (token_hash, user_id, date_creation, date_expiration)
+        VALUES (?, ?, ?, ?)
         """,
         (
             token_hash,
             user["id"],
-            datetime.now().isoformat(),
+            date_creation,
+            date_expiration,
         ),
     )
 
@@ -1601,7 +1630,8 @@ def ajouter_serie(seance_id):
             "error": "Exercice introuvable"
         }), 404
 
-    conn.execute(
+    cursor = conn.cursor()
+    cursor.execute(
         """
         INSERT INTO series
         (
@@ -1620,12 +1650,54 @@ def ajouter_serie(seance_id):
         ),
     )
 
+    series_id = cursor.lastrowid
     conn.commit()
     conn.close()
 
     return jsonify({
-        "status": "ok"
+        "status": "ok",
+        "series_id": series_id,
     }), 201
+
+
+# ============================================================
+# SEANCE - SUPPRIMER UNE SERIE
+# ============================================================
+
+@app.route(
+    "/seances/<int:seance_id>/series/<int:series_id>",
+    methods=["DELETE"],
+)
+def supprimer_serie(seance_id, series_id):
+    user = get_user_from_request()
+
+    if not user:
+        return utilisateur_non_connecte()
+
+    conn = get_db()
+    seance = verifier_proprietaire_seance(conn, seance_id, user["id"])
+
+    if not seance:
+        conn.close()
+        return jsonify({"error": "Séance introuvable"}), 404
+
+    serie = conn.execute(
+        "SELECT id FROM series WHERE id = ? AND seance_id = ?",
+        (series_id, seance_id),
+    ).fetchone()
+
+    if not serie:
+        conn.close()
+        return jsonify({"error": "Série introuvable"}), 404
+
+    conn.execute(
+        "DELETE FROM series WHERE id = ? AND seance_id = ?",
+        (series_id, seance_id),
+    )
+    conn.commit()
+    conn.close()
+
+    return jsonify({"status": "ok"})
 
 
 # ============================================================
@@ -1812,6 +1884,6 @@ def historique():
 if __name__ == "__main__":
     app.run(
         host="0.0.0.0",
-        debug=True,
+        debug=False,
         port=5001,
     )
