@@ -83,7 +83,7 @@ const exercicesInitiaux: Exercice[] = [
 
 export default function SeanceScreen() {
   const { token, user } = useAuth();
-  const { t } = useI18n();
+  const { t, exerciseName } = useI18n();
   const dark = useColorScheme() === 'dark';
 
   const sonFinTimer = useAudioPlayer(SON_FIN_TIMER);
@@ -853,7 +853,7 @@ export default function SeanceScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, dark && styles.containerDark]}>
       <StatusBar barStyle="dark-content" />
 
       <ScrollView
@@ -885,7 +885,7 @@ export default function SeanceScreen() {
             </View>
 
             <View style={styles.headerSeries}>
-              <Text style={styles.headerTexte}>
+              <Text style={[styles.headerTexte, dark && styles.mutedDark]}>
                 {t('set')}
               </Text>
 
@@ -919,7 +919,7 @@ export default function SeanceScreen() {
                       styles.serieTerminee,
                   ]}
                 >
-                  <Text style={styles.numero}>
+                  <Text style={[styles.numero, dark && styles.textDark]}>
                     {serie.id}
                   </Text>
 
@@ -1102,7 +1102,7 @@ export default function SeanceScreen() {
 
         {menuExercices && !terminee && (
           <View style={[styles.menu, dark && styles.cardDark]}>
-            <Text style={styles.menuTitre}>
+            <Text style={[styles.menuTitre, dark && styles.textDark]}>
               {t('chooseExercise')}
             </Text>
 
