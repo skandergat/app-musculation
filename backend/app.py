@@ -4,13 +4,14 @@ from datetime import datetime, timedelta
 import hashlib
 import secrets
 import re
+import os
 
 app = Flask(__name__)
 
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = str(BASE_DIR / "musculation.db")
+DB_PATH = os.getenv("LIFTELY_DB_PATH", str(BASE_DIR / "musculation.db"))
 SESSION_DURATION_DAYS = 30
 
 
