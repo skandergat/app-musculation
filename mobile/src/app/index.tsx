@@ -10,7 +10,7 @@ type Category = 'gym' | 'calisthenics';
 type Exercice = { id:number; nom?:string; name?:string; groupe_musculaire?:string; categorie?:Category };
 
 export default function HomeScreen() {
-  const { t, exerciseName } = useI18n();
+  const { t, exerciseName, muscleGroupName } = useI18n();
   const scheme = useColorScheme();
   const dark = scheme === 'dark';
   const [categorieOuverte, setCategorieOuverte] = useState<Category|null>(null);
@@ -93,7 +93,7 @@ export default function HomeScreen() {
               <View style={styles.numero}><Text style={styles.numeroTexte}>{index + 1}</Text></View>
               <View style={styles.exerciceInfo}>
                 <Text style={[styles.nomExercice, dark && styles.textDark]}>{exerciseName(item.nom ?? item.name ?? t('exercise'))}</Text>
-                {!!item.groupe_musculaire && <Text style={[styles.muscle, dark && styles.mutedDark]}>{item.groupe_musculaire}</Text>}
+                {!!item.groupe_musculaire && <Text style={[styles.muscle, dark && styles.mutedDark]}>{muscleGroupName(item.groupe_musculaire)}</Text>}
               </View>
             </View>
           )}
