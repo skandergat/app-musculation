@@ -70,8 +70,8 @@ const exercicesInitiaux: Exercice[] = [
   },
   {
     id: 3,
-    backendId: 15,
-    nom: 'Extensions triceps poulie',
+    backendId: 80,
+    nom: 'Extension poulie corde',
     muscle: 'Triceps',
     series: [
       { id: 1, poids: '20', reps: '12', terminee: false },
