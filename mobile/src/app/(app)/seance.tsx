@@ -168,9 +168,8 @@ export default function SeanceScreen() {
     Record<string, PreviousSerie[]>
   >({});
 
-  const [exercicesDisponibles, setExercicesDisponibles] = useState<
-    { nom: string; muscle: string; backendId: number }[]
-  >([]);
+  const [exercicesDisponibles, setExercicesDisponibles] =
+    useState<ExerciceDisponible[]>([]);
 
   const [tempsReposSerie, setTempsReposSerie] = useState(60);
   const [timerActif, setTimerActif] = useState(false);
@@ -493,8 +492,8 @@ export default function SeanceScreen() {
 
         if (exercice.series.length <= 1) {
           Alert.alert(
-            'Impossible',
-            'Un exercice doit garder au moins une série.'
+            t('error'),
+            t('mustKeepOneSet')
           );
 
           return exercice;
@@ -726,7 +725,7 @@ export default function SeanceScreen() {
         );
 
         if (!response.ok) {
-          throw new Error('Impossible de supprimer la série');
+          throw new Error(t('cannotDeleteSet'));
         }
 
         setExercices((anciens) =>
@@ -750,7 +749,7 @@ export default function SeanceScreen() {
         );
       } catch (error) {
         console.error('Erreur suppression série :', error);
-        Alert.alert('Erreur', 'La série n’a pas pu être supprimée.');
+        Alert.alert(t('error'), t('cannotDeleteSet'));
       }
 
       return;
