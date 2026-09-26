@@ -1,12 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, {
+import { API_URL } from '@/config/api';
   createContext,
   useContext,
   useEffect,
   useState,
 } from 'react';
 
-const API_URL = 'http://192.168.100.200:5001';
 
 type User = {
   id: number;
