@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  ActivityIndicator, FlatList, Image, Pressable, RefreshControl, SafeAreaView,
+  ActivityIndicator, FlatList, Pressable, RefreshControl, SafeAreaView,
   StatusBar, StyleSheet, Text, View, useColorScheme,
 } from 'react-native';
 import { useI18n } from '@/context/I18nContext';
@@ -111,12 +111,11 @@ export default function HomeScreen() {
         <Text style={[styles.sousTitreHome, dark && styles.mutedDark]}>{t('chooseWorkout')}</Text>
 
         <Pressable style={({pressed}) => [styles.carte, pressed && styles.presse]} onPress={() => ouvrirCategorie('gym')}>
-          <Image
-            source={{uri:'https://images.pexels.com/photos/20418612/pexels-photo-20418612.jpeg?cs=srgb&dl=pexels-fire-flintq8-1049543416-20418612.jpg&fm=jpg'}}
-            style={styles.carteImage}
-            resizeMode="cover"
-          />
-          <View style={styles.carteOverlay} />
+          <View style={styles.icone}>
+            <View style={styles.halteres}>
+              <View style={styles.plateGauche}/><View style={styles.barreHalteres}/><View style={styles.plateDroite}/>
+            </View>
+          </View>
           <View style={styles.texteCarte}>
             <Text style={styles.titreCarte}>{t('gym')}</Text>
             <Text style={styles.descriptionCarte}>{t('gymDescription')}</Text>
@@ -124,13 +123,12 @@ export default function HomeScreen() {
           <Text style={styles.chevron}>›</Text>
         </Pressable>
 
-        <Pressable style={({pressed}) => [styles.carte, pressed && styles.presse]} onPress={() => ouvrirCategorie('calisthenics')}>
-          <Image
-            source={{uri:'https://images.pexels.com/photos/13993538/pexels-photo-13993538.jpeg?cs=srgb&dl=pexels-niko-twisty-13993538.jpg&fm=jpg'}}
-            style={styles.carteImage}
-            resizeMode="cover"
-          />
-          <View style={styles.carteOverlay} />
+        <Pressable style={({pressed}) => [styles.carte, styles.carteCalisthenics, pressed && styles.presse]} onPress={() => ouvrirCategorie('calisthenics')}>
+          <View style={styles.icone}>
+            <View style={styles.barreCalisthenics}/>
+            <View style={styles.corpsCalisthenics}/>
+            <View style={styles.brasCalisthenics}/>
+          </View>
           <View style={styles.texteCarte}>
             <Text style={styles.titreCarte}>{t('calisthenics')}</Text>
             <Text style={styles.descriptionCarte}>{t('calisthenicsDescription')}</Text>
@@ -152,9 +150,9 @@ const styles = StyleSheet.create({
   contenu:{flex:1,padding:20},
   titreHome:{fontSize:32,fontWeight:'700',color:'#111',marginTop:8},
   sousTitreHome:{fontSize:16,color:'#8A8A8E',marginTop:4,marginBottom:24},
-  carte:{minHeight:170,backgroundColor:'#111',borderRadius:22,padding:22,flexDirection:'row',alignItems:'flex-end',marginBottom:14,overflow:'hidden',position:'relative'},
-  carteImage:{...StyleSheet.absoluteFillObject,width:'100%',height:'100%'},
-  carteOverlay:{...StyleSheet.absoluteFillObject,backgroundColor:'rgba(0,0,0,0.46)'},
+  carte:{minHeight:170,backgroundColor:'#111',borderRadius:22,padding:22,flexDirection:'row',alignItems:'flex-end',marginBottom:14},
+  carteCalisthenics:{backgroundColor:'#1A1A1C'},
+  icone:{width:76,height:76,borderRadius:18,backgroundColor:'#2C2C2E',justifyContent:'center',alignItems:'center'},
   halteres:{width:52,height:34,flexDirection:'row',alignItems:'center',justifyContent:'center'},
   plateGauche:{width:10,height:28,borderRadius:3,backgroundColor:'#FFF'},
   barreHalteres:{width:26,height:7,borderRadius:3,backgroundColor:'#FFF'},
