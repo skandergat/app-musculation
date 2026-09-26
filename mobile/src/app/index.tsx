@@ -107,7 +107,7 @@ export default function HomeScreen() {
     <SafeAreaView style={[styles.container, dark && styles.containerDark]}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.contenu}>
-        <Text style={[styles.titreHome, dark && styles.textDark]}>{t('home')}</Text>
+        <Text style={[styles.titreHome, dark && styles.textDark]}>LIFTELY</Text>
         <Text style={[styles.sousTitreHome, dark && styles.mutedDark]}>{t('chooseWorkout')}</Text>
 
         <Pressable style={({pressed}) => [styles.carte, pressed && styles.presse]} onPress={() => ouvrirCategorie('gym')}>
