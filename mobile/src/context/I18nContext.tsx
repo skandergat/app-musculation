@@ -824,6 +824,55 @@ const exercisePhraseTranslations: Record<Language, Array<[string, string]>> = {
   ],
 };
 
+const exerciseExtraTranslations: Record<Language, Array<[string, string]>> = {
+  fr: [],
+  en: [
+    ['Développé couché haltères', 'Dumbbell Bench Press'], ['Pec deck', 'Pec Deck'], ['Pompes', 'Push-Ups'],
+    ['Rowing Pendlay', 'Pendlay Row'], ['Rowing T-bar', 'T-Bar Row'], ['Rowing machine', 'Machine Row'],
+    ['Shoulder press machine', 'Machine Shoulder Press'], ['Shoulder press convergente', 'Converging Shoulder Press'], ['Cuban press', 'Cuban Press'],
+    ['Bayesian curl', 'Bayesian Curl'], ['Spider curl', 'Spider Curl'], ['Drag curl', 'Drag Curl'], ['Reverse curl', 'Reverse Curl'], ['Zottman curl', 'Zottman Curl'],
+    ['Skull crushers', 'Skull Crushers'], ['Barre front', 'EZ-Bar Skull Crushers'], ['JM Press', 'JM Press'],
+    ['Hack squat', 'Hack Squat'], ['Step-up', 'Step-Up'], ['Sissy squat', 'Sissy Squat'], ['Spanish squat', 'Spanish Squat'], ['Belt squat', 'Belt Squat'], ['Goblet squat', 'Goblet Squat'],
+    ['Nordic curl', 'Nordic Curl'], ['Glute ham raise', 'Glute-Ham Raise'], ['Good morning', 'Good Morning'],
+    ['Cable kickback', 'Cable Glute Kickback'], ['Kickback machine', 'Machine Glute Kickback'], ['Frog pumps', 'Frog Pumps'], ['Step-up haut', 'High Step-Up'], ['Sumo squat', 'Sumo Squat'],
+    ['Crunch', 'Crunch'], ['Sit-up', 'Sit-Up'], ['Sit-up lesté', 'Weighted Sit-Up'], ['Reverse crunch', 'Reverse Crunch'], ['Ab wheel', 'Ab Wheel Rollout'], ['Bicycle crunch', 'Bicycle Crunch'], ['Dead bug', 'Dead Bug'], ['Pallof press', 'Pallof Press'], ['Cable rotation', 'Cable Rotation'], ['V-up', 'V-Up'],
+    ['Wrist curl', 'Wrist Curl'], ['Reverse wrist curl', 'Reverse Wrist Curl'], ['Plate pinch', 'Plate Pinch'], ['Dead hang', 'Dead Hang'], ['Grip trainer', 'Grip Trainer'],
+    ['Clean', 'Clean'], ['Power clean', 'Power Clean'], ['Clean & press', 'Clean & Press'], ['Snatch', 'Snatch'], ['Thruster', 'Thruster'], ['Man makers', 'Man Makers'],
+    ['Pompes dive bomber', 'Dive Bomber Push-Ups'], ['Dips', 'Dips'], ['Dips lestés', 'Weighted Dips'], ['Dips sur banc', 'Bench Dips'], ['Bench dips', 'Bench Dips'], ['Extensions triceps au poids du corps', 'Bodyweight Triceps Extensions'],
+    ['Muscle-up', 'Muscle-Up'], ['Dead hang', 'Dead Hang'], ['Active hang', 'Active Hang'], ['Skin the cat', 'Skin the Cat'], ['Front lever', 'Front Lever'], ['Back lever', 'Back Lever'], ['Planche', 'Planche'], ['Mountain climbers', 'Mountain Climbers'], ['Sissy squat', 'Sissy Squat'], ['Split squat', 'Split Squat'], ['Calf raise', 'Calf Raise'], ['Box jump', 'Box Jump'], ['Broad jump', 'Broad Jump'], ['Press to handstand', 'Press to Handstand'], ['90 degree hold', '90-Degree Hold'], ['Bar L-sit', 'Bar L-Sit'], ['Ring L-sit', 'Ring L-Sit'], ['Tuck hold', 'Tuck Hold']
+  ],
+  de: [
+    ['Développé couché haltères', 'Kurzhantel-Bankdrücken'], ['Pec deck', 'Pec-Deck'], ['Pompes', 'Liegestütze'],
+    ['Rowing Pendlay', 'Pendlay-Rudern'], ['Rowing T-bar', 'T-Bar-Rudern'], ['Rowing machine', 'Rudermaschine'],
+    ['Shoulder press machine', 'Schulterdrückmaschine'], ['Shoulder press convergente', 'Konvergierende Schulterpresse'], ['Cuban press', 'Cuban Press'],
+    ['Bayesian curl', 'Bayesian Curl'], ['Spider curl', 'Spider Curls'], ['Drag curl', 'Drag Curls'], ['Reverse curl', 'Reverse Curls'], ['Zottman curl', 'Zottman Curls'],
+    ['Skull crushers', 'Skull Crushers'], ['Barre front', 'French Press mit Langhantel'], ['JM Press', 'JM Press'],
+    ['Hack squat', 'Hackenschmidt-Kniebeuge'], ['Step-up', 'Step-Ups'], ['Sissy squat', 'Sissy Squat'], ['Spanish squat', 'Spanish Squat'], ['Belt squat', 'Belt Squat'], ['Goblet squat', 'Goblet Squat'],
+    ['Nordic curl', 'Nordic Curl'], ['Glute ham raise', 'Glute-Ham Raise'], ['Good morning', 'Good Mornings'],
+    ['Cable kickback', 'Kabel-Glute-Kickback'], ['Kickback machine', 'Glute-Kickback an der Maschine'], ['Frog pumps', 'Frog Pumps'], ['Step-up haut', 'Hoher Step-Up'], ['Sumo squat', 'Sumo-Kniebeuge'],
+    ['Crunch', 'Crunch'], ['Sit-up', 'Sit-Up'], ['Sit-up lesté', 'Sit-Up mit Zusatzgewicht'], ['Reverse crunch', 'Reverse Crunch'], ['Ab wheel', 'Ab Wheel'], ['Bicycle crunch', 'Fahrrad-Crunch'], ['Dead bug', 'Dead Bug'], ['Pallof press', 'Pallof Press'], ['Cable rotation', 'Kabelrotation'], ['V-up', 'V-Up'],
+    ['Wrist curl', 'Handgelenk-Curls'], ['Reverse wrist curl', 'Reverse Handgelenk-Curls'], ['Plate pinch', 'Scheiben-Halten'], ['Dead hang', 'Dead Hang'], ['Grip trainer', 'Grifftrainer'],
+    ['Clean', 'Umsetzen'], ['Power clean', 'Power Clean'], ['Clean & press', 'Umsetzen und Drücken'], ['Snatch', 'Reißen'], ['Thruster', 'Thruster'], ['Man makers', 'Man Makers'],
+    ['Pompes dive bomber', 'Dive-Bomber-Liegestütze'], ['Dips', 'Dips'], ['Dips lestés', 'Dips mit Zusatzgewicht'], ['Dips sur banc', 'Bank-Dips'], ['Bench dips', 'Bank-Dips'], ['Extensions triceps au poids du corps', 'Trizepsstrecken mit Körpergewicht'],
+    ['Muscle-up', 'Muscle-Up'], ['Active hang', 'Aktives Hängen'], ['Skin the cat', 'Skin the Cat'], ['Front lever', 'Front Lever'], ['Back lever', 'Back Lever'], ['Planche', 'Planche'], ['Mountain climbers', 'Mountain Climbers'], ['Sissy squat', 'Sissy Squat'], ['Split squat', 'Split Squat'], ['Calf raise', 'Wadenheben'], ['Box jump', 'Box Jumps'], ['Broad jump', 'Weitsprung'], ['Press to handstand', 'Press to Handstand'], ['90 degree hold', '90-Grad-Halten'], ['Bar L-sit', 'Bar-L-Sit'], ['Ring L-sit', 'Ring-L-Sit'], ['Tuck hold', 'Tuck Hold']
+  ],
+  ar: [
+    ['Développé couché haltères', 'ضغط الصدر بالدمبل'], ['Pec deck', 'آلة تفتيح الصدر'], ['Pompes', 'تمارين الضغط'],
+    ['Rowing Pendlay', 'تجديف بندلاي'], ['Rowing T-bar', 'تجديف T-Bar'], ['Rowing machine', 'التجديف بالآلة'],
+    ['Shoulder press machine', 'ضغط الكتف بالآلة'], ['Shoulder press convergente', 'ضغط الكتف المتقارب'], ['Cuban press', 'ضغط كوبي'],
+    ['Bayesian curl', 'بايسبس بايزيان'], ['Spider curl', 'سبايدر كيرل'], ['Drag curl', 'دراج كيرل'], ['Reverse curl', 'ريفيرس كيرل'], ['Zottman curl', 'زوتمن كيرل'],
+    ['Skull crushers', 'تمديد الترايسبس خلف الرأس'], ['Barre front', 'تمديد الترايسبس بالبار'], ['JM Press', 'جي إم برس'],
+    ['Hack squat', 'هاك سكوات'], ['Step-up', 'صعود على الصندوق'], ['Sissy squat', 'سيسي سكوات'], ['Spanish squat', 'سبانيش سكوات'], ['Belt squat', 'بيلت سكوات'], ['Goblet squat', 'غوبلت سكوات'],
+    ['Nordic curl', 'نوردك كيرل'], ['Glute ham raise', 'رفع الأرداف وأوتار الركبة'], ['Good morning', 'غود مورنينغ'],
+    ['Cable kickback', 'ركلة الأرداف بالكابل'], ['Kickback machine', 'ركلة الأرداف بالآلة'], ['Frog pumps', 'ضخ الأرداف مثل الضفدع'], ['Step-up haut', 'صعود مرتفع على الصندوق'], ['Sumo squat', 'سومو سكوات'],
+    ['Crunch', 'كرنش'], ['Sit-up', 'تمارين البطن الكاملة'], ['Sit-up lesté', 'تمارين البطن مع أوزان'], ['Reverse crunch', 'كرنش عكسي'], ['Ab wheel', 'عجلة البطن'], ['Bicycle crunch', 'كرنش الدراجة'], ['Dead bug', 'ديد باغ'], ['Pallof press', 'ضغط بالوف'], ['Cable rotation', 'دوران بالكابل'], ['V-up', 'في أب'],
+    ['Wrist curl', 'ثني المعصم'], ['Reverse wrist curl', 'ثني المعصم العكسي'], ['Plate pinch', 'قبضة الأقراص'], ['Dead hang', 'التعلق الثابت'], ['Grip trainer', 'تمرين قبضة اليد'],
+    ['Clean', 'كلين'], ['Power clean', 'باور كلين'], ['Clean & press', 'كلين وضغط'], ['Snatch', 'سنتش'], ['Thruster', 'ثرستر'], ['Man makers', 'مان ميكرز'],
+    ['Pompes dive bomber', 'ضغط دايف بومبر'], ['Dips', 'ديبس'], ['Dips lestés', 'ديبس مع أوزان'], ['Dips sur banc', 'ديبس على المقعد'], ['Bench dips', 'ديبس على المقعد'], ['Extensions triceps au poids du corps', 'تمديد الترايسبس بوزن الجسم'],
+    ['Muscle-up', 'ماسِل أب'], ['Active hang', 'تعلق نشط'], ['Skin the cat', 'سكين ذا كات'], ['Front lever', 'فرونت ليفر'], ['Back lever', 'باك ليفر'], ['Planche', 'بلانش'], ['Mountain climbers', 'متسلقو الجبال'], ['Sissy squat', 'سيسي سكوات'], ['Split squat', 'سبليت سكوات'], ['Calf raise', 'رفع السمانة'], ['Box jump', 'قفز على الصندوق'], ['Broad jump', 'قفزة عريضة'], ['Press to handstand', 'الضغط إلى الوقوف على اليدين'], ['90 degree hold', 'ثبات 90 درجة'], ['Bar L-sit', 'إل سيت على البار'], ['Ring L-sit', 'إل سيت على الحلقات'], ['Tuck hold', 'ثبات تك']
+  ],
+};
+
 const localizedExerciseFallbacks: Record<Language, Record<string, string>> = {
   fr: {},
   en: {
@@ -940,7 +989,7 @@ function exerciseNameForLanguage(name: string, language: Language) {
   const exactFallback = localizedExerciseFallbacks[language][normalized];
   if (exactFallback) return exactFallback;
 
-  const phrase = exercisePhraseTranslations[language].find(
+  const phrase = [...exercisePhraseTranslations[language], ...exerciseExtraTranslations[language]].find(
     ([source]) => source.toLocaleLowerCase('fr-FR') === normalized.toLocaleLowerCase('fr-FR')
   );
   if (phrase) return phrase[1];
