@@ -1,56 +1,61 @@
-# Welcome to your Expo app 👋
+# LIFTELY
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+LIFTELY is a multilingual fitness tracking app built with Expo / React Native and a Flask + SQLite backend.
 
-## Get started
+## Mobile app
 
-1. Install dependencies
+From the repository root:
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```powershell
+cd mobile
+npm install
+npx expo start --clear
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+For type checking:
 
-### Other setup steps
+```powershell
+cd mobile
+npx tsc --noEmit
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+For Expo diagnostics:
 
-## Learn more
+```powershell
+cd mobile
+npx expo-doctor
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+## Backend
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+From the repository root:
 
-## Join the community
+```powershell
+cd C:\Users\sonia\Desktop\app-musculation
+.\.venv\Scripts\Activate.ps1
+python backend\app.py
+```
 
-Join our community of developers creating universal apps.
+The local development API listens on port 5001.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## API configuration
+
+Create `mobile/.env.local` when the backend is not using the default LAN address:
+
+```
+EXPO_PUBLIC_API_URL=http://192.168.100.200:5001
+```
+
+For a production build, use an HTTPS API URL instead.
+
+## Repository structure
+
+- `mobile/src/app/`: Expo Router routes
+- `mobile/src/context/`: authentication and localization
+- `mobile/src/components/`: reusable UI
+- `backend/app.py`: Flask API and SQLite schema/catalog
+- `init_db.py`: database initialization helper
+
+## Development note
+
+The current mobile app targets Expo SDK 57 and uses `expo-router/unstable-native-tabs`, which is the appropriate NativeTabs API for SDK 57.
