@@ -140,9 +140,7 @@ export default function HistoriqueScreen() {
       );
 
       if (!response.ok) {
-        throw new Error(
-          `Erreur ${response.status}`
-        );
+        throw new Error(t('connectionImpossible'));
       }
 
       const data = await response.json();
