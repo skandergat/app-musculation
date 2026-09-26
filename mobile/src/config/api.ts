@@ -1,6 +1,6 @@
 const LOCAL_API_URL = 'http://192.168.100.200:5001';
 const configuredApiUrl =
-  process.env.EXPO_PUBLIC_API_URL?.trim() || '';
+  (process.env.EXPO_PUBLIC_API_URL?.trim() || '').replace(/\/+$/, '');
 
 if (
   process.env.NODE_ENV === 'production' &&
