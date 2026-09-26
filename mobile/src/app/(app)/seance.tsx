@@ -833,7 +833,7 @@ export default function SeanceScreen() {
 
     if (!seanceId) {
       Alert.alert(
-        'Erreur',
+        t('error'),
         t('noActiveWorkout')
       );
 
@@ -931,7 +931,7 @@ export default function SeanceScreen() {
       setChargement(false);
 
       Alert.alert(
-        'Erreur',
+        t('error'),
         t('unableFinishWorkout')
       );
     } finally {
