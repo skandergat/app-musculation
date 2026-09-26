@@ -109,7 +109,7 @@ export function AuthProvider({
           setUser(data.user);
         } else {
           await removeStoredToken();
-        await AsyncStorage.removeItem(USER_KEY);
+          await AsyncStorage.removeItem(USER_KEY);
         }
       }
     } catch (error) {
@@ -173,7 +173,7 @@ export function AuthProvider({
       }),
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
       throw new Error(data.error || 'Création du compte impossible');
@@ -195,7 +195,8 @@ export function AuthProvider({
     } catch (error) {
       console.log('Erreur déconnexion:', error);
     } finally {
-      await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
+      await removeStoredToken();
+      await AsyncStorage.removeItem(USER_KEY);
       setToken(null);
       setUser(null);
     }
