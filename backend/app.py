@@ -1604,19 +1604,42 @@ def demarrer_seance():
         })
 
     cursor = conn.cursor()
-    cursor.execute(
-        """
-        INSERT INTO seances
-        (date_debut, user_id)
-        VALUES (?, ?)
-        """,
-        (
-            datetime.now().isoformat(),
-            user["id"],
-        ),
-    )
+    try:
+        cursor.execute(
+            """
+            INSERT INTO seances
+            (date_debut, user_id)
+            VALUES (?, ?)
+            """,
+            (
+                datetime.now().isoformat(),
+                user["id"],
+            ),
+        )
+        conn.commit()
+    except sqlite3.IntegrityError:
+        active = conn.execute(
+            """
+            SELECT id, date_debut
+            FROM seances
+            WHERE user_id = ?
+              AND date_fin IS NULL
+            ORDER BY date_debut DESC
+            LIMIT 1
+            """,
+            (user["id"],),
+        ).fetchone()
+        conn.close()
 
-    conn.commit()
+        if active:
+            return jsonify({
+                "seance_id": active["id"],
+                "reused": True,
+                "date_debut": active["date_debut"],
+            })
+
+        raise
+
     seance_id = cursor.lastrowid
     date_debut = cursor.execute(
         "SELECT date_debut FROM seances WHERE id = ?",
