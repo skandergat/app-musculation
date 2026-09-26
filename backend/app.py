@@ -110,6 +110,7 @@ def get_user_from_request():
         "DELETE FROM sessions WHERE date_expiration <= ?",
         (datetime.now().isoformat(),),
     )
+    conn.commit()
 
     user = conn.execute(
         """
