@@ -330,10 +330,15 @@ export default function SeanceScreen() {
       }
 
       const data: PreviousSerie[] = await response.json();
+      const backendId = exercice.backendId;
+
+      if (!backendId) {
+        return;
+      }
 
       setPrevious((ancien) => ({
         ...ancien,
-        [exercice.backendId]: data,
+        [backendId]: data,
       }));
     } catch (error) {
       console.error('Erreur chargement Previous :', error);
