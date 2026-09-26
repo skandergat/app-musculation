@@ -105,6 +105,11 @@ def get_user_from_request():
 
     conn = get_db()
 
+    conn.execute(
+        "DELETE FROM sessions WHERE date_expiration <= ?",
+        (datetime.now().isoformat(),),
+    )
+
     user = conn.execute(
         """
         SELECT users.id, users.nom, users.email, users.date_creation
