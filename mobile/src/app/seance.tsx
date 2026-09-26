@@ -913,8 +913,8 @@ export default function SeanceScreen() {
                 <View
                   style={[
                     styles.serie,
-                    serie.terminee &&
-                      styles.serieTerminee,
+                    dark && styles.cardDark,
+                    serie.terminee && styles.serieTerminee,
                   ]}
                 >
                   <Text style={[styles.numero, dark && styles.textDark]}>
@@ -1051,9 +1051,7 @@ export default function SeanceScreen() {
             ))}
 
             <TouchableOpacity
-              style={
-                styles.boutonAjouterSerie
-              }
+              style={[styles.boutonAjouterSerie, dark && styles.cardDark]}
               disabled={terminee}
               onPress={() =>
                 ajouterSerie(
@@ -1075,9 +1073,7 @@ export default function SeanceScreen() {
 
 
         <TouchableOpacity
-          style={
-            styles.boutonAjouterExercice
-          }
+          style={[styles.boutonAjouterExercice, dark && styles.cardDark, dark && styles.boutonAjouterExerciceDark]}
           disabled={terminee}
           onPress={() =>
             setMenuExercices(
@@ -1085,7 +1081,7 @@ export default function SeanceScreen() {
             )
           }
         >
-          <Text style={styles.boutonAjouterExerciceTexte}>
+          <Text style={[styles.boutonAjouterExerciceTexte, dark && styles.textDark]}>
             ＋ {t('addExercise').toUpperCase()}
           </Text>
         </TouchableOpacity>
@@ -1166,6 +1162,8 @@ const styles = StyleSheet.create({
   containerDark: { backgroundColor: '#0B0B0D' },
   cardDark: { backgroundColor: '#1C1C1E' },
   inputDark: { backgroundColor: '#2C2C2E', color: '#FFFFFF' },
+  boutonAjouterExerciceDark: { borderColor: '#38383A' },
+  optionExerciceDark: { borderTopColor: '#38383A' },
   textDark: { color: '#FFFFFF' },
   mutedDark: { color: '#A1A1A6' },
 
