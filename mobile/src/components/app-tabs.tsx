@@ -5,7 +5,7 @@ import { useI18n } from '@/context/I18nContext';
 
 export default function AppTabs() {
   const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
   const { t } = useI18n();
 
   return (
