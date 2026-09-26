@@ -36,10 +36,23 @@ type ExerciceGroupe = {
   series: Serie[];
 };
 
-const formaterDate = (iso: string) => {
+const getLocale = (language: string) => {
+  switch (language) {
+    case 'en':
+      return 'en-US';
+    case 'de':
+      return 'de-DE';
+    case 'ar':
+      return 'ar-TN';
+    default:
+      return 'fr-FR';
+  }
+};
+
+const formaterDate = (iso: string, language: string) => {
   const date = new Date(iso);
 
-  const texte = date.toLocaleDateString('fr-FR', {
+  const texte = date.toLocaleDateString(getLocale(language), {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -49,8 +62,8 @@ const formaterDate = (iso: string) => {
   return texte.charAt(0).toUpperCase() + texte.slice(1);
 };
 
-const formaterHeure = (iso: string) =>
-  new Date(iso).toLocaleTimeString('fr-FR', {
+const formaterHeure = (iso: string, language: string) =>
+  new Date(iso).toLocaleTimeString(getLocale(language), {
     hour: '2-digit',
     minute: '2-digit',
   });
@@ -100,7 +113,7 @@ const grouperParExercice = (
 
 export default function HistoriqueScreen() {
   const { token } = useAuth();
-  const { t, exerciseName } = useI18n();
+  const { language, t, exerciseName } = useI18n();
   const dark = useColorScheme() === 'dark';
   const [seances, setSeances] = useState<Seance[]>([]);
   const [chargement, setChargement] = useState(true);
@@ -165,7 +178,7 @@ export default function HistoriqueScreen() {
 
   if (erreur) {
     return (
-      <SafeAreaView style={styles.centre}>
+      <SafeAreaView style={[styles.centre, dark && styles.containerDark]}>
         <Text style={[styles.erreurTitre, dark && styles.textDark]}>
           {t('connectionImpossible')}
         </Text>
@@ -175,9 +188,7 @@ export default function HistoriqueScreen() {
         </Text>
 
         <Text style={[styles.erreurAide, dark && styles.mutedDark]}>
-          Vérifie que le serveur Flask tourne
-          (python app.py) et que API_URL pointe
-          vers l'IP locale de ton PC.
+          {t('connectionServerHelp')}
         </Text>
       </SafeAreaView>
     );
@@ -208,7 +219,7 @@ export default function HistoriqueScreen() {
             </Text>
 
             <Text style={styles.retourTexte}>
-              Historique
+              {t('history')}
             </Text>
           </TouchableOpacity>
 
@@ -226,15 +237,11 @@ export default function HistoriqueScreen() {
           ListHeaderComponent={
             <View style={[styles.resumeCarte, dark && styles.cardDark]}>
               <Text style={[styles.dateDetail, dark && styles.textDark]}>
-                {formaterDate(
-                  seanceSelectionnee.date_debut
-                )}
+                {formaterDate(seanceSelectionnee.date_debut, language)}
               </Text>
 
               <Text style={[styles.infoDetail, dark && styles.mutedDark]}>
-                {formaterHeure(
-                  seanceSelectionnee.date_debut
-                )}
+                {formaterHeure(seanceSelectionnee.date_debut, language)}
 
                 {seanceSelectionnee.date_fin
                   ? `  ·  ${calculerDuree(
@@ -353,6 +360,7 @@ export default function HistoriqueScreen() {
           <RefreshControl
             refreshing={rafraichissement}
             onRefresh={onRefresh}
+            tintColor="#0A84FF"
           />
         }
         ListEmptyComponent={
@@ -379,9 +387,7 @@ export default function HistoriqueScreen() {
                   style={styles.carteEntete}
                 >
                   <Text style={[styles.date, dark && styles.mutedDark]}>
-                    {formaterDate(
-                      item.date_debut
-                    )}
+                    {formaterDate(item.date_debut, language)}
                   </Text>
 
                   {item.date_fin ? (
@@ -398,9 +404,7 @@ export default function HistoriqueScreen() {
                 <Text
                   style={[styles.sousTitre, dark && styles.mutedDark]}
                 >
-                  {formaterHeure(
-                    item.date_debut
-                  )}
+                  {formaterHeure(item.date_debut, language)}
                   {'  ·  '}
                   {groupes.length} {t('exercisesLabel')}
                   {'  ·  '}
@@ -422,7 +426,7 @@ export default function HistoriqueScreen() {
                           dark && styles.textDark,
                         ]}
                       >
-                        {groupe.nom}
+                        {exerciseName(groupe.nom)}
                       </Text>
 
                       <Text
