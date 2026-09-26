@@ -144,7 +144,8 @@ def assurer_base():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nom TEXT NOT NULL,
             groupe_musculaire TEXT,
-            categorie TEXT NOT NULL DEFAULT 'gym'
+            categorie TEXT NOT NULL DEFAULT 'gym',
+            actif INTEGER NOT NULL DEFAULT 1
         )
     """)
 
@@ -158,6 +159,11 @@ def assurer_base():
     if "categorie" not in noms_colonnes_exercices:
         cursor.execute(
             "ALTER TABLE exercices ADD COLUMN categorie TEXT NOT NULL DEFAULT 'gym'"
+        )
+
+    if "actif" not in noms_colonnes_exercices:
+        cursor.execute(
+            "ALTER TABLE exercices ADD COLUMN actif INTEGER NOT NULL DEFAULT 1"
         )
 
     # --------------------------------------------------------
@@ -1159,23 +1165,37 @@ def assurer_base():
         ("Jumping lunges", "Jambes"),
     ]
 
+    # Synchronisation du catalogue : les lignes historiques restent disponibles
+    # pour l'historique, mais seules les lignes du catalogue canonique sont actives.
+    cursor.execute("UPDATE exercices SET actif = 0")
+
     for nom, groupe in exercices_gym:
         existe = cursor.execute(
-            "SELECT id FROM exercices WHERE nom = ?",
+            "SELECT id FROM exercices WHERE nom = ? AND categorie = 'gym'",
             (nom,),
         ).fetchone()
 
-        if not existe:
+        if existe:
+            cursor.execute(
+                """
+                UPDATE exercices
+                SET groupe_musculaire = ?, categorie = 'gym', actif = 1
+                WHERE id = ?
+                """,
+                (groupe, existe[0]),
+            )
+        else:
             cursor.execute(
                 """
                 INSERT INTO exercices
-                (nom, groupe_musculaire, categorie)
-                VALUES (?, ?, 'gym')
+                (nom, groupe_musculaire, categorie, actif)
+                VALUES (?, ?, 'gym', 1)
                 """,
                 (nom, groupe),
             )
 
-    # Les anciennes lignes de la base restent explicitement GYM.
+    # Les anciennes lignes sans catégorie sont conservées pour l'historique
+    # mais ne sont plus proposées dans le catalogue actif.
     cursor.execute(
         "UPDATE exercices SET categorie = 'gym' WHERE categorie IS NULL OR categorie = ''"
     )
@@ -1186,12 +1206,21 @@ def assurer_base():
             (nom,),
         ).fetchone()
 
-        if not existe:
+        if existe:
+            cursor.execute(
+                """
+                UPDATE exercices
+                SET groupe_musculaire = ?, categorie = 'calisthenics', actif = 1
+                WHERE id = ?
+                """,
+                (groupe, existe[0]),
+            )
+        else:
             cursor.execute(
                 """
                 INSERT INTO exercices
-                (nom, groupe_musculaire, categorie)
-                VALUES (?, ?, 'calisthenics')
+                (nom, groupe_musculaire, categorie, actif)
+                VALUES (?, ?, 'calisthenics', 1)
                 """,
                 (nom, groupe),
             )
@@ -1482,6 +1511,7 @@ def liste_exercices():
             """
             SELECT *
             FROM exercices
+            WHERE actif = 1
             ORDER BY id ASC
             """
         ).fetchall()
@@ -1491,6 +1521,7 @@ def liste_exercices():
             SELECT *
             FROM exercices
             WHERE categorie = ?
+              AND actif = 1
             ORDER BY id ASC
             """,
             (categorie,),
@@ -1518,8 +1549,27 @@ def demarrer_seance():
 
     conn = get_db()
 
-    cursor = conn.cursor()
+    active = conn.execute(
+        """
+        SELECT id, date_debut
+        FROM seances
+        WHERE user_id = ?
+          AND date_fin IS NULL
+        ORDER BY date_debut DESC
+        LIMIT 1
+        """,
+        (user["id"],),
+    ).fetchone()
 
+    if active:
+        conn.close()
+        return jsonify({
+            "seance_id": active["id"],
+            "reused": True,
+            "date_debut": active["date_debut"],
+        })
+
+    cursor = conn.cursor()
     cursor.execute(
         """
         INSERT INTO seances
@@ -1533,14 +1583,74 @@ def demarrer_seance():
     )
 
     conn.commit()
-
     seance_id = cursor.lastrowid
+    date_debut = cursor.execute(
+        "SELECT date_debut FROM seances WHERE id = ?",
+        (seance_id,),
+    ).fetchone()[0]
 
     conn.close()
 
     return jsonify({
-        "seance_id": seance_id
+        "seance_id": seance_id,
+        "reused": False,
+        "date_debut": date_debut,
     }), 201
+
+
+@app.route("/seances/active")
+def seance_active():
+
+    user = get_user_from_request()
+
+    if not user:
+        return utilisateur_non_connecte()
+
+    conn = get_db()
+
+    seance = conn.execute(
+        """
+        SELECT id, date_debut
+        FROM seances
+        WHERE user_id = ?
+          AND date_fin IS NULL
+        ORDER BY date_debut DESC
+        LIMIT 1
+        """,
+        (user["id"],),
+    ).fetchone()
+
+    if not seance:
+        conn.close()
+        return jsonify({"seance": None})
+
+    series = conn.execute(
+        """
+        SELECT
+            series.id,
+            series.exercice_id,
+            exercices.nom AS exercice_nom,
+            exercices.groupe_musculaire,
+            series.poids,
+            series.repetitions
+        FROM series
+        JOIN exercices
+            ON exercices.id = series.exercice_id
+        WHERE series.seance_id = ?
+        ORDER BY series.id ASC
+        """,
+        (seance["id"],),
+    ).fetchall()
+
+    conn.close()
+
+    return jsonify({
+        "seance": {
+            "id": seance["id"],
+            "date_debut": seance["date_debut"],
+            "series": [dict(serie) for serie in series],
+        }
+    })
 
 
 # ============================================================
@@ -1596,15 +1706,38 @@ def ajouter_serie(seance_id):
             "error": "repetitions obligatoires"
         }), 400
 
+    try:
+        poids_numerique = float(poids) if poids is not None and poids != "" else 0.0
+        repetitions_numeriques = int(repetitions)
+    except (TypeError, ValueError):
+        return jsonify({
+            "error": "Poids ou répétitions invalides"
+        }), 400
+
+    if poids_numerique < 0:
+        return jsonify({
+            "error": "Le poids ne peut pas être négatif"
+        }), 400
+
+    if repetitions_numeriques < 1:
+        return jsonify({
+            "error": "Les répétitions doivent être supérieures à 0"
+        }), 400
+
     conn = get_db()
 
     # Vérifier que la séance appartient bien
     # à l'utilisateur connecté
-    seance = verifier_proprietaire_seance(
-        conn,
-        seance_id,
-        user["id"],
-    )
+    seance = conn.execute(
+        """
+        SELECT *
+        FROM seances
+        WHERE id = ?
+          AND user_id = ?
+          AND date_fin IS NULL
+        """,
+        (seance_id, user["id"]),
+    ).fetchone()
 
     if not seance:
         conn.close()
@@ -1619,6 +1752,7 @@ def ajouter_serie(seance_id):
         SELECT id
         FROM exercices
         WHERE id = ?
+          AND actif = 1
         """,
         (exercice_id,),
     ).fetchone()
@@ -1645,8 +1779,8 @@ def ajouter_serie(seance_id):
         (
             seance_id,
             exercice_id,
-            poids,
-            repetitions,
+            poids_numerique,
+            repetitions_numeriques,
         ),
     )
 
@@ -1675,7 +1809,16 @@ def supprimer_serie(seance_id, series_id):
         return utilisateur_non_connecte()
 
     conn = get_db()
-    seance = verifier_proprietaire_seance(conn, seance_id, user["id"])
+    seance = conn.execute(
+        """
+        SELECT *
+        FROM seances
+        WHERE id = ?
+          AND user_id = ?
+          AND date_fin IS NULL
+        """,
+        (seance_id, user["id"]),
+    ).fetchone()
 
     if not seance:
         conn.close()
@@ -1717,11 +1860,16 @@ def terminer_seance(seance_id):
 
     conn = get_db()
 
-    seance = verifier_proprietaire_seance(
-        conn,
-        seance_id,
-        user["id"],
-    )
+    seance = conn.execute(
+        """
+        SELECT *
+        FROM seances
+        WHERE id = ?
+          AND user_id = ?
+          AND date_fin IS NULL
+        """,
+        (seance_id, user["id"]),
+    ).fetchone()
 
     if not seance:
         conn.close()
