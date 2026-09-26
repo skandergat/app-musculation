@@ -5,6 +5,8 @@ import React, {
   useEffect,
   useState,
 } from 'react';
+import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 import { API_URL } from '@/config/api';
 
 
@@ -33,6 +35,46 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const TOKEN_KEY = '@app_musculation_token';
 const USER_KEY = '@app_musculation_user';
 
+async function getStoredToken(): Promise<string | null> {
+  if (Platform.OS === 'web') {
+    return AsyncStorage.getItem(TOKEN_KEY);
+  }
+
+  const secureToken = await SecureStore.getItemAsync(TOKEN_KEY);
+  if (secureToken) {
+    return secureToken;
+  }
+
+  // Migrate a token from the old AsyncStorage location once.
+  const legacyToken = await AsyncStorage.getItem(TOKEN_KEY);
+  if (legacyToken) {
+    await SecureStore.setItemAsync(TOKEN_KEY, legacyToken);
+    await AsyncStorage.removeItem(TOKEN_KEY);
+    return legacyToken;
+  }
+
+  return null;
+}
+
+async function setStoredToken(token: string): Promise<void> {
+  if (Platform.OS === 'web') {
+    await AsyncStorage.setItem(TOKEN_KEY, token);
+    return;
+  }
+
+  await SecureStore.setItemAsync(TOKEN_KEY, token);
+}
+
+async function removeStoredToken(): Promise<void> {
+  if (Platform.OS === 'web') {
+    await AsyncStorage.removeItem(TOKEN_KEY);
+    return;
+  }
+
+  await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
+  await AsyncStorage.removeItem(TOKEN_KEY).catch(() => {});
+}
+
 export function AuthProvider({
   children,
 }: {
@@ -48,7 +90,7 @@ export function AuthProvider({
 
   const chargerSession = async () => {
     try {
-      const tokenSauvegarde = await AsyncStorage.getItem(TOKEN_KEY);
+      const tokenSauvegarde = await getStoredToken();
       const userSauvegarde = await AsyncStorage.getItem(USER_KEY);
 
       if (tokenSauvegarde && userSauvegarde) {
@@ -66,12 +108,14 @@ export function AuthProvider({
           setToken(tokenSauvegarde);
           setUser(data.user);
         } else {
-          await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
+          await removeStoredToken();
+        await AsyncStorage.removeItem(USER_KEY);
         }
       }
     } catch (error) {
       console.log('Erreur chargement session:', error);
-      await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
+      await removeStoredToken();
+      await AsyncStorage.removeItem(USER_KEY);
     } finally {
       setLoading(false);
     }
@@ -81,7 +125,7 @@ export function AuthProvider({
     nouveauToken: string,
     nouvelUtilisateur: User
   ) => {
-    await AsyncStorage.setItem(TOKEN_KEY, nouveauToken);
+    await setStoredToken(nouveauToken);
     await AsyncStorage.setItem(
       USER_KEY,
       JSON.stringify(nouvelUtilisateur)
@@ -103,7 +147,7 @@ export function AuthProvider({
       }),
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
       throw new Error(data.error || 'Connexion impossible');
