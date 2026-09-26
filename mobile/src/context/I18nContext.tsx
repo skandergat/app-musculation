@@ -8,7 +8,7 @@ type Dictionary = Record<string, string>;
 
 const translations: Record<Language, Dictionary> = {
   fr: {
-    home: 'Accueil', chooseWorkout: 'Choisissez votre entraînement', gym: 'GYM',
+    home: 'Accueil', chooseWorkout: 'Choisissez votre entraînement', gym: 'MUSCULATION',
     gymDescription: 'Tous les exercices de musculation', calisthenics: 'CALISTHÉNIE',
     calisthenicsDescription: 'Exercices au poids du corps et skills', exercises: 'exercices',
     back: 'Retour', connectionImpossible: 'Connexion impossible', retry: 'Réessayer',
@@ -88,7 +88,7 @@ const translations: Record<Language, Dictionary> = {
   },
 
   ar: {
-    home: 'الرئيسية', chooseWorkout: 'اختر تمرينك', gym: 'GYM',
+    home: 'الرئيسية', chooseWorkout: 'اختر تمرينك', gym: 'رفع الأثقال',
     gymDescription: 'جميع تمارين كمال الأجسام', calisthenics: 'كاليستنكس',
     calisthenicsDescription: 'تمارين وزن الجسم والمهارات', exercises: 'تمارين',
     back: 'رجوع', connectionImpossible: 'تعذر الاتصال', retry: 'إعادة المحاولة',
@@ -123,7 +123,7 @@ const translations: Record<Language, Dictionary> = {
   },
 
   de: {
-    home: 'Startseite', chooseWorkout: 'Wähle dein Training', gym: 'GYM',
+    home: 'Startseite', chooseWorkout: 'Wähle dein Training', gym: 'KRAFTTRAINING',
     gymDescription: 'Alle Krafttrainingsübungen', calisthenics: 'CALISTHENICS',
     calisthenicsDescription: 'Körpergewichtsübungen und Skills', exercises: 'Übungen',
     back: 'Zurück', connectionImpossible: 'Verbindung nicht möglich', retry: 'Erneut versuchen',
