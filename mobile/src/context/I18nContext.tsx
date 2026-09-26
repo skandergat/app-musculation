@@ -949,7 +949,7 @@ const exerciseFinalTranslations: Record<Language, Array<[string, string]>> = {
     ['Side plank', 'Seitlicher Unterarmstütz'],
     ['RKC plank', 'RKC-Plank'],
     ['Reverse plank', 'Umgekehrter Plank'],
-    ['Arch body hold', 'Hohlkörper?'],
+    ['Arch body hold', 'Superman-Halten'],
     ['Arch rocks', 'Arch Rocks'],
     ['Pseudo planche lean', 'Pseudo-Planche-Lean'],
     ['Planche lean', 'Planche Lean'],
@@ -1132,7 +1132,7 @@ function exerciseNameForLanguage(name: string, language: Language) {
   const exactFallback = localizedExerciseFallbacks[language][normalized];
   if (exactFallback) return exactFallback;
 
-  const phrase = [...exercisePhraseTranslations[language], ...exerciseExtraTranslations[language]].find(
+  const phrase = [...exercisePhraseTranslations[language], ...exerciseExtraTranslations[language], ...exerciseFinalTranslations[language]].find(
     ([source]) => source.toLocaleLowerCase('fr-FR') === normalized.toLocaleLowerCase('fr-FR')
   );
   if (phrase) return phrase[1];
