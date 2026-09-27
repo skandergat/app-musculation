@@ -126,7 +126,7 @@ jobs:
 
           history = client.get("/historique", headers=headers)
           assert history.status_code == 200, history.data
-          assert len(history.get_json()) == 2
+          assert len(history.get_json()) == 1
 
           progression = client.get("/progression", headers=headers)
           assert progression.status_code == 200, progression.data
@@ -189,6 +189,17 @@ jobs:
           assert template_after_workout.status_code == 200, template_after_workout.data
           assert [e["exercice_id"] for e in template_after_workout.get_json()["exercices"]] == [exercise_id]
 
+          history_after_template = client.get("/historique", headers=headers)
+          assert history_after_template.status_code == 200, history_after_template.data
+          assert len(history_after_template.get_json()) == 2
+
+          progression_after_template = client.get("/progression", headers=headers)
+          assert progression_after_template.status_code == 200, progression_after_template.data
+          progression_after_template_data = progression_after_template.get_json()
+          assert len(progression_after_template_data) == 1, progression_after_template_data
+          assert progression_after_template_data[0]["meilleur_poids"] == 25
+          assert progression_after_template_data[0]["meilleures_repetitions"] == 10
+          assert progression_after_template_data[0]["volume_total"] == 400
 
           rejected = client.post(
               f"/seances/{first_id}/series",
