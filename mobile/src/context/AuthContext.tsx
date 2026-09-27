@@ -7,7 +7,7 @@ import React, {
 } from 'react';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import { API_URL } from '@/config/api';
+import { API_URL, apiFetch } from '@/config/api';
 import { useI18n } from '@/context/I18nContext';
 
 
@@ -97,29 +97,64 @@ export function AuthProvider({
       const tokenSauvegarde = await getStoredToken();
       const userSauvegarde = await AsyncStorage.getItem(USER_KEY);
 
-      if (tokenSauvegarde && userSauvegarde) {
-        const utilisateur = JSON.parse(userSauvegarde) as User;
+      if (!tokenSauvegarde || !userSauvegarde) {
+        return;
+      }
 
-        const response = await fetch(`${API_URL}/auth/me`, {
-          headers: {
-            Authorization: `Bearer ${tokenSauvegarde}`,
+      let utilisateurSauvegarde: User;
+      try {
+        utilisateurSauvegarde = JSON.parse(userSauvegarde) as User;
+      } catch {
+        await removeStoredToken();
+        await AsyncStorage.removeItem(USER_KEY);
+        return;
+      }
+
+      // Afficher immédiatement la session locale : l'écran de démarrage
+      // ne doit jamais dépendre d'un serveur LAN potentiellement indisponible.
+      setToken(tokenSauvegarde);
+      setUser(utilisateurSauvegarde);
+
+      // Validation distante en arrière-plan. Une panne réseau ne déconnecte
+      // pas l'utilisateur ; seule une réponse 401 invalide réellement la session.
+      try {
+        const response = await apiFetch(
+          API_URL + '/auth/me',
+          {
+            headers: {
+              Authorization: 'Bearer ' + tokenSauvegarde,
+            },
           },
-        });
+          5000,
+        );
 
         if (response.ok) {
           const data = await response.json();
-
-          setToken(tokenSauvegarde);
-          setUser(data.user);
-        } else {
+          if (data?.user) {
+            await AsyncStorage.setItem(
+              USER_KEY,
+              JSON.stringify(data.user)
+            );
+            setUser(data.user);
+          }
+        } else if (response.status === 401) {
           await removeStoredToken();
           await AsyncStorage.removeItem(USER_KEY);
+          setToken(null);
+          setUser(null);
         }
+      } catch (error) {
+        console.log(
+          'Serveur indisponible, session locale conservée:',
+          error
+        );
       }
     } catch (error) {
       console.log('Erreur chargement session:', error);
       await removeStoredToken();
       await AsyncStorage.removeItem(USER_KEY);
+      setToken(null);
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -140,7 +175,7 @@ export function AuthProvider({
   };
 
   const login = async (email: string, password: string) => {
-    const response = await fetch(`${API_URL}/auth/login`, {
+    const response = await apiFetch(`${API_URL}/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -168,7 +203,7 @@ export function AuthProvider({
     email: string,
     password: string
   ) => {
-    const response = await fetch(`${API_URL}/auth/register`, {
+    const response = await apiFetch(`${API_URL}/auth/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -195,7 +230,7 @@ export function AuthProvider({
   const logout = async () => {
     try {
       if (token) {
-        await fetch(`${API_URL}/auth/logout`, {
+        await apiFetch(`${API_URL}/auth/logout`, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,
