@@ -307,19 +307,7 @@ export default function SeanceScreen() {
 
       const activeData = await activeResponse.json();
 
-      if (activeData.seance) {
-        const exercicesRestaures = construireExercicesDepuisSeance(
-          activeData.seance.exercices ?? [],
-          activeData.seance.series ?? []
-        );
-
-        setExercices(exercicesRestaures);
-        setSeanceId(activeData.seance.id);
-
-        await Promise.all(
-          exercicesRestaures.map((exercice) => chargerPrevious(exercice))
-        );
-      } else {
+      const creerNouvelleSeance = async () => {
         const response = await fetch(
           API_URL + '/seances',
           {
@@ -337,14 +325,93 @@ export default function SeanceScreen() {
 
         const data = await response.json();
 
-        // Une nouvelle séance commence volontairement vide.
-        // L'utilisateur choisit lui-même ses exercices et le nombre de séries.
+        // Une nouvelle séance commence toujours vide.
         setExercices([]);
+        setPrevious({});
         setSeanceId(data.seance_id);
-      }
+        setTerminee(false);
+      };
 
-      setTerminee(false);
-      setChargement(false);
+      const chargerSeanceActive = async () => {
+        const exercicesRestaures = construireExercicesDepuisSeance(
+          activeData.seance.exercices ?? [],
+          activeData.seance.series ?? []
+        );
+
+        setExercices(exercicesRestaures);
+        setPrevious({});
+        setSeanceId(activeData.seance.id);
+        setTerminee(false);
+
+        await Promise.all(
+          exercicesRestaures.map((exercice) => chargerPrevious(exercice))
+        );
+      };
+
+      if (activeData.seance) {
+        setChargement(false);
+
+        Alert.alert(
+          t('activeWorkoutTitle'),
+          t('activeWorkoutQuestion'),
+          [
+            {
+              text: t('startNewWorkout'),
+              style: 'destructive',
+              onPress: async () => {
+                try {
+                  setChargement(true);
+
+                  const cancelResponse = await fetch(
+                    API_URL + '/seances/' + activeData.seance.id + '/annuler',
+                    {
+                      method: 'POST',
+                      headers: {
+                        Authorization: 'Bearer ' + token,
+                      },
+                    }
+                  );
+
+                  if (!cancelResponse.ok) {
+                    throw new Error(t('unableStartNew'));
+                  }
+
+                  await creerNouvelleSeance();
+                } catch (error) {
+                  console.error(t('error') + ' :', error);
+                  Alert.alert(
+                    t('error'),
+                    t('connectionServerHelp')
+                  );
+                } finally {
+                  setChargement(false);
+                }
+              },
+            },
+            {
+              text: t('resumeWorkout'),
+              onPress: async () => {
+                try {
+                  setChargement(true);
+                  await chargerSeanceActive();
+                } catch (error) {
+                  console.error(t('error') + ' :', error);
+                  Alert.alert(
+                    t('error'),
+                    t('connectionServerHelp')
+                  );
+                } finally {
+                  setChargement(false);
+                }
+              },
+            },
+          ],
+          { cancelable: false }
+        );
+      } else {
+        await creerNouvelleSeance();
+        setChargement(false);
+      }
     } catch (error) {
       console.error(t('error') + ' :', error);
       setChargement(false);
