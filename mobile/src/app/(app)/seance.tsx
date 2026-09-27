@@ -52,60 +52,31 @@ type Exercice = {
   series: Serie[];
 };
 
-const exercicesInitiaux: Exercice[] = [
-  {
-    id: 1,
-    nom: 'Développé couché',
-    muscle: 'Pectoraux',
-    series: [
-      { id: 1, poids: '40', reps: '12', terminee: false },
-      { id: 2, poids: '40', reps: '12', terminee: false },
-      { id: 3, poids: '40', reps: '10', terminee: false },
-    ],
-  },
-  {
-    id: 2,
-    nom: 'Développé incliné haltères',
-    muscle: 'Pectoraux',
-    series: [
-      { id: 1, poids: '30', reps: '12', terminee: false },
-      { id: 2, poids: '30', reps: '10', terminee: false },
-      { id: 3, poids: '30', reps: '10', terminee: false },
-    ],
-  },
-  {
-    id: 3,
-    nom: 'Extension poulie corde',
-    muscle: 'Triceps',
-    series: [
-      { id: 1, poids: '20', reps: '12', terminee: false },
-      { id: 2, poids: '20', reps: '12', terminee: false },
-      { id: 3, poids: '20', reps: '10', terminee: false },
-    ],
-  },
-];
+type ExerciceDisponible = {
+  nom: string;
+  muscle: string;
+  backendId: number;
+  categorie?: string;
+};
 
-function construireExercicesInitiaux(disponibles: ExerciceDisponible[]): Exercice[] {
-  return exercicesInitiaux.map((exercice) => {
-    const disponible = disponibles.find(
-      (item) => item.nom === exercice.nom && item.categorie === 'gym'
-    );
+type Exercice = {
+  id: number;
+  nom: string;
+  muscle: string;
+  backendId?: number;
+  series: Serie[];
+};
 
-    return {
-      ...exercice,
-      backendId: disponible?.backendId,
-      series: exercice.series.map((serie) => ({
-        ...serie,
-        terminee: false,
-        sauvegardee: false,
-        backendId: undefined,
-      })),
-    };
-  });
-}
+type ExerciceSeance = {
+  exercice_id: number;
+  position: number;
+  nom: string;
+  groupe_musculaire: string | null;
+  categorie?: string;
+};
 
 function construireExercicesDepuisSeance(
-  disponibles: ExerciceDisponible[],
+  exercicesSeance: ExerciceSeance[],
   series: {
     id: number;
     exercice_id: number;
@@ -115,47 +86,39 @@ function construireExercicesDepuisSeance(
     repetitions: number | null;
   }[]
 ): Exercice[] {
-  const catalogue = construireExercicesInitiaux(disponibles);
-  const exercicesParBackendId = new Map<number, Exercice>();
+  return [...exercicesSeance]
+    .sort((a, b) => a.position - b.position)
+    .map((exercice, index) => {
+      const seriesExercice = series
+        .filter((serie) => serie.exercice_id === exercice.exercice_id)
+        .sort((a, b) => a.id - b.id)
+        .map((serie, serieIndex): Serie => ({
+          id: serieIndex + 1,
+          poids: String(serie.poids ?? 0),
+          reps: String(serie.repetitions ?? 0),
+          terminee: true,
+          sauvegardee: true,
+          backendId: serie.id,
+        }));
 
-  for (const exercice of catalogue) {
-    if (exercice.backendId) {
-      exercicesParBackendId.set(exercice.backendId, exercice);
-    }
-  }
-
-  for (const serie of series) {
-    const exerciceExistant = exercicesParBackendId.get(serie.exercice_id);
-
-    const nouvelleSerie: Serie = {
-      id: (exerciceExistant?.series.length ?? 0) + 1,
-      poids: String(serie.poids ?? 0),
-      reps: String(serie.repetitions ?? 0),
-      terminee: true,
-      sauvegardee: true,
-      backendId: serie.id,
-    };
-
-    if (exerciceExistant) {
-      if (!exerciceExistant.series.some((item) => item.terminee)) {
-        exerciceExistant.series = [nouvelleSerie];
-      } else {
-        exerciceExistant.series.push(nouvelleSerie);
-      }
-      continue;
-    }
-
-    exercicesParBackendId.set(serie.exercice_id, {
-      id: Date.now() + serie.exercice_id,
-      backendId: serie.exercice_id,
-      nom: serie.exercice_nom,
-      muscle: serie.groupe_musculaire ?? 'Autres',
-      series: [nouvelleSerie],
+      return {
+        id: Date.now() + index,
+        backendId: exercice.exercice_id,
+        nom: exercice.nom,
+        muscle: exercice.groupe_musculaire ?? 'Autres',
+        series: seriesExercice.length > 0
+          ? seriesExercice
+          : [{
+              id: 1,
+              poids: '0',
+              reps: '10',
+              terminee: false,
+              sauvegardee: false,
+            }],
+      };
     });
-  }
-
-  return Array.from(exercicesParBackendId.values());
 }
+
 export default function SeanceScreen() {
   const { token, user } = useAuth();
   const { t, exerciseName, muscleGroupName } = useI18n();
@@ -163,14 +126,7 @@ export default function SeanceScreen() {
 
   const sonFinTimer = useAudioPlayer(SON_FIN_TIMER);
 
-  const [exercices, setExercices] = useState<Exercice[]>(
-    exercicesInitiaux.map((exercice) => ({
-      ...exercice,
-      series: exercice.series.map((serie) => ({
-        ...serie,
-      })),
-    }))
-  );
+  const [exercices, setExercices] = useState<Exercice[]>([]);
 
   const [menuExercices, setMenuExercices] = useState(false);
   const [seanceId, setSeanceId] = useState<number | null>(null);
@@ -367,11 +323,10 @@ export default function SeanceScreen() {
       const activeData = await activeResponse.json();
 
       if (activeData.seance) {
-        const activeSeries = activeData.seance.series ?? [];
-        const exercicesRestaures =
-          activeSeries.length > 0
-            ? construireExercicesDepuisSeance(disponibles, activeSeries)
-            : construireExercicesInitiaux(disponibles);
+        const exercicesRestaures = construireExercicesDepuisSeance(
+          activeData.seance.exercices ?? [],
+          activeData.seance.series ?? []
+        );
 
         setExercices(exercicesRestaures);
         setSeanceId(activeData.seance.id);
@@ -396,14 +351,11 @@ export default function SeanceScreen() {
         }
 
         const data = await response.json();
-        const exercicesNouveaux = construireExercicesInitiaux(disponibles);
 
-        setExercices(exercicesNouveaux);
+        // Une nouvelle séance commence volontairement vide.
+        // L'utilisateur choisit lui-même ses exercices et le nombre de séries.
+        setExercices([]);
         setSeanceId(data.seance_id);
-
-        await Promise.all(
-          exercicesNouveaux.map((exercice) => chargerPrevious(exercice))
-        );
       }
 
       setTerminee(false);
@@ -430,41 +382,99 @@ export default function SeanceScreen() {
     muscle: string,
     backendId: number
   ) => {
-    const nouvelExercice: Exercice = {
-      id: Date.now(),
-      backendId,
-      nom,
-      muscle,
-      series: [
-        {
-          id: 1,
-          poids: '0',
-          reps: '10',
-          terminee: false,
-        },
-        {
-          id: 2,
-          poids: '0',
-          reps: '10',
-          terminee: false,
-        },
-        {
-          id: 3,
-          poids: '0',
-          reps: '10',
-          terminee: false,
-        },
-      ],
-    };
+    if (!seanceId) {
+      Alert.alert(t('error'), t('noActiveWorkout'));
+      return;
+    }
 
-    setExercices((anciens) => [
-      ...anciens,
-      nouvelExercice,
-    ]);
+    if (exercices.some((exercice) => exercice.backendId === backendId)) {
+      Alert.alert(t('error'), t('exerciseAlreadyAdded'));
+      return;
+    }
 
-    setMenuExercices(false);
+    try {
+      const response = await fetch(
+        `${API_URL}/seances/${seanceId}/exercices`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            exercice_id: backendId,
+          }),
+        }
+      );
 
-    await chargerPrevious(nouvelExercice);
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.error || t('cannotAddExercise'));
+      }
+
+      const nouvelExercice: Exercice = {
+        id: Date.now(),
+        backendId,
+        nom,
+        muscle,
+        series: [
+          {
+            id: 1,
+            poids: '0',
+            reps: '10',
+            terminee: false,
+            sauvegardee: false,
+          },
+        ],
+      };
+
+      setExercices((anciens) => [...anciens, nouvelExercice]);
+      setMenuExercices(false);
+      await chargerPrevious(nouvelExercice);
+    } catch (error: any) {
+      console.error('Erreur ajout exercice :', error);
+      Alert.alert(t('error'), error?.message || t('cannotAddExercise'));
+    }
+  };
+
+  const supprimerExercice = async (exercice: Exercice) => {
+    if (!seanceId || !exercice.backendId) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_URL}/seances/${seanceId}/exercices/${exercice.backendId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.error || t('cannotRemoveExercise'));
+      }
+
+      setExercices((anciens) =>
+        anciens.filter((item) => item.id !== exercice.id)
+      );
+
+      setPrevious((ancien) => {
+        const nouveau = { ...ancien };
+        if (exercice.backendId) {
+          delete nouveau[exercice.backendId];
+        }
+        return nouveau;
+      });
+    } catch (error: any) {
+      console.error('Erreur suppression exercice :', error);
+      Alert.alert(t('error'), error?.message || t('cannotRemoveExercise'));
+    }
   };
 
   const ajouterSerie = (exerciceId: number) => {
@@ -903,17 +913,10 @@ export default function SeanceScreen() {
       const nouvelleSeance =
         await nouvelleSeanceResponse.json();
 
-      const exercicesReset =
-        construireExercicesInitiaux(exercicesDisponibles);
-
-      setExercices(exercicesReset);
+      // La nouvelle séance est vide : aucune routine n'est imposée.
+      setExercices([]);
+      setPrevious({});
       setSeanceId(nouvelleSeance.seance_id);
-
-      await Promise.all(
-        exercicesReset.map((exercice) =>
-          chargerPrevious(exercice)
-        )
-      );
 
       setTerminee(false);
       setChargement(false);
@@ -988,6 +991,29 @@ export default function SeanceScreen() {
               <Text style={[styles.muscle, dark && styles.mutedDark]}>
                 {muscleGroupName(exercice.muscle)}
               </Text>
+
+              <TouchableOpacity
+                style={styles.supprimerExercice}
+                disabled={terminee}
+                onPress={() =>
+                  Alert.alert(
+                    t('removeExercise'),
+                    t('removeExerciseQuestion'),
+                    [
+                      { text: t('cancel'), style: 'cancel' },
+                      {
+                        text: t('delete'),
+                        style: 'destructive',
+                        onPress: () => supprimerExercice(exercice),
+                      },
+                    ]
+                  )
+                }
+              >
+                <Text style={styles.supprimerExerciceTexte}>
+                  {t('removeExercise')}
+                </Text>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.headerSeries}>
@@ -1227,9 +1253,6 @@ export default function SeanceScreen() {
                             {exerciseName(exercice.nom)}
                           </Text>
 
-                          <Text style={[styles.optionMuscle, dark && styles.mutedDark]}>
-                            {muscleGroupName(exercice.muscle)}
-                          </Text>
                         </View>
 
                         <Text style={styles.plus}>＋</Text>
@@ -1329,6 +1352,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#8A8A8E',
     marginTop: 5,
+  },
+
+  supprimerExercice: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: '#F2F2F7',
+  },
+
+  supprimerExerciceTexte: {
+    color: '#FF3B30',
+    fontSize: 13,
+    fontWeight: '700',
   },
 
   headerSeries: {
