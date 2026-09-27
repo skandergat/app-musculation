@@ -124,6 +124,18 @@ jobs:
           )
           assert finished.status_code == 200, finished.data
 
+          history = client.get("/historique", headers=headers)
+          assert history.status_code == 200, history.data
+          assert len(history.get_json()) == 2
+
+          progression = client.get("/progression", headers=headers)
+          assert progression.status_code == 200, progression.data
+          progression_data = progression.get_json()
+          assert len(progression_data) == 1, progression_data
+          assert progression_data[0]["meilleur_poids"] == 20
+          assert progression_data[0]["meilleures_repetitions"] == 10
+          assert progression_data[0]["volume_total"] == 200
+
           template = client.post(
               "/templates",
               headers=headers,
@@ -184,18 +196,6 @@ jobs:
               json={"exercice_id": exercise_id, "poids": 20, "repetitions": 10},
           )
           assert rejected.status_code == 404, rejected.data
-
-          history = client.get("/historique", headers=headers)
-          assert history.status_code == 200, history.data
-          assert len(history.get_json()) == 2
-
-          progression = client.get("/progression", headers=headers)
-          assert progression.status_code == 200, progression.data
-          progression_data = progression.get_json()
-          assert len(progression_data) == 1, progression_data
-          assert progression_data[0]["meilleur_poids"] == 20
-          assert progression_data[0]["meilleures_repetitions"] == 10
-          assert progression_data[0]["volume_total"] == 200
 
           print("LIFTELY backend smoke test: OK")
           PY
