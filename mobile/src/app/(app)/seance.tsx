@@ -462,6 +462,43 @@ export default function SeanceScreen() {
     }
   };
 
+  const deplacerExercice = async (index: number, direction: -1 | 1) => {
+    if (!seanceId || terminee) return;
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= exercices.length) return;
+
+    const reordered = [...exercices];
+    [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
+
+    const exerciceIds = reordered
+      .map((item) => item.backendId)
+      .filter((id): id is number => typeof id === 'number');
+
+    if (exerciceIds.length !== reordered.length) return;
+
+    const previousOrder = exercices;
+    setExercices(reordered);
+
+    try {
+      const response = await fetch(
+        API_URL + '/seances/' + seanceId + '/exercices/reorder',
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + token,
+          },
+          body: JSON.stringify({ exercice_ids: exerciceIds }),
+        }
+      );
+
+      if (!response.ok) throw new Error(t('cannotReorderExercises'));
+    } catch (error: any) {
+      setExercices(previousOrder);
+      Alert.alert(t('error'), error?.message || t('cannotReorderExercises'));
+    }
+  };
+
   const ajouterSerie = (exerciceId: number) => {
     setExercices((anciens) =>
       anciens.map((exercice) => {
@@ -977,6 +1014,23 @@ export default function SeanceScreen() {
                 {muscleGroupName(exercice.muscle)}
               </Text>
 
+              <View style={styles.actionsExercice}>
+                <TouchableOpacity
+                  style={styles.reordonnerBouton}
+                  disabled={terminee}
+                  onPress={() => deplacerExercice(exercices.findIndex((item) => item.id === exercice.id), -1)}
+                >
+                  <Text style={styles.reordonnerTexte}>↑</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.reordonnerBouton}
+                  disabled={terminee}
+                  onPress={() => deplacerExercice(exercices.findIndex((item) => item.id === exercice.id), 1)}
+                >
+                  <Text style={styles.reordonnerTexte}>↓</Text>
+                </TouchableOpacity>
+              </View>
+
               <TouchableOpacity
                 style={styles.supprimerExercice}
                 disabled={terminee}
@@ -1337,6 +1391,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#8A8A8E',
     marginTop: 5,
+  },
+
+  actionsExercice: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
+
+  reordonnerBouton: {
+    width: 34,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#F2F2F7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  reordonnerTexte: {
+    color: '#0A84FF',
+    fontSize: 18,
+    fontWeight: '800',
   },
 
   supprimerExercice: {
