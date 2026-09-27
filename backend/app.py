@@ -2541,6 +2541,80 @@ def ajouter_serie(seance_id):
 
 
 # ============================================================
+# SEANCE - MODIFIER UNE SERIE
+# ============================================================
+
+@app.route(
+    "/seances/<int:seance_id>/series/<int:series_id>",
+    methods=["PUT"],
+)
+def modifier_serie(seance_id, series_id):
+    user = get_user_from_request()
+
+    if not user:
+        return utilisateur_non_connecte()
+
+    data = request.get_json(silent=True) or {}
+    poids = data.get("poids")
+    repetitions = data.get("repetitions")
+
+    if repetitions is None:
+        return jsonify({"error": "repetitions obligatoires"}), 400
+
+    try:
+        poids_numerique = float(poids) if poids is not None and poids != "" else 0.0
+        repetitions_numeriques = entier_strict(repetitions)
+    except (TypeError, ValueError, OverflowError):
+        return jsonify({"error": "Poids ou répétitions invalides"}), 400
+
+    if not math.isfinite(poids_numerique):
+        return jsonify({"error": "Le poids doit être un nombre fini"}), 400
+
+    if poids_numerique < 0 or poids_numerique > 1000:
+        return jsonify({"error": "Le poids doit être compris entre 0 et 1000"}), 400
+
+    if repetitions_numeriques < 1 or repetitions_numeriques > 1000:
+        return jsonify({"error": "Les répétitions doivent être comprises entre 1 et 1000"}), 400
+
+    conn = get_db()
+
+    serie = conn.execute(
+        """
+        SELECT series.id
+        FROM series
+        JOIN seances ON seances.id = series.seance_id
+        WHERE series.id = ?
+          AND series.seance_id = ?
+          AND seances.user_id = ?
+          AND seances.date_fin IS NULL
+        """,
+        (series_id, seance_id, user["id"]),
+    ).fetchone()
+
+    if not serie:
+        conn.close()
+        return jsonify({"error": "Série introuvable"}), 404
+
+    conn.execute(
+        """
+        UPDATE series
+        SET poids = ?, repetitions = ?
+        WHERE id = ? AND seance_id = ?
+        """,
+        (poids_numerique, repetitions_numeriques, series_id, seance_id),
+    )
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        "status": "ok",
+        "series_id": series_id,
+        "poids": poids_numerique,
+        "repetitions": repetitions_numeriques,
+    })
+
+
+# ============================================================
 # SEANCE - SUPPRIMER UNE SERIE
 # ============================================================
 
