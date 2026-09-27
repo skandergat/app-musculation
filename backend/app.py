@@ -84,6 +84,31 @@ def get_db():
     return conn
 
 
+def entier_strict(value):
+    """
+    Convertit une valeur en entier sans tronquer silencieusement
+    les nombres décimaux ou les booléens.
+    """
+    if isinstance(value, bool):
+        raise ValueError
+
+    if isinstance(value, int):
+        return value
+
+    if isinstance(value, float):
+        if not math.isfinite(value) or not value.is_integer():
+            raise ValueError
+        return int(value)
+
+    if isinstance(value, str):
+        value = value.strip()
+        if not re.fullmatch(r"[+-]?\\d+", value):
+            raise ValueError
+        return int(value)
+
+    raise ValueError
+
+
 # ============================================================
 # AUTHENTIFICATION
 # ============================================================
@@ -1846,9 +1871,7 @@ def reorder_template_exercices(template_id):
     try:
         for item in exercices:
             value = item.get("exercice_id") if isinstance(item, dict) else item
-            if isinstance(value, bool):
-                raise ValueError
-            ids.append(int(value))
+            ids.append(entier_strict(value))
     except (TypeError, ValueError):
         conn.close()
         return jsonify({"error": "Liste d'exercices invalide"}), 400
@@ -2143,7 +2166,7 @@ def ajouter_exercice_a_seance(seance_id):
     data = request.get_json(silent=True) or {}
 
     try:
-        exercice_id = int(data.get("exercice_id"))
+        exercice_id = entier_strict(data.get("exercice_id"))
     except (TypeError, ValueError):
         return jsonify({"error": "exercice_id invalide"}), 400
 
@@ -2237,7 +2260,7 @@ def reorganiser_exercices(seance_id):
         return jsonify({"error": "exercice_ids doit être une liste non vide"}), 400
 
     try:
-        exercice_ids = [int(value) for value in exercice_ids]
+        exercice_ids = [entier_strict(value) for value in exercice_ids]
     except (TypeError, ValueError):
         return jsonify({"error": "Identifiants d'exercices invalides"}), 400
 
@@ -2396,9 +2419,9 @@ def ajouter_serie(seance_id):
         }), 400
 
     try:
-        exercice_id = int(exercice_id)
+        exercice_id = entier_strict(exercice_id)
         poids_numerique = float(poids) if poids is not None and poids != "" else 0.0
-        repetitions_numeriques = int(repetitions)
+        repetitions_numeriques = entier_strict(repetitions)
     except (TypeError, ValueError, OverflowError):
         return jsonify({
             "error": "Poids ou répétitions invalides"
