@@ -22,3 +22,33 @@ if (
 
 export const API_URL =
   configuredApiUrl || LOCAL_API_URL;
+
+const DEFAULT_TIMEOUT_MS = 8000;
+
+export async function apiFetch(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+  } catch (error: any) {
+    if (error?.name === 'AbortError') {
+      throw new Error(
+        'Connexion au serveur impossible après ' +
+          timeoutMs / 1000 +
+          's. Vérifiez que Flask est lancé et que l\'adresse API est correcte.'
+      );
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
