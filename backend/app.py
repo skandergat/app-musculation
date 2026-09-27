@@ -222,6 +222,37 @@ def assurer_base():
         )
 
     # --------------------------------------------------------
+    # TEMPLATES
+    # --------------------------------------------------------
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS templates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            nom TEXT NOT NULL,
+            date_creation TEXT NOT NULL,
+            date_modification TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS template_exercices (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            template_id INTEGER NOT NULL,
+            exercice_id INTEGER NOT NULL,
+            position INTEGER NOT NULL DEFAULT 0,
+            FOREIGN KEY (template_id) REFERENCES templates (id) ON DELETE CASCADE,
+            FOREIGN KEY (exercice_id) REFERENCES exercices (id),
+            UNIQUE(template_id, exercice_id)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_template_exercices_template
+        ON template_exercices(template_id, position)
+    """)
+
+    # --------------------------------------------------------
     # SEANCES
     # --------------------------------------------------------
 
@@ -1605,6 +1636,262 @@ def liste_exercices():
         dict(exercice)
         for exercice in exercices
     ])
+
+
+# ============================================================
+# TEMPLATES
+# ============================================================
+
+def _template_appartient_a_user(conn, template_id, user_id):
+    return conn.execute(
+        "SELECT * FROM templates WHERE id = ? AND user_id = ?",
+        (template_id, user_id),
+    ).fetchone()
+
+
+@app.route("/templates", methods=["GET"])
+def lister_templates():
+    user = get_user_from_request()
+    if not user:
+        return utilisateur_non_connecte()
+
+    conn = get_db()
+    templates = conn.execute(
+        """
+        SELECT t.id, t.nom, t.date_creation, t.date_modification,
+               COUNT(te.id) AS nombre_exercices
+        FROM templates t
+        LEFT JOIN template_exercices te ON te.template_id = t.id
+        WHERE t.user_id = ?
+        GROUP BY t.id
+        ORDER BY t.date_modification DESC, t.id DESC
+        """,
+        (user["id"],),
+    ).fetchall()
+    conn.close()
+    return jsonify([dict(t) for t in templates])
+
+
+@app.route("/templates", methods=["POST"])
+def creer_template():
+    user = get_user_from_request()
+    if not user:
+        return utilisateur_non_connecte()
+
+    data = request.get_json(silent=True) or {}
+    nom = str(data.get("nom", "")).strip()
+    if not nom:
+        return jsonify({"error": "Le nom du template est obligatoire"}), 400
+    if len(nom) > 100:
+        return jsonify({"error": "Le nom du template est trop long"}), 400
+
+    maintenant = datetime.now().isoformat()
+    conn = get_db()
+    cursor = conn.execute(
+        """
+        INSERT INTO templates (user_id, nom, date_creation, date_modification)
+        VALUES (?, ?, ?, ?)
+        """,
+        (user["id"], nom, maintenant, maintenant),
+    )
+    conn.commit()
+    template_id = cursor.lastrowid
+    conn.close()
+    return jsonify({"id": template_id, "nom": nom, "nombre_exercices": 0}), 201
+
+
+@app.route("/templates/<int:template_id>", methods=["GET"])
+def obtenir_template(template_id):
+    user = get_user_from_request()
+    if not user:
+        return utilisateur_non_connecte()
+
+    conn = get_db()
+    template = _template_appartient_a_user(conn, template_id, user["id"])
+    if not template:
+        conn.close()
+        return jsonify({"error": "Template introuvable"}), 404
+
+    exercices = conn.execute(
+        """
+        SELECT te.exercice_id, te.position, e.nom, e.groupe_musculaire, e.categorie
+        FROM template_exercices te
+        JOIN exercices e ON e.id = te.exercice_id
+        WHERE te.template_id = ?
+        ORDER BY te.position ASC, te.id ASC
+        """,
+        (template_id,),
+    ).fetchall()
+    conn.close()
+    return jsonify({"id": template["id"], "nom": template["nom"], "exercices": [dict(e) for e in exercices]})
+
+
+@app.route("/templates/<int:template_id>", methods=["PUT"])
+def modifier_template(template_id):
+    user = get_user_from_request()
+    if not user:
+        return utilisateur_non_connecte()
+
+    data = request.get_json(silent=True) or {}
+    nom = str(data.get("nom", "")).strip()
+    if not nom:
+        return jsonify({"error": "Le nom du template est obligatoire"}), 400
+    if len(nom) > 100:
+        return jsonify({"error": "Le nom du template est trop long"}), 400
+
+    conn = get_db()
+    template = _template_appartient_a_user(conn, template_id, user["id"])
+    if not template:
+        conn.close()
+        return jsonify({"error": "Template introuvable"}), 404
+    conn.execute(
+        "UPDATE templates SET nom = ?, date_modification = ? WHERE id = ? AND user_id = ?",
+        (nom, datetime.now().isoformat(), template_id, user["id"]),
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "ok", "nom": nom})
+
+
+@app.route("/templates/<int:template_id>", methods=["DELETE"])
+def supprimer_template(template_id):
+    user = get_user_from_request()
+    if not user:
+        return utilisateur_non_connecte()
+
+    conn = get_db()
+    template = _template_appartient_a_user(conn, template_id, user["id"])
+    if not template:
+        conn.close()
+        return jsonify({"error": "Template introuvable"}), 404
+    conn.execute("DELETE FROM templates WHERE id = ? AND user_id = ?", (template_id, user["id"]))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "ok"})
+
+
+@app.route("/templates/<int:template_id>/exercices", methods=["POST"])
+def ajouter_exercice_template(template_id):
+    user = get_user_from_request()
+    if not user:
+        return utilisateur_non_connecte()
+
+    data = request.get_json(silent=True) or {}
+    exercice_id = data.get("exercice_id")
+    try:
+        if isinstance(exercice_id, bool):
+            raise ValueError
+        exercice_id = int(exercice_id)
+    except (TypeError, ValueError):
+        return jsonify({"error": "exercice_id invalide"}), 400
+
+    conn = get_db()
+    template = _template_appartient_a_user(conn, template_id, user["id"])
+    exercice = conn.execute("SELECT id FROM exercices WHERE id = ? AND actif = 1", (exercice_id,)).fetchone()
+    if not template:
+        conn.close()
+        return jsonify({"error": "Template introuvable"}), 404
+    if not exercice:
+        conn.close()
+        return jsonify({"error": "Exercice introuvable"}), 404
+    if conn.execute("SELECT 1 FROM template_exercices WHERE template_id = ? AND exercice_id = ?", (template_id, exercice_id)).fetchone():
+        conn.close()
+        return jsonify({"error": "Cet exercice est déjà dans le template"}), 409
+
+    position = conn.execute("SELECT COALESCE(MAX(position), -1) + 1 FROM template_exercices WHERE template_id = ?", (template_id,)).fetchone()[0]
+    conn.execute("INSERT INTO template_exercices (template_id, exercice_id, position) VALUES (?, ?, ?)", (template_id, exercice_id, position))
+    conn.execute("UPDATE templates SET date_modification = ? WHERE id = ?", (datetime.now().isoformat(), template_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "ok", "position": position}), 201
+
+
+@app.route("/templates/<int:template_id>/exercices/<int:exercice_id>", methods=["DELETE"])
+def supprimer_exercice_template(template_id, exercice_id):
+    user = get_user_from_request()
+    if not user:
+        return utilisateur_non_connecte()
+    conn = get_db()
+    template = _template_appartient_a_user(conn, template_id, user["id"])
+    if not template:
+        conn.close()
+        return jsonify({"error": "Template introuvable"}), 404
+    conn.execute("DELETE FROM template_exercices WHERE template_id = ? AND exercice_id = ?", (template_id, exercice_id))
+    rows = conn.execute("SELECT id FROM template_exercices WHERE template_id = ? ORDER BY position, id", (template_id,)).fetchall()
+    for position, row in enumerate(rows):
+        conn.execute("UPDATE template_exercices SET position = ? WHERE id = ?", (position, row["id"]))
+    conn.execute("UPDATE templates SET date_modification = ? WHERE id = ?", (datetime.now().isoformat(), template_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "ok"})
+
+
+@app.route("/templates/<int:template_id>/exercices/reorder", methods=["PUT"])
+def reorder_template_exercices(template_id):
+    user = get_user_from_request()
+    if not user:
+        return utilisateur_non_connecte()
+    data = request.get_json(silent=True) or {}
+    exercices = data.get("exercices")
+    if not isinstance(exercices, list):
+        return jsonify({"error": "exercices doit être une liste"}), 400
+
+    conn = get_db()
+    template = _template_appartient_a_user(conn, template_id, user["id"])
+    if not template:
+        conn.close()
+        return jsonify({"error": "Template introuvable"}), 404
+
+    ids = []
+    try:
+        for item in exercices:
+            value = item.get("exercice_id") if isinstance(item, dict) else item
+            if isinstance(value, bool):
+                raise ValueError
+            ids.append(int(value))
+    except (TypeError, ValueError):
+        conn.close()
+        return jsonify({"error": "Liste d'exercices invalide"}), 400
+
+    existing = [row["exercice_id"] for row in conn.execute("SELECT exercice_id FROM template_exercices WHERE template_id = ? ORDER BY position, id", (template_id,)).fetchall()]
+    if len(ids) != len(existing) or set(ids) != set(existing):
+        conn.close()
+        return jsonify({"error": "La liste ne correspond pas au template"}), 400
+
+    for position, exercice_id in enumerate(ids):
+        conn.execute("UPDATE template_exercices SET position = ? WHERE template_id = ? AND exercice_id = ?", (position, template_id, exercice_id))
+    conn.execute("UPDATE templates SET date_modification = ? WHERE id = ?", (datetime.now().isoformat(), template_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "ok"})
+
+
+@app.route("/templates/<int:template_id>/start", methods=["POST"])
+def demarrer_template(template_id):
+    user = get_user_from_request()
+    if not user:
+        return utilisateur_non_connecte()
+
+    conn = get_db()
+    template = _template_appartient_a_user(conn, template_id, user["id"])
+    if not template:
+        conn.close()
+        return jsonify({"error": "Template introuvable"}), 404
+
+    active = conn.execute("SELECT id FROM seances WHERE user_id = ? AND date_fin IS NULL LIMIT 1", (user["id"],)).fetchone()
+    if active:
+        conn.close()
+        return jsonify({"error": "Une séance est déjà active", "seance_id": active["id"]}), 409
+
+    maintenant = datetime.now().isoformat()
+    cursor = conn.execute("INSERT INTO seances (date_debut, user_id) VALUES (?, ?)", (maintenant, user["id"]))
+    seance_id = cursor.lastrowid
+    exercices = conn.execute("SELECT exercice_id, position FROM template_exercices WHERE template_id = ? ORDER BY position, id", (template_id,)).fetchall()
+    for exercice in exercices:
+        conn.execute("INSERT INTO seance_exercices (seance_id, exercice_id, position, date_ajout) VALUES (?, ?, ?, ?)", (seance_id, exercice["exercice_id"], exercice["position"], maintenant))
+    conn.commit()
+    conn.close()
+    return jsonify({"seance_id": seance_id, "template_id": template_id, "nom": template["nom"], "nombre_exercices": len(exercices)}), 201
 
 
 # ============================================================
