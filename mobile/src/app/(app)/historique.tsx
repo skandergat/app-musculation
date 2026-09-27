@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useI18n } from '@/context/I18nContext';
-import { API_URL } from '@/config/api';
+import { API_URL, apiFetch } from '@/config/api';
 import {
   ActivityIndicator,
   FlatList,
@@ -130,7 +130,7 @@ export default function HistoriqueScreen() {
     try {
       setErreur(null);
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/historique`,
         {
           headers: {
