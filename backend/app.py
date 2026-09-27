@@ -2381,6 +2381,82 @@ def historique():
 
 
 # ============================================================
+# PROGRESSION
+# ============================================================
+
+@app.route("/progression")
+def progression():
+    user = get_user_from_request()
+
+    if not user:
+        return utilisateur_non_connecte()
+
+    conn = get_db()
+
+    rows = conn.execute(
+        """
+        SELECT
+            exercices.id AS exercice_id,
+            exercices.nom AS exercice_nom,
+            exercices.groupe_musculaire,
+            COUNT(series.id) AS total_series,
+            COUNT(DISTINCT seances.id) AS total_seances,
+            MAX(series.poids) AS meilleur_poids,
+            MAX(series.repetitions) AS meilleures_repetitions,
+            MAX(series.poids * series.repetitions) AS meilleure_serie,
+            COALESCE(SUM(series.poids * series.repetitions), 0) AS volume_total
+        FROM series
+        JOIN exercices ON exercices.id = series.exercice_id
+        JOIN seances ON seances.id = series.seance_id
+        WHERE seances.user_id = ?
+          AND seances.date_fin IS NOT NULL
+        GROUP BY exercices.id, exercices.nom, exercices.groupe_musculaire
+        ORDER BY volume_total DESC, exercices.nom ASC
+        """,
+        (user["id"],),
+    ).fetchall()
+
+    progression_resultat = []
+
+    for row in rows:
+        historique = conn.execute(
+            """
+            SELECT
+                seances.date_debut,
+                MAX(series.poids) AS poids_max,
+                MAX(series.repetitions) AS repetitions_max,
+                COALESCE(SUM(series.poids * series.repetitions), 0) AS volume
+            FROM series
+            JOIN seances ON seances.id = series.seance_id
+            WHERE series.exercice_id = ?
+              AND seances.user_id = ?
+              AND seances.date_fin IS NOT NULL
+            GROUP BY seances.id, seances.date_debut
+            ORDER BY seances.date_debut DESC
+            LIMIT 10
+            """,
+            (row["exercice_id"], user["id"]),
+        ).fetchall()
+
+        progression_resultat.append({
+            "exercice_id": row["exercice_id"],
+            "exercice_nom": row["exercice_nom"],
+            "groupe_musculaire": row["groupe_musculaire"],
+            "total_series": row["total_series"],
+            "total_seances": row["total_seances"],
+            "meilleur_poids": row["meilleur_poids"],
+            "meilleures_repetitions": row["meilleures_repetitions"],
+            "meilleure_serie": row["meilleure_serie"],
+            "volume_total": row["volume_total"],
+            "historique": [dict(item) for item in historique],
+        })
+
+    conn.close()
+
+    return jsonify(progression_resultat)
+
+
+# ============================================================
 # LANCEMENT
 # ============================================================
 
