@@ -154,6 +154,13 @@ jobs:
           )
           assert template_add.status_code == 201, template_add.data
 
+          template_add_decimal = client.post(
+              f"/templates/{template_id}/exercices",
+              headers=headers,
+              json={"exercice_id": 1.5},
+          )
+          assert template_add_decimal.status_code == 400, template_add_decimal.data
+
           template_detail = client.get(
               f"/templates/{template_id}",
               headers=headers,
