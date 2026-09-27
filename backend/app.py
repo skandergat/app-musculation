@@ -2662,6 +2662,63 @@ def supprimer_serie(seance_id, series_id):
 
 
 # ============================================================
+# SEANCE - ANNULER
+# ============================================================
+
+@app.route(
+    "/seances/<int:seance_id>/annuler",
+    methods=["POST"],
+)
+def annuler_seance(seance_id):
+
+    user = get_user_from_request()
+
+    if not user:
+        return utilisateur_non_connecte()
+
+    conn = get_db()
+
+    seance = conn.execute(
+        """
+        SELECT id
+        FROM seances
+        WHERE id = ?
+          AND user_id = ?
+          AND date_fin IS NULL
+        """,
+        (seance_id, user["id"]),
+    ).fetchone()
+
+    if not seance:
+        conn.close()
+        return jsonify({
+            "error": "Séance introuvable"
+        }), 404
+
+    # Une séance abandonnée ne doit pas apparaître dans l'historique.
+    # On supprime ses données de travail avant de supprimer la séance.
+    conn.execute(
+        "DELETE FROM series WHERE seance_id = ?",
+        (seance_id,),
+    )
+    conn.execute(
+        "DELETE FROM seance_exercices WHERE seance_id = ?",
+        (seance_id,),
+    )
+    conn.execute(
+        "DELETE FROM seances WHERE id = ? AND user_id = ?",
+        (seance_id, user["id"]),
+    )
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        "status": "séance annulée"
+    })
+
+
+# ============================================================
 # SEANCE - TERMINER
 # ============================================================
 
