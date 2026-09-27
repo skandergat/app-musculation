@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useI18n } from '@/context/I18nContext';
-import { API_URL } from '@/config/api';
+import { API_URL, apiFetch } from '@/config/api';
 
 type HistoriquePoint = {
   date_debut: string;
@@ -53,7 +53,7 @@ export default function ProgressionScreen() {
   const load = useCallback(async () => {
     try {
       setError(null);
-      const response = await fetch(API_URL + '/progression', {
+      const response = await apiFetch(API_URL + '/progression', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) throw new Error(t('connectionImpossible'));
