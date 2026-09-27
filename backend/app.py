@@ -293,6 +293,28 @@ def assurer_base():
     """)
 
     # --------------------------------------------------------
+    # EXERCICES PRESENTS DANS UNE SEANCE
+    # --------------------------------------------------------
+    # Sépare la composition de la séance des séries déjà validées.
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS seance_exercices (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            seance_id INTEGER NOT NULL,
+            exercice_id INTEGER NOT NULL,
+            position INTEGER NOT NULL DEFAULT 0,
+            date_ajout TEXT NOT NULL,
+            UNIQUE(seance_id, exercice_id),
+            FOREIGN KEY (seance_id) REFERENCES seances (id) ON DELETE CASCADE,
+            FOREIGN KEY (exercice_id) REFERENCES exercices (id)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_seance_exercices_seance
+        ON seance_exercices(seance_id, position)
+    """)
+
+    # --------------------------------------------------------
     # BIBLIOTHÈQUE GYM
     # --------------------------------------------------------
     # Tous les exercices appartiennent pour l'instant à la catégorie
@@ -1689,6 +1711,23 @@ def seance_active():
         conn.close()
         return jsonify({"seance": None})
 
+    exercices = conn.execute(
+        """
+        SELECT
+            seance_exercices.exercice_id,
+            seance_exercices.position,
+            exercices.nom,
+            exercices.groupe_musculaire,
+            exercices.categorie
+        FROM seance_exercices
+        JOIN exercices
+            ON exercices.id = seance_exercices.exercice_id
+        WHERE seance_exercices.seance_id = ?
+        ORDER BY seance_exercices.position ASC, seance_exercices.id ASC
+        """,
+        (seance["id"],),
+    ).fetchall()
+
     series = conn.execute(
         """
         SELECT
@@ -1713,6 +1752,7 @@ def seance_active():
         "seance": {
             "id": seance["id"],
             "date_debut": seance["date_debut"],
+            "exercices": [dict(exercice) for exercice in exercices],
             "series": [dict(serie) for serie in series],
         }
     })
@@ -1738,6 +1778,179 @@ def verifier_proprietaire_seance(conn, seance_id, user_id):
     ).fetchone()
 
     return seance
+
+
+# ============================================================
+# SEANCE - AJOUTER UN EXERCICE
+# ============================================================
+
+@app.route(
+    "/seances/<int:seance_id>/exercices",
+    methods=["POST"],
+)
+def ajouter_exercice_a_seance(seance_id):
+
+    user = get_user_from_request()
+
+    if not user:
+        return utilisateur_non_connecte()
+
+    data = request.get_json(silent=True) or {}
+
+    try:
+        exercice_id = int(data.get("exercice_id"))
+    except (TypeError, ValueError):
+        return jsonify({"error": "exercice_id invalide"}), 400
+
+    conn = get_db()
+
+    seance = conn.execute(
+        """
+        SELECT id
+        FROM seances
+        WHERE id = ?
+          AND user_id = ?
+          AND date_fin IS NULL
+        """,
+        (seance_id, user["id"]),
+    ).fetchone()
+
+    if not seance:
+        conn.close()
+        return jsonify({"error": "Séance introuvable"}), 404
+
+    exercice = conn.execute(
+        """
+        SELECT id, nom, groupe_musculaire, categorie
+        FROM exercices
+        WHERE id = ? AND actif = 1
+        """,
+        (exercice_id,),
+    ).fetchone()
+
+    if not exercice:
+        conn.close()
+        return jsonify({"error": "Exercice introuvable"}), 404
+
+    present = conn.execute(
+        """
+        SELECT 1 FROM seance_exercices
+        WHERE seance_id = ? AND exercice_id = ?
+        """,
+        (seance_id, exercice_id),
+    ).fetchone()
+
+    if present:
+        conn.close()
+        return jsonify({"error": "Exercice déjà présent dans la séance"}), 409
+
+    position = conn.execute(
+        """
+        SELECT COALESCE(MAX(position), -1) + 1
+        FROM seance_exercices
+        WHERE seance_id = ?
+        """,
+        (seance_id,),
+    ).fetchone()[0]
+
+    conn.execute(
+        """
+        INSERT INTO seance_exercices
+        (seance_id, exercice_id, position, date_ajout)
+        VALUES (?, ?, ?, ?)
+        """,
+        (seance_id, exercice_id, position, datetime.now().isoformat()),
+    )
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        "status": "ok",
+        "exercice": dict(exercice),
+        "position": position,
+    }), 201
+
+
+# ============================================================
+# SEANCE - SUPPRIMER UN EXERCICE
+# ============================================================
+
+@app.route(
+    "/seances/<int:seance_id>/exercices/<int:exercice_id>",
+    methods=["DELETE"],
+)
+def supprimer_exercice_de_seance(seance_id, exercice_id):
+
+    user = get_user_from_request()
+
+    if not user:
+        return utilisateur_non_connecte()
+
+    conn = get_db()
+
+    seance = conn.execute(
+        """
+        SELECT id
+        FROM seances
+        WHERE id = ?
+          AND user_id = ?
+          AND date_fin IS NULL
+        """,
+        (seance_id, user["id"]),
+    ).fetchone()
+
+    if not seance:
+        conn.close()
+        return jsonify({"error": "Séance introuvable"}), 404
+
+    present = conn.execute(
+        """
+        SELECT id FROM seance_exercices
+        WHERE seance_id = ? AND exercice_id = ?
+        """,
+        (seance_id, exercice_id),
+    ).fetchone()
+
+    if not present:
+        conn.close()
+        return jsonify({"error": "Exercice absent de la séance"}), 404
+
+    conn.execute(
+        """
+        DELETE FROM seance_exercices
+        WHERE seance_id = ? AND exercice_id = ?
+        """,
+        (seance_id, exercice_id),
+    )
+
+    conn.execute(
+        """
+        DELETE FROM series
+        WHERE seance_id = ? AND exercice_id = ?
+        """,
+        (seance_id, exercice_id),
+    )
+
+    restantes = conn.execute(
+        """
+        SELECT id FROM seance_exercices
+        WHERE seance_id = ?
+        ORDER BY position ASC, id ASC
+        """,
+        (seance_id,),
+    ).fetchall()
+
+    for position, ligne in enumerate(restantes):
+        conn.execute(
+            "UPDATE seance_exercices SET position = ? WHERE id = ?",
+            (position, ligne["id"]),
+        )
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"status": "ok"})
 
 
 # ============================================================
@@ -1830,6 +2043,34 @@ def ajouter_serie(seance_id):
         }), 404
 
     cursor = conn.cursor()
+
+    membership = conn.execute(
+        """
+        SELECT 1 FROM seance_exercices
+        WHERE seance_id = ? AND exercice_id = ?
+        """,
+        (seance_id, exercice_id),
+    ).fetchone()
+
+    if not membership:
+        position = conn.execute(
+            """
+            SELECT COALESCE(MAX(position), -1) + 1
+            FROM seance_exercices
+            WHERE seance_id = ?
+            """,
+            (seance_id,),
+        ).fetchone()[0]
+
+        conn.execute(
+            """
+            INSERT INTO seance_exercices
+            (seance_id, exercice_id, position, date_ajout)
+            VALUES (?, ?, ?, ?)
+            """,
+            (seance_id, exercice_id, position, datetime.now().isoformat()),
+        )
+
     cursor.execute(
         """
         INSERT INTO series
