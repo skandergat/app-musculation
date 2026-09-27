@@ -124,6 +124,60 @@ jobs:
           )
           assert finished.status_code == 200, finished.data
 
+          template = client.post(
+              "/templates",
+              headers=headers,
+              json={"nom": "CI Push A"},
+          )
+          assert template.status_code == 201, template.data
+          template_id = template.get_json()["id"]
+
+          template_add = client.post(
+              f"/templates/{template_id}/exercices",
+              headers=headers,
+              json={"exercice_id": exercise_id},
+          )
+          assert template_add.status_code == 201, template_add.data
+
+          template_detail = client.get(
+              f"/templates/{template_id}",
+              headers=headers,
+          )
+          assert template_detail.status_code == 200, template_detail.data
+          assert [e["exercice_id"] for e in template_detail.get_json()["exercices"]] == [exercise_id]
+
+          template_start = client.post(
+              f"/templates/{template_id}/start",
+              headers=headers,
+          )
+          assert template_start.status_code == 201, template_start.data
+          template_session_id = template_start.get_json()["seance_id"]
+
+          template_active = client.get("/seances/active", headers=headers)
+          assert template_active.status_code == 200, template_active.data
+          assert [e["exercice_id"] for e in template_active.get_json()["seance"]["exercices"]] == [exercise_id]
+
+          template_series = client.post(
+              f"/seances/{template_session_id}/series",
+              headers=headers,
+              json={"exercice_id": exercise_id, "poids": 25, "repetitions": 8},
+          )
+          assert template_series.status_code == 201, template_series.data
+
+          template_finished = client.post(
+              f"/seances/{template_session_id}/terminer",
+              headers=headers,
+          )
+          assert template_finished.status_code == 200, template_finished.data
+
+          template_after_workout = client.get(
+              f"/templates/{template_id}",
+              headers=headers,
+          )
+          assert template_after_workout.status_code == 200, template_after_workout.data
+          assert [e["exercice_id"] for e in template_after_workout.get_json()["exercices"]] == [exercise_id]
+
+
           rejected = client.post(
               f"/seances/{first_id}/series",
               headers=headers,
