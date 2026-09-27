@@ -1716,9 +1716,10 @@ def seance_active():
     # des exercices de séance persistés.
     anciens_exercices = conn.execute(
         """
-        SELECT DISTINCT exercice_id
+        SELECT exercice_id
         FROM series
         WHERE seance_id = ?
+        GROUP BY exercice_id
         ORDER BY MIN(id) ASC
         """,
         (seance["id"],),
