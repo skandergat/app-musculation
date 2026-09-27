@@ -25,6 +25,9 @@ jobs:
       - name: Install backend dependencies
         run: pip install -r requirements.txt
 
+      - name: CI sanity marker
+        run: echo "LIFTELY CI sanity check"
+
       - name: Validate Python syntax
         run: python -m py_compile backend/app.py init_db.py
 
