@@ -72,8 +72,19 @@ jobs:
           exercise_id = conn.execute("SELECT id FROM exercices WHERE actif = 1 ORDER BY id LIMIT 1").fetchone()[0]
           conn.close()
 
+          add_exercise = client.post(f"/seances/{first_id}/exercices", headers=headers, json={"exercice_id": exercise_id})
+          assert add_exercise.status_code == 201, add_exercise.data
+
+          duplicate_exercise = client.post(f"/seances/{first_id}/exercices", headers=headers, json={"exercice_id": exercise_id})
+          assert duplicate_exercise.status_code == 409, duplicate_exercise.data
+
           series = client.post(f"/seances/{first_id}/series", headers=headers, json={"exercice_id": exercise_id, "poids": 20, "repetitions": 10})
           assert series.status_code == 201, series.data
+
+          active = client.get("/seances/active", headers=headers)
+          assert active.status_code == 200, active.data
+          active_data = active.get_json()
+          assert any(e["id"] == exercise_id for e in active_data["seance"]["exercices"])
 
           finished = client.post(f"/seances/{first_id}/terminer", headers=headers)
           assert finished.status_code == 200, finished.data
@@ -84,6 +95,14 @@ jobs:
           history = client.get("/historique", headers=headers)
           assert history.status_code == 200, history.data
           assert len(history.get_json()) == 1
+
+          progression = client.get("/progression", headers=headers)
+          assert progression.status_code == 200, progression.data
+          progression_data = progression.get_json()
+          assert len(progression_data) == 1, progression_data
+          assert progression_data[0]["meilleur_poids"] == 20
+          assert progression_data[0]["meilleures_repetitions"] == 10
+          assert progression_data[0]["volume_total"] == 200
 
           print("LIFTELY backend smoke test: OK")
           PY
