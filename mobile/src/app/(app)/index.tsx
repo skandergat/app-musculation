@@ -4,7 +4,7 @@ import {
   StatusBar, StyleSheet, Text, View, useColorScheme,
 } from 'react-native';
 import { useI18n } from '@/context/I18nContext';
-import { API_URL } from '@/config/api';
+import { API_URL, apiFetch } from '@/config/api';
 
 type Category = 'gym' | 'calisthenics';
 type Exercice = { id:number; nom?:string; name?:string; groupe_musculaire?:string; categorie?:Category };
@@ -22,7 +22,7 @@ export default function HomeScreen() {
   const chargerExercices = async (categorie: Category) => {
     try {
       setErreur(null);
-      const response = await fetch(API_URL + '/exercices?categorie=' + categorie);
+      const response = await apiFetch(API_URL + '/exercices?categorie=' + categorie);
       if (!response.ok) throw new Error(t('connectionImpossible'));
       setExercices(await response.json());
     } catch (err:any) {
