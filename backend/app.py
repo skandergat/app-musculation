@@ -1711,6 +1711,55 @@ def seance_active():
         conn.close()
         return jsonify({"seance": None})
 
+    # Compatibilité avec les séances actives créées avant la migration :
+    # les exercices déjà présents via leurs séries deviennent automatiquement
+    # des exercices de séance persistés.
+    anciens_exercices = conn.execute(
+        """
+        SELECT DISTINCT exercice_id
+        FROM series
+        WHERE seance_id = ?
+        ORDER BY MIN(id) ASC
+        """,
+        (seance["id"],),
+    ).fetchall()
+
+    for ancien in anciens_exercices:
+        present = conn.execute(
+            """
+            SELECT 1
+            FROM seance_exercices
+            WHERE seance_id = ? AND exercice_id = ?
+            """,
+            (seance["id"], ancien["exercice_id"]),
+        ).fetchone()
+
+        if not present:
+            position = conn.execute(
+                """
+                SELECT COALESCE(MAX(position), -1) + 1
+                FROM seance_exercices
+                WHERE seance_id = ?
+                """,
+                (seance["id"],),
+            ).fetchone()[0]
+
+            conn.execute(
+                """
+                INSERT INTO seance_exercices
+                (seance_id, exercice_id, position, date_ajout)
+                VALUES (?, ?, ?, ?)
+                """,
+                (
+                    seance["id"],
+                    ancien["exercice_id"],
+                    position,
+                    datetime.now().isoformat(),
+                ),
+            )
+
+    conn.commit()
+
     exercices = conn.execute(
         """
         SELECT
