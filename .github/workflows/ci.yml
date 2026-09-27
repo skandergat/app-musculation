@@ -178,6 +178,28 @@ jobs:
               json={"exercice_id": exercise_id, "poids": 25, "repetitions": 8},
           )
           assert template_series.status_code == 201, template_series.data
+          template_series_id = template_series.get_json()["series_id"]
+
+          template_update = client.put(
+              f"/seances/{template_session_id}/series/{template_series_id}",
+              headers=headers,
+              json={"exercice_id": exercise_id, "poids": 27.5, "repetitions": 9},
+          )
+          assert template_update.status_code == 200, template_update.data
+
+          template_active_after_update = client.get(
+              "/seances/active",
+              headers=headers,
+          )
+          assert template_active_after_update.status_code == 200, template_active_after_update.data
+          updated_series = [
+              item
+              for item in template_active_after_update.get_json()["seance"]["series"]
+              if item["id"] == template_series_id
+          ]
+          assert len(updated_series) == 1, updated_series
+          assert updated_series[0]["poids"] == 27.5
+          assert updated_series[0]["repetitions"] == 9
 
           template_finished = client.post(
               f"/seances/{template_session_id}/terminer",
@@ -200,9 +222,9 @@ jobs:
           assert progression_after_template.status_code == 200, progression_after_template.data
           progression_after_template_data = progression_after_template.get_json()
           assert len(progression_after_template_data) == 1, progression_after_template_data
-          assert progression_after_template_data[0]["meilleur_poids"] == 25
+          assert progression_after_template_data[0]["meilleur_poids"] == 27.5
           assert progression_after_template_data[0]["meilleures_repetitions"] == 10
-          assert progression_after_template_data[0]["volume_total"] == 400
+          assert progression_after_template_data[0]["volume_total"] == 447.5
 
           rejected = client.post(
               f"/seances/{first_id}/series",
