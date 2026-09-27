@@ -92,6 +92,20 @@ jobs:
           rejected = client.post(f"/seances/{first_id}/series", headers=headers, json={"exercice_id": exercise_id, "poids": 20, "repetitions": 10})
           assert rejected.status_code == 404, rejected.data
 
+          invalid_nan = client.post(
+              f"/seances/{first_id}/series",
+              headers=headers,
+              json={"exercice_id": exercise_id, "poids": "NaN", "repetitions": 10},
+          )
+          assert invalid_nan.status_code == 404, invalid_nan.data
+
+          invalid_weight = client.post(
+              f"/seances/{first_id}/series",
+              headers=headers,
+              json={"exercice_id": exercise_id, "poids": 1001, "repetitions": 10},
+          )
+          assert invalid_weight.status_code == 404, invalid_weight.data
+
           history = client.get("/historique", headers=headers)
           assert history.status_code == 200, history.data
           assert len(history.get_json()) == 1
