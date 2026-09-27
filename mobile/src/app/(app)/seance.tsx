@@ -4,7 +4,7 @@ import { Vibration } from 'react-native';
 import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { useAuth } from '@/context/AuthContext';
 import { useI18n } from '@/context/I18nContext';
-import { API_URL } from '@/config/api';
+import { API_URL, apiFetch } from '@/config/api';
 import {
   SafeAreaView,
   StatusBar,
@@ -228,7 +228,7 @@ export default function SeanceScreen() {
 
   const chargerExercicesDisponibles = async (): Promise<ExerciceDisponible[]> => {
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         API_URL + '/exercices?categorie=all'
       );
 
@@ -257,7 +257,7 @@ export default function SeanceScreen() {
         return;
       }
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/exercices/${exercice.backendId}/previous`,
         {
           headers: {
@@ -290,9 +290,7 @@ export default function SeanceScreen() {
     try {
       setChargement(true);
 
-      const disponibles = await chargerExercicesDisponibles();
-
-      const activeResponse = await fetch(
+      const activeResponse = await apiFetch(
         API_URL + '/seances/active',
         {
           headers: {
@@ -308,7 +306,7 @@ export default function SeanceScreen() {
       const activeData = await activeResponse.json();
 
       const creerNouvelleSeance = async () => {
-        const response = await fetch(
+        const response = await apiFetch(
           API_URL + '/seances',
           {
             method: 'POST',
@@ -362,7 +360,7 @@ export default function SeanceScreen() {
                 try {
                   setChargement(true);
 
-                  const cancelResponse = await fetch(
+                  const cancelResponse = await apiFetch(
                     API_URL + '/seances/' + activeData.seance.id + '/annuler',
                     {
                       method: 'POST',
@@ -445,7 +443,7 @@ export default function SeanceScreen() {
     }
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/seances/${seanceId}/exercices`,
         {
           method: 'POST',
@@ -496,7 +494,7 @@ export default function SeanceScreen() {
     }
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/seances/${seanceId}/exercices/${exercice.backendId}`,
         {
           method: 'DELETE',
@@ -547,7 +545,7 @@ export default function SeanceScreen() {
     setExercices(reordered);
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         API_URL + '/seances/' + seanceId + '/exercices/reorder',
         {
           method: 'PUT',
@@ -697,7 +695,7 @@ export default function SeanceScreen() {
     }
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         API_URL + '/seances/' + seanceId + '/series/' + serie.backendId,
         {
           method: 'PUT',
@@ -761,7 +759,7 @@ export default function SeanceScreen() {
     }
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         API_URL + '/seances/' + seanceId + '/series',
         {
           method: 'POST',
@@ -882,7 +880,7 @@ export default function SeanceScreen() {
       }
 
       try {
-        const response = await fetch(
+        const response = await apiFetch(
           API_URL + '/seances/' + seanceId + '/series/' + serie.backendId,
           {
             method: 'DELETE',
@@ -999,7 +997,7 @@ export default function SeanceScreen() {
 
       const ancienneSeanceId = seanceId;
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/seances/${ancienneSeanceId}/terminer`,
         {
           method: 'POST',
@@ -1035,7 +1033,7 @@ export default function SeanceScreen() {
       setChargement(true);
 
       const nouvelleSeanceResponse =
-        await fetch(`${API_URL}/seances`, {
+        await apiFetch(`${API_URL}/seances`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1377,11 +1375,29 @@ export default function SeanceScreen() {
         <TouchableOpacity
           style={[styles.boutonAjouterExercice, dark && styles.cardDark, dark && styles.boutonAjouterExerciceDark]}
           disabled={terminee}
-          onPress={() =>
-            setMenuExercices(
-              !menuExercices
-            )
-          }
+          onPress={async () => {
+            const prochainEtat = !menuExercices;
+            setMenuExercices(prochainEtat);
+
+            if (
+              prochainEtat &&
+              exercicesDisponibles.length === 0
+            ) {
+              try {
+                await chargerExercicesDisponibles();
+              } catch (error) {
+                console.error(
+                  'Erreur chargement exercices disponibles :',
+                  error
+                );
+                setMenuExercices(false);
+                Alert.alert(
+                  t('connectionImpossible'),
+                  t('connectionServerHelp')
+                );
+              }
+            }
+          }}
         >
           <Text style={[styles.boutonAjouterExerciceTexte, dark && styles.textDark]}>
             ＋ {t('addExercise').toUpperCase()}
