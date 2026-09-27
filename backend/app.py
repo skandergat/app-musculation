@@ -1926,6 +1926,67 @@ def ajouter_exercice_a_seance(seance_id):
 # ============================================================
 
 @app.route(
+    "/seances/<int:seance_id>/exercices/reorder",
+    methods=["PUT"],
+)
+def reorganiser_exercices(seance_id):
+    user = get_user_from_request()
+    if not user:
+        return utilisateur_non_connecte()
+
+    data = request.get_json(silent=True) or {}
+    exercice_ids = data.get("exercice_ids")
+
+    if not isinstance(exercice_ids, list) or not exercice_ids:
+        return jsonify({"error": "exercice_ids doit être une liste non vide"}), 400
+
+    try:
+        exercice_ids = [int(value) for value in exercice_ids]
+    except (TypeError, ValueError):
+        return jsonify({"error": "Identifiants d'exercices invalides"}), 400
+
+    if len(set(exercice_ids)) != len(exercice_ids):
+        return jsonify({"error": "Un exercice ne peut apparaître qu'une fois"}), 400
+
+    conn = get_db()
+    seance = conn.execute(
+        """
+        SELECT id FROM seances
+        WHERE id = ? AND user_id = ? AND date_fin IS NULL
+        """,
+        (seance_id, user["id"]),
+    ).fetchone()
+
+    if not seance:
+        conn.close()
+        return jsonify({"error": "Séance introuvable"}), 404
+
+    membres = conn.execute(
+        "SELECT exercice_id FROM seance_exercices WHERE seance_id = ?",
+        (seance_id,),
+    ).fetchall()
+    membres_ids = {row["exercice_id"] for row in membres}
+
+    if set(exercice_ids) != membres_ids:
+        conn.close()
+        return jsonify({"error": "La liste ne correspond pas aux exercices de la séance"}), 400
+
+    for position, exercice_id in enumerate(exercice_ids):
+        conn.execute(
+            """
+            UPDATE seance_exercices
+            SET position = ?
+            WHERE seance_id = ? AND exercice_id = ?
+            """,
+            (position, seance_id, exercice_id),
+        )
+
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "ok"})
+
+
+@app.route(
     "/seances/<int:seance_id>/exercices/<int:exercice_id>",
     methods=["DELETE"],
 )
