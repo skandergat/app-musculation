@@ -577,11 +577,7 @@ export default function SeanceScreen() {
           ...exercice,
           series: exercice.series.map((serie) =>
             serie.id === serieId
-              ? {
-                  ...serie,
-                  poids,
-                  sauvegardee: false,
-                }
+              ? { ...serie, poids, sauvegardee: false }
               : serie
           ),
         };
@@ -604,16 +600,70 @@ export default function SeanceScreen() {
           ...exercice,
           series: exercice.series.map((serie) =>
             serie.id === serieId
-              ? {
-                  ...serie,
-                  reps,
-                  sauvegardee: false,
-                }
+              ? { ...serie, reps, sauvegardee: false }
               : serie
           ),
         };
       })
     );
+  };
+
+  const mettreAJourSerie = async (
+    exercice: Exercice,
+    serie: Serie
+  ) => {
+    if (!seanceId || !serie.backendId || !token || serie.sauvegardee !== false) {
+      return;
+    }
+
+    const poids = Number.parseFloat(serie.poids.replace(',', '.'));
+    const repetitions = Number.parseInt(serie.reps, 10);
+
+    if (!Number.isFinite(poids) || poids < 0 || poids > 1000) {
+      Alert.alert(t('weight'), t('invalidWeight'));
+      return;
+    }
+
+    if (!Number.isInteger(repetitions) || repetitions < 1 || repetitions > 1000) {
+      Alert.alert(t('reps'), t('invalidReps'));
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        API_URL + '/seances/' + seanceId + '/series/' + serie.backendId,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + token,
+          },
+          body: JSON.stringify({ poids, repetitions }),
+        }
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.error || t('cannotSaveSet'));
+      }
+
+      setExercices((anciens) =>
+        anciens.map((item) =>
+          item.id !== exercice.id
+            ? item
+            : {
+                ...item,
+                series: item.series.map((s) =>
+                  s.id === serie.id ? { ...s, sauvegardee: true } : s
+                ),
+              }
+        )
+      );
+    } catch (error: any) {
+      console.error('Erreur mise à jour série :', error);
+      Alert.alert(t('error'), error?.message || t('cannotSaveSet'));
+    }
   };
 
   const sauvegarderSerie = async (
@@ -1102,7 +1152,7 @@ export default function SeanceScreen() {
                     style={[styles.input, dark && styles.inputDark]}
                     value={serie.poids}
                     keyboardType="decimal-pad"
-                    editable={!terminee && !serie.terminee}
+                    editable={!terminee}
                     onChangeText={(texte) =>
                       modifierPoids(
                         exercice.id,
@@ -1110,6 +1160,14 @@ export default function SeanceScreen() {
                         texte
                       )
                     }
+                    onBlur={() => {
+                      const current = exercices
+                        .find((item) => item.id === exercice.id)
+                        ?.series.find((item) => item.id === serie.id);
+                      if (current?.backendId && current.sauvegardee === false) {
+                        void mettreAJourSerie(exercice, current);
+                      }
+                    }}
                   />
 
                   <TextInput
@@ -1124,6 +1182,14 @@ export default function SeanceScreen() {
                         texte
                       )
                     }
+                    onBlur={() => {
+                      const current = exercices
+                        .find((item) => item.id === exercice.id)
+                        ?.series.find((item) => item.id === serie.id);
+                      if (current?.backendId && current.sauvegardee === false) {
+                        void mettreAJourSerie(exercice, current);
+                      }
+                    }}
                   />
 
                   <TouchableOpacity
