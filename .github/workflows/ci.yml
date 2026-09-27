@@ -187,7 +187,7 @@ jobs:
 
           history = client.get("/historique", headers=headers)
           assert history.status_code == 200, history.data
-          assert len(history.get_json()) == 1
+          assert len(history.get_json()) == 2
 
           progression = client.get("/progression", headers=headers)
           assert progression.status_code == 200, progression.data
