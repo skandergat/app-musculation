@@ -102,7 +102,7 @@ def entier_strict(value):
 
     if isinstance(value, str):
         value = value.strip()
-        if not re.fullmatch(r"[+-]?\\d+", value):
+        if not re.fullmatch(r"[+-]?\d+", value):
             raise ValueError
         return int(value)
 
