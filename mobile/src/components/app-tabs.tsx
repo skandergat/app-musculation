@@ -19,6 +19,11 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Icon sf="house.fill" md="home" />
       </NativeTabs.Trigger>
 
+      <NativeTabs.Trigger name="templates">
+        <NativeTabs.Trigger.Label>Templates</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="square.stack.3d.up.fill" md="view_module" />
+      </NativeTabs.Trigger>
+
       <NativeTabs.Trigger name="seance">
         <NativeTabs.Trigger.Label>{t('session')}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="dumbbell.fill" md="fitness_center" />
