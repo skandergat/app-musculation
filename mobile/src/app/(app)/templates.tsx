@@ -5,7 +5,7 @@ import {
   ScrollView, StyleSheet, Text, TextInput, View, useColorScheme,
 } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
-import { API_URL } from '@/config/api';
+import { API_URL, apiFetch } from '@/config/api';
 
 type Template = { id:number; nom:string; nombre_exercices:number };
 type Exercise = { id:number; nom:string; groupe_musculaire?:string|null; categorie?:string };
@@ -32,7 +32,7 @@ export default function TemplatesScreen() {
   const loadTemplates = useCallback(async () => {
     try {
       setError(null);
-      const r = await fetch(API_URL + '/templates', { headers: { Authorization: `Bearer ${token}` } });
+      const r = await apiFetch(API_URL + '/templates', { headers: { Authorization: `Bearer ${token}` } });
       if (!r.ok) throw new Error('Impossible de charger les templates.');
       setTemplates(await r.json());
     } catch (e:any) {
@@ -50,7 +50,7 @@ export default function TemplatesScreen() {
     setShowLibrary(false);
     setBusy(true);
     try {
-      const r = await fetch(`${API_URL}/templates/${template.id}`, { headers: { Authorization: `Bearer ${token}` } });
+      const r = await apiFetch(`${API_URL}/templates/${template.id}`, { headers: { Authorization: `Bearer ${token}` } });
       if (!r.ok) throw new Error('Impossible de charger le template.');
       const data = await r.json();
       setTemplateExercises(data.exercices ?? []);
@@ -67,7 +67,7 @@ export default function TemplatesScreen() {
     if (!nom || creating) return;
     setCreating(true);
     try {
-      const r = await fetch(API_URL + '/templates', { method:'POST', headers, body:JSON.stringify({ nom }) });
+      const r = await apiFetch(API_URL + '/templates', { method:'POST', headers, body:JSON.stringify({ nom }) });
       if (!r.ok) {
         const data = await r.json().catch(() => ({}));
         throw new Error(data.error ?? 'Impossible de créer le template.');
@@ -86,7 +86,7 @@ export default function TemplatesScreen() {
   const loadLibrary = async () => {
     setShowLibrary(true);
     try {
-      const r = await fetch(API_URL + '/exercices?categorie=all');
+      const r = await apiFetch(API_URL + '/exercices?categorie=all');
       if (!r.ok) throw new Error('Impossible de charger les exercices.');
       setLibrary(await r.json());
     } catch (e:any) {
@@ -98,7 +98,7 @@ export default function TemplatesScreen() {
     if (!selected || busy) return;
     setBusy(true);
     try {
-      const r = await fetch(`${API_URL}/templates/${selected.id}/exercices`, {
+      const r = await apiFetch(`${API_URL}/templates/${selected.id}/exercices`, {
         method:'POST', headers, body:JSON.stringify({ exercice_id: exercise.id }),
       });
       if (!r.ok) {
@@ -116,7 +116,7 @@ export default function TemplatesScreen() {
     if (!selected || busy) return;
     setBusy(true);
     try {
-      const r = await fetch(`${API_URL}/templates/${selected.id}/exercices/${exerciseId}`, { method:'DELETE', headers });
+      const r = await apiFetch(`${API_URL}/templates/${selected.id}/exercices/${exerciseId}`, { method:'DELETE', headers });
       if (!r.ok) throw new Error('Impossible de retirer cet exercice.');
       await openTemplate(selected);
     } catch (e:any) {
@@ -133,7 +133,7 @@ export default function TemplatesScreen() {
     [next[index], next[target]] = [next[target], next[index]];
     setTemplateExercises(next.map((x,i) => ({ ...x, position:i })));
     try {
-      const r = await fetch(`${API_URL}/templates/${selected.id}/exercices/reorder`, {
+      const r = await apiFetch(`${API_URL}/templates/${selected.id}/exercices/reorder`, {
         method:'PUT', headers,
         body:JSON.stringify({ exercices: next.map(x => ({ exercice_id:x.exercice_id })) }),
       });
@@ -148,7 +148,7 @@ export default function TemplatesScreen() {
     if (!selected || busy) return;
     setBusy(true);
     try {
-      const r = await fetch(`${API_URL}/templates/${selected.id}/start`, { method:'POST', headers });
+      const r = await apiFetch(`${API_URL}/templates/${selected.id}/start`, { method:'POST', headers });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.error ?? 'Impossible de démarrer la séance.');
       router.push('/(app)/seance');
@@ -166,7 +166,7 @@ export default function TemplatesScreen() {
       { text:'Supprimer', style:'destructive', onPress: async () => {
         setBusy(true);
         try {
-          const r = await fetch(`${API_URL}/templates/${selected.id}`, { method:'DELETE', headers });
+          const r = await apiFetch(`${API_URL}/templates/${selected.id}`, { method:'DELETE', headers });
           if (!r.ok) throw new Error('Impossible de supprimer le template.');
           setSelected(null);
           setTemplateExercises([]);
