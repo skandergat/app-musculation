@@ -5,6 +5,7 @@ import hashlib
 import secrets
 import re
 import os
+import math
 
 app = Flask(__name__)
 
@@ -12,6 +13,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = os.getenv("LIFTELY_DB_PATH", str(BASE_DIR / "musculation.db"))
+Path(DB_PATH).expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)
 SESSION_DURATION_DAYS = 30
 
 
@@ -1363,19 +1365,25 @@ def register():
 
     cursor = conn.cursor()
 
-    cursor.execute(
-        """
-        INSERT INTO users
-        (nom, email, password_hash, date_creation)
-        VALUES (?, ?, ?, ?)
-        """,
-        (
-            nom,
-            email,
-            password_hash,
-            date_creation,
-        ),
-    )
+    try:
+        cursor.execute(
+            """
+            INSERT INTO users
+            (nom, email, password_hash, date_creation)
+            VALUES (?, ?, ?, ?)
+            """,
+            (
+                nom,
+                email,
+                password_hash,
+                date_creation,
+            ),
+        )
+    except sqlite3.IntegrityError:
+        conn.close()
+        return jsonify({
+            "error": "Cette adresse email est déjà utilisée"
+        }), 409
 
     user_id = cursor.lastrowid
 
@@ -2095,22 +2103,33 @@ def ajouter_serie(seance_id):
             "error": "repetitions obligatoires"
         }), 400
 
+    if isinstance(exercice_id, bool):
+        return jsonify({
+            "error": "exercice_id invalide"
+        }), 400
+
     try:
+        exercice_id = int(exercice_id)
         poids_numerique = float(poids) if poids is not None and poids != "" else 0.0
         repetitions_numeriques = int(repetitions)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return jsonify({
             "error": "Poids ou répétitions invalides"
         }), 400
 
-    if poids_numerique < 0:
+    if not math.isfinite(poids_numerique):
         return jsonify({
-            "error": "Le poids ne peut pas être négatif"
+            "error": "Le poids doit être un nombre fini"
         }), 400
 
-    if repetitions_numeriques < 1:
+    if poids_numerique < 0 or poids_numerique > 1000:
         return jsonify({
-            "error": "Les répétitions doivent être supérieures à 0"
+            "error": "Le poids doit être compris entre 0 et 1000"
+        }), 400
+
+    if repetitions_numeriques < 1 or repetitions_numeriques > 1000:
+        return jsonify({
+            "error": "Les répétitions doivent être comprises entre 1 et 1000"
         }), 400
 
     conn = get_db()
