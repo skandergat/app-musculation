@@ -52,21 +52,6 @@ type Exercice = {
   series: Serie[];
 };
 
-type ExerciceDisponible = {
-  nom: string;
-  muscle: string;
-  backendId: number;
-  categorie?: string;
-};
-
-type Exercice = {
-  id: number;
-  nom: string;
-  muscle: string;
-  backendId?: number;
-  series: Serie[];
-};
-
 type ExerciceSeance = {
   exercice_id: number;
   position: number;
