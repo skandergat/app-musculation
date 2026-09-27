@@ -84,7 +84,7 @@ jobs:
           active = client.get("/seances/active", headers=headers)
           assert active.status_code == 200, active.data
           active_data = active.get_json()
-          assert any(e["id"] == exercise_id for e in active_data["seance"]["exercices"])
+          assert any(e["exercice_id"] == exercise_id for e in active_data["seance"]["exercices"])
 
           finished = client.post(f"/seances/{first_id}/terminer", headers=headers)
           assert finished.status_code == 200, finished.data
