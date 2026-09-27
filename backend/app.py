@@ -1804,9 +1804,7 @@ def ajouter_exercice_template(template_id):
     data = request.get_json(silent=True) or {}
     exercice_id = data.get("exercice_id")
     try:
-        if isinstance(exercice_id, bool):
-            raise ValueError
-        exercice_id = int(exercice_id)
+        exercice_id = entier_strict(exercice_id)
     except (TypeError, ValueError):
         return jsonify({"error": "exercice_id invalide"}), 400
 
