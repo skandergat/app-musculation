@@ -6,16 +6,19 @@ on:
       - main
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
@@ -72,19 +75,34 @@ jobs:
           exercise_id = conn.execute("SELECT id FROM exercices WHERE actif = 1 ORDER BY id LIMIT 1").fetchone()[0]
           conn.close()
 
-          add_exercise = client.post(f"/seances/{first_id}/exercices", headers=headers, json={"exercice_id": exercise_id})
+          add_exercise = client.post(
+              f"/seances/{first_id}/exercices",
+              headers=headers,
+              json={"exercice_id": exercise_id},
+          )
           assert add_exercise.status_code == 201, add_exercise.data
 
-          duplicate_exercise = client.post(f"/seances/{first_id}/exercices", headers=headers, json={"exercice_id": exercise_id})
+          duplicate_exercise = client.post(
+              f"/seances/{first_id}/exercices",
+              headers=headers,
+              json={"exercice_id": exercise_id},
+          )
           assert duplicate_exercise.status_code == 409, duplicate_exercise.data
 
-          series = client.post(f"/seances/{first_id}/series", headers=headers, json={"exercice_id": exercise_id, "poids": 20, "repetitions": 10})
+          series = client.post(
+              f"/seances/{first_id}/series",
+              headers=headers,
+              json={"exercice_id": exercise_id, "poids": 20, "repetitions": 10},
+          )
           assert series.status_code == 201, series.data
 
           active = client.get("/seances/active", headers=headers)
           assert active.status_code == 200, active.data
           active_data = active.get_json()
-          assert any(e["exercice_id"] == exercise_id for e in active_data["seance"]["exercices"])
+          assert any(
+              e["exercice_id"] == exercise_id
+              for e in active_data["seance"]["exercices"]
+          )
 
           invalid_nan = client.post(
               f"/seances/{first_id}/series",
@@ -100,10 +118,17 @@ jobs:
           )
           assert invalid_weight.status_code == 400, invalid_weight.data
 
-          finished = client.post(f"/seances/{first_id}/terminer", headers=headers)
+          finished = client.post(
+              f"/seances/{first_id}/terminer",
+              headers=headers,
+          )
           assert finished.status_code == 200, finished.data
 
-          rejected = client.post(f"/seances/{first_id}/series", headers=headers, json={"exercice_id": exercise_id, "poids": 20, "repetitions": 10})
+          rejected = client.post(
+              f"/seances/{first_id}/series",
+              headers=headers,
+              json={"exercice_id": exercise_id, "poids": 20, "repetitions": 10},
+          )
           assert rejected.status_code == 404, rejected.data
 
           history = client.get("/historique", headers=headers)
@@ -120,8 +145,9 @@ jobs:
 
           print("LIFTELY backend smoke test: OK")
           PY
+
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: npm
