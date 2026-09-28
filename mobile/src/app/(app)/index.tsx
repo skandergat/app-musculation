@@ -191,11 +191,7 @@ export default function HomeScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={actualiser} />}
           contentContainerStyle={styles.liste}
           renderItem={({item, index}) => (
-            <Pressable
-              style={[styles.carteExercice, dark && styles.cardDark]}
-              onPress={() => setExerciceInfo(item)}
-              disabled={demarrageId !== null}
-            >
+            <View style={[styles.carteExercice, dark && styles.cardDark]}>
               <View style={styles.numero}><Text style={styles.numeroTexte}>{index + 1}</Text></View>
               <View style={styles.exerciceInfo}>
                 <Text style={[styles.nomExercice, dark && styles.textDark]}>{exerciseName(item.nom ?? item.name ?? t('exercise'))}</Text>
@@ -222,7 +218,7 @@ export default function HomeScreen() {
                   </Text>
                 </Pressable>
               </View>
-            </Pressable>
+            </View>
           )}
           ListEmptyComponent={<Text style={[styles.vide, dark && styles.mutedDark]}>{recherche.trim() ? t('noSearchResults') : t('noExercises')}</Text>}
         />
