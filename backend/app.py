@@ -1942,12 +1942,31 @@ def demarrer_seance():
     ).fetchone()
 
     if active:
-        conn.close()
-        return jsonify({
-            "seance_id": active["id"],
-            "reused": True,
-            "date_debut": active["date_debut"],
-        })
+        # Une séance vide ne doit pas bloquer le démarrage depuis la bibliothèque.
+        # Elle peut provenir d'une ouverture précédente de l'écran Séance
+        # interrompue avant qu'un exercice ait été ajouté.
+        nombre_exercices = conn.execute(
+            "SELECT COUNT(*) FROM seance_exercices WHERE seance_id = ?",
+            (active["id"],),
+        ).fetchone()[0]
+        nombre_series = conn.execute(
+            "SELECT COUNT(*) FROM series WHERE seance_id = ?",
+            (active["id"],),
+        ).fetchone()[0]
+
+        if nombre_exercices == 0 and nombre_series == 0:
+            conn.execute(
+                "DELETE FROM seances WHERE id = ? AND user_id = ?",
+                (active["id"], user["id"]),
+            )
+            conn.commit()
+        else:
+            conn.close()
+            return jsonify({
+                "seance_id": active["id"],
+                "reused": True,
+                "date_debut": active["date_debut"],
+            })
 
     cursor = conn.cursor()
     try:
