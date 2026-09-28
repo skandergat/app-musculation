@@ -2027,6 +2027,27 @@ def seance_active():
         conn.close()
         return jsonify({"seance": None})
 
+    # Une séance vide n'est pas un entraînement en cours.
+    # Cela évite notamment qu'une séance vide créée après "Terminer"
+    # déclenche systématiquement le dialogue "Reprendre / Nouvelle séance".
+    nombre_exercices = conn.execute(
+        "SELECT COUNT(*) FROM seance_exercices WHERE seance_id = ?",
+        (seance["id"],),
+    ).fetchone()[0]
+    nombre_series = conn.execute(
+        "SELECT COUNT(*) FROM series WHERE seance_id = ?",
+        (seance["id"],),
+    ).fetchone()[0]
+
+    if nombre_exercices == 0 and nombre_series == 0:
+        conn.execute(
+            "DELETE FROM seances WHERE id = ? AND user_id = ?",
+            (seance["id"], user["id"]),
+        )
+        conn.commit()
+        conn.close()
+        return jsonify({"seance": None})
+
     # Compatibilité avec les séances actives créées avant la migration :
     # les exercices déjà présents via leurs séries deviennent automatiquement
     # des exercices de séance persistés.
