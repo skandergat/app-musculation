@@ -23,6 +23,7 @@ export default function HomeScreen() {
   const [erreur, setErreur] = useState<string|null>(null);
   const [recherche, setRecherche] = useState('');
   const [demarrageId, setDemarrageId] = useState<number | null>(null);
+  const [exerciceInfo, setExerciceInfo] = useState<Exercice | null>(null);
 
   const chargerExercices = async (categorie: Category) => {
     try {
@@ -155,6 +156,35 @@ export default function HomeScreen() {
           autoCapitalize="none"
           autoCorrect={false}
         />
+        {exerciceInfo && (
+          <View style={styles.infoOverlay}>
+            <Pressable style={styles.infoBackdrop} onPress={() => setExerciceInfo(null)} />
+            <View style={[styles.infoCarte, dark && styles.infoCarteDark]}>
+              <View style={styles.infoEntete}>
+                <View style={styles.infoTitreBloc}>
+                  <Text style={[styles.infoTitre, dark && styles.textDark]}>
+                    {exerciseName(exerciceInfo.nom ?? exerciceInfo.name ?? t('exercise'))}
+                  </Text>
+                  {!!exerciceInfo.groupe_musculaire && (
+                    <Text style={[styles.infoSousTitre, dark && styles.mutedDark]}>
+                      {muscleGroupName(exerciceInfo.groupe_musculaire)}
+                    </Text>
+                  )}
+                </View>
+                <Pressable
+                  hitSlop={10}
+                  onPress={() => setExerciceInfo(null)}
+                  accessibilityLabel={t('close')}
+                >
+                  <Text style={[styles.infoFermer, dark && styles.textDark]}>×</Text>
+                </Pressable>
+              </View>
+              <Text style={[styles.infoTexte, dark && styles.mutedDark]}>
+                {t('exerciseInfoComingSoon')}
+              </Text>
+            </View>
+          </View>
+        )}
         <FlatList
           data={exercicesFiltres}
           keyExtractor={(item) => String(item.id)}
@@ -163,7 +193,7 @@ export default function HomeScreen() {
           renderItem={({item, index}) => (
             <Pressable
               style={[styles.carteExercice, dark && styles.cardDark]}
-              onPress={() => demarrerAvecExercice(item)}
+              onPress={() => setExerciceInfo(item)}
               disabled={demarrageId !== null}
             >
               <View style={styles.numero}><Text style={styles.numeroTexte}>{index + 1}</Text></View>
@@ -171,9 +201,27 @@ export default function HomeScreen() {
                 <Text style={[styles.nomExercice, dark && styles.textDark]}>{exerciseName(item.nom ?? item.name ?? t('exercise'))}</Text>
                 {!!item.groupe_musculaire && <Text style={[styles.muscle, dark && styles.mutedDark]}>{muscleGroupName(item.groupe_musculaire)}</Text>}
               </View>
-              <Text style={[styles.actionExercice, dark && styles.textDark]}>
-                {demarrageId === item.id ? '…' : '＋'}
-              </Text>
+              <View style={styles.actionsExercice}>
+                <Pressable
+                  hitSlop={10}
+                  style={[styles.actionBouton, dark && styles.actionBoutonDark]}
+                  onPress={() => setExerciceInfo(item)}
+                  accessibilityLabel={t('exerciseInfo')}
+                >
+                  <Text style={[styles.infoIcon, dark && styles.textDark]}>ⓘ</Text>
+                </Pressable>
+                <Pressable
+                  hitSlop={10}
+                  style={[styles.actionBouton, dark && styles.actionBoutonDark]}
+                  onPress={() => demarrerAvecExercice(item)}
+                  disabled={demarrageId !== null}
+                  accessibilityLabel={t('startExercise')}
+                >
+                  <Text style={[styles.plusIcon, dark && styles.textDark]}>
+                    {demarrageId === item.id ? '…' : '+'}
+                  </Text>
+                </Pressable>
+              </View>
             </Pressable>
           )}
           ListEmptyComponent={<Text style={[styles.vide, dark && styles.mutedDark]}>{recherche.trim() ? t('noSearchResults') : t('noExercises')}</Text>}
@@ -259,7 +307,21 @@ const styles = StyleSheet.create({
   exerciceInfo:{flex:1},
   nomExercice:{fontSize:16,fontWeight:'600',color:'#111'},
   muscle:{fontSize:12,color:'#8A8A8E',marginTop:3},
-  actionExercice:{fontSize:24,color:'#111',marginLeft:10},
+  actionsExercice:{flexDirection:'row',alignItems:'center',marginLeft:10,gap:8},
+  actionBouton:{width:38,height:38,borderRadius:19,backgroundColor:'#F2F2F7',justifyContent:'center',alignItems:'center'},
+  actionBoutonDark:{backgroundColor:'#2C2C2E'},
+  infoIcon:{fontSize:23,color:'#111',lineHeight:25},
+  plusIcon:{fontSize:28,fontWeight:'500',color:'#111',lineHeight:30},
+  infoOverlay:{position:'absolute',top:0,left:0,right:0,bottom:0,zIndex:20,justifyContent:'flex-end'},
+  infoBackdrop:{position:'absolute',top:0,left:0,right:0,bottom:0,backgroundColor:'rgba(0,0,0,0.45)'},
+  infoCarte:{backgroundColor:'#FFF',borderTopLeftRadius:24,borderTopRightRadius:24,padding:22,paddingBottom:32,minHeight:190},
+  infoCarteDark:{backgroundColor:'#1C1C1E'},
+  infoEntete:{flexDirection:'row',alignItems:'flex-start',justifyContent:'space-between'},
+  infoTitreBloc:{flex:1,paddingRight:12},
+  infoTitre:{fontSize:22,fontWeight:'800',color:'#111'},
+  infoSousTitre:{fontSize:14,color:'#8A8A8E',marginTop:5},
+  infoFermer:{fontSize:32,lineHeight:32,color:'#111'},
+  infoTexte:{fontSize:15,color:'#6E6E73',lineHeight:22,marginTop:22},
   vide:{fontSize:14,color:'#8A8A8E',textAlign:'center',marginTop:30},
   erreurTitre:{fontSize:18,fontWeight:'700',marginBottom:8},
   erreurTexte:{fontSize:14,color:'#FF3B30',textAlign:'center',marginBottom:18},
