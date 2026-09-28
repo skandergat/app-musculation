@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator, FlatList, Pressable, RefreshControl, SafeAreaView,
-  StatusBar, StyleSheet, Text, View, useColorScheme,
+  StatusBar, StyleSheet, Text, View, useColorScheme, TextInput,
 } from 'react-native';
 import { useI18n } from '@/context/I18nContext';
+import { useAuth } from '@/context/AuthContext';
+import { router } from 'expo-router';
 import { API_URL, apiFetch } from '@/config/api';
 
 type Category = 'gym' | 'calisthenics';
@@ -11,6 +13,7 @@ type Exercice = { id:number; nom?:string; name?:string; groupe_musculaire?:strin
 
 export default function HomeScreen() {
   const { t, exerciseName, muscleGroupName } = useI18n();
+  const { token } = useAuth();
   const scheme = useColorScheme();
   const dark = scheme === 'dark';
   const [categorieOuverte, setCategorieOuverte] = useState<Category|null>(null);
@@ -18,6 +21,8 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [erreur, setErreur] = useState<string|null>(null);
+  const [recherche, setRecherche] = useState('');
+  const [demarrageId, setDemarrageId] = useState<number | null>(null);
 
   const chargerExercices = async (categorie: Category) => {
     try {
@@ -42,8 +47,66 @@ export default function HomeScreen() {
   const fermerCategorie = () => {
     setCategorieOuverte(null);
     setExercices([]);
+    setRecherche('');
     setErreur(null);
   };
+
+  const demarrerAvecExercice = async (exercice: Exercice) => {
+    if (!token || demarrageId !== null) return;
+
+    try {
+      setDemarrageId(exercice.id);
+
+      const response = await apiFetch(API_URL + '/seances', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || !data.seance_id) {
+        throw new Error(data.error || t('cannotStartExercise'));
+      }
+
+      if (data.reused) {
+        router.push('/seance');
+        return;
+      }
+
+      const ajoutResponse = await apiFetch(
+        API_URL + '/seances/' + data.seance_id + '/exercices',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ exercice_id: exercice.id }),
+        }
+      );
+
+      const ajoutData = await ajoutResponse.json().catch(() => ({}));
+
+      if (!ajoutResponse.ok) {
+        throw new Error(ajoutData.error || t('cannotAddExercise'));
+      }
+
+      router.push('/seance');
+    } catch (error: any) {
+      setDemarrageId(null);
+      setErreur(error?.message || t('cannotStartExercise'));
+    }
+  };
+
+  const exercicesFiltres = useMemo(() => {
+    const terme = recherche.trim().toLocaleLowerCase();
+    if (!terme) return exercices;
+
+    return exercices.filter((item) => {
+      const nom = exerciseName(item.nom ?? item.name ?? '').toLocaleLowerCase();
+      const muscle = muscleGroupName(item.groupe_musculaire ?? '').toLocaleLowerCase();
+      return nom.includes(terme) || muscle.includes(terme);
+    });
+  }, [exercices, recherche, exerciseName, muscleGroupName]);
 
   const actualiser = () => {
     if (!categorieOuverte) return;
@@ -83,21 +146,37 @@ export default function HomeScreen() {
             <Text style={[styles.sousTitre, dark && styles.mutedDark]}>{exercices.length} {t('exercises')}</Text>
           </View>
         </View>
+        <TextInput
+          value={recherche}
+          onChangeText={setRecherche}
+          placeholder={t('searchExercises')}
+          placeholderTextColor={dark ? '#8E8E93' : '#8A8A8E'}
+          style={[styles.recherche, dark && styles.rechercheDark]}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
         <FlatList
-          data={exercices}
+          data={exercicesFiltres}
           keyExtractor={(item) => String(item.id)}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={actualiser} />}
           contentContainerStyle={styles.liste}
           renderItem={({item, index}) => (
-            <View style={[styles.carteExercice, dark && styles.cardDark]}>
+            <Pressable
+              style={[styles.carteExercice, dark && styles.cardDark]}
+              onPress={() => demarrerAvecExercice(item)}
+              disabled={demarrageId !== null}
+            >
               <View style={styles.numero}><Text style={styles.numeroTexte}>{index + 1}</Text></View>
               <View style={styles.exerciceInfo}>
                 <Text style={[styles.nomExercice, dark && styles.textDark]}>{exerciseName(item.nom ?? item.name ?? t('exercise'))}</Text>
                 {!!item.groupe_musculaire && <Text style={[styles.muscle, dark && styles.mutedDark]}>{muscleGroupName(item.groupe_musculaire)}</Text>}
               </View>
-            </View>
+              <Text style={[styles.actionExercice, dark && styles.textDark]}>
+                {demarrageId === item.id ? '…' : '＋'}
+              </Text>
+            </Pressable>
           )}
-          ListEmptyComponent={<Text style={[styles.vide, dark && styles.mutedDark]}>{t('noExercises')}</Text>}
+          ListEmptyComponent={<Text style={[styles.vide, dark && styles.mutedDark]}>{recherche.trim() ? t('noSearchResults') : t('noExercises')}</Text>}
         />
       </SafeAreaView>
     );
@@ -172,12 +251,15 @@ const styles = StyleSheet.create({
   titre:{fontSize:28,fontWeight:'800',color:'#111'},
   sousTitre:{fontSize:13,color:'#8A8A8E',marginTop:1},
   liste:{paddingHorizontal:16,paddingBottom:24},
+  recherche:{marginHorizontal:16,marginBottom:10,backgroundColor:'#FFF',borderRadius:12,paddingHorizontal:14,height:46,fontSize:15,color:'#111'},
+  rechercheDark:{backgroundColor:'#1C1C1E',color:'#FFF'},
   carteExercice:{backgroundColor:'#FFF',borderRadius:12,paddingVertical:14,paddingHorizontal:14,marginBottom:8,flexDirection:'row',alignItems:'center'},
   numero:{width:34,height:34,borderRadius:10,backgroundColor:'#F2F2F7',justifyContent:'center',alignItems:'center',marginRight:12},
   numeroTexte:{fontSize:11,fontWeight:'600',color:'#8A8A8E'},
   exerciceInfo:{flex:1},
   nomExercice:{fontSize:16,fontWeight:'600',color:'#111'},
   muscle:{fontSize:12,color:'#8A8A8E',marginTop:3},
+  actionExercice:{fontSize:24,color:'#111',marginLeft:10},
   vide:{fontSize:14,color:'#8A8A8E',textAlign:'center',marginTop:30},
   erreurTitre:{fontSize:18,fontWeight:'700',marginBottom:8},
   erreurTexte:{fontSize:14,color:'#FF3B30',textAlign:'center',marginBottom:18},
