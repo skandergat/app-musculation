@@ -1,6 +1,16 @@
-const LOCAL_API_URL = 'http://192.168.100.200:5001';
+import Constants from 'expo-constants';
+
 const configuredApiUrl =
   (process.env.EXPO_PUBLIC_API_URL?.trim() || '').replace(/\/+$/, '');
+
+const expoHostUri = Constants.expoConfig?.hostUri?.trim() || '';
+const expoHost = expoHostUri
+  ? expoHostUri.replace(/^\[|\]$/g, '').replace(/:\d+$/, '')
+  : '';
+
+const localApiUrl = expoHost
+  ? `http://${expoHost}:5001`
+  : 'http://127.0.0.1:5001';
 
 if (
   process.env.NODE_ENV === 'production' &&
@@ -21,7 +31,7 @@ if (
 }
 
 export const API_URL =
-  configuredApiUrl || LOCAL_API_URL;
+  configuredApiUrl || localApiUrl;
 
 const DEFAULT_TIMEOUT_MS = 8000;
 
