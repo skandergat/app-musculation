@@ -268,6 +268,8 @@ jobs:
 
       - name: Export web production bundle
         working-directory: mobile
+        env:
+          EXPO_PUBLIC_API_URL: https://api.example.invalid
         run: npx expo export --platform web
 
       - name: Expo doctor
