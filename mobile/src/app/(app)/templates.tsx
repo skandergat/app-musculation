@@ -253,7 +253,7 @@ export default function TemplatesScreen() {
               <Text style={[styles.title, dark && styles.white]}>{selected.nom}</Text>
               <Text style={[styles.subtitle, dark && styles.muted]}>{templateExercises.length} {templateExercises.length === 1 ? t('exerciseCount') : t('exercisesCount')}</Text>
             </View>
-            <Pressable onPress={startTemplate} disabled={busy} style={styles.start}><Text style={styles.startText}>DÉMARRER</Text></Pressable>
+            <Pressable onPress={startTemplate} disabled={busy} style={styles.start}><Text style={styles.startText}>{copy.start}</Text></Pressable>
           </View>
 
           <View style={[styles.card, dark && styles.cardDark]}>
@@ -305,8 +305,8 @@ export default function TemplatesScreen() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadTemplates(); }}/>}
       >
-        <Text style={[styles.title, dark && styles.white]}>Mes templates</Text>
-        <Text style={[styles.subtitle, dark && styles.muted]}>Crée tes séances types. Les modifier ici ne modifie jamais une séance déjà commencée.</Text>
+        <Text style={[styles.title, dark && styles.white]}>{copy.title}</Text>
+        <Text style={[styles.subtitle, dark && styles.muted]}>{copy.subtitle}</Text>
 
         <View style={[styles.createCard, dark && styles.cardDark]}>
           <TextInput
