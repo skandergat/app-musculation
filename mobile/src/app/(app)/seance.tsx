@@ -445,8 +445,60 @@ export default function SeanceScreen() {
     }
 
     try {
+      // Toujours resynchroniser l'identifiant de séance avec le serveur
+      // avant un ajout. Cela évite d'utiliser un ancien seanceId après
+      // un redémarrage, une nouvelle séance ou une course d'initialisation.
+      let sessionIdActuelle = seanceId;
+
+      const activeResponse = await apiFetch(
+        `${API_URL}/seances/active`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!activeResponse.ok) {
+        throw new Error(t('connectionImpossible'));
+      }
+
+      const activeData = await activeResponse.json();
+
+      if (activeData.seance?.id) {
+        sessionIdActuelle = activeData.seance.id;
+        setSeanceId(sessionIdActuelle);
+      } else {
+        const nouvelleSessionResponse = await apiFetch(
+          `${API_URL}/seances`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const nouvelleSessionData =
+          await nouvelleSessionResponse.json().catch(() => ({}));
+
+        if (!nouvelleSessionResponse.ok || !nouvelleSessionData.seance_id) {
+          throw new Error(
+            nouvelleSessionData.error || t('unableStartNew')
+          );
+        }
+
+        sessionIdActuelle = nouvelleSessionData.seance_id;
+        setSeanceId(sessionIdActuelle);
+      }
+
+      if (!sessionIdActuelle) {
+        throw new Error(t('noActiveWorkout'));
+      }
+
       const response = await apiFetch(
-        `${API_URL}/seances/${seanceId}/exercices`,
+        `${API_URL}/seances/${sessionIdActuelle}/exercices`,
         {
           method: 'POST',
           headers: {
@@ -461,7 +513,7 @@ export default function SeanceScreen() {
 
       const data = await response.json().catch(() => ({}));
 
-      if (!response.ok) {
+      if (!response.ok && response.status !== 409) {
         throw new Error(data.error || t('cannotAddExercise'));
       }
 
