@@ -23,7 +23,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install backend dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r backend/requirements.txt
 
       - name: CI sanity marker
         run: echo "LIFTELY CI sanity check"
