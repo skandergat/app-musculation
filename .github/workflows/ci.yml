@@ -75,11 +75,6 @@ jobs:
           assert second_id != first_id
           assert second_session.get_json()["reused"] is False
 
-          reused_session = client.post("/seances", headers=headers)
-          assert reused_session.status_code == 200, reused_session.data
-          assert reused_session.get_json()["seance_id"] == second_id
-          assert reused_session.get_json()["reused"] is True
-
           first_id = second_id
 
           conn = sqlite3.connect(app.DB_PATH)
@@ -92,6 +87,11 @@ jobs:
               json={"exercice_id": exercise_id},
           )
           assert add_exercise.status_code == 201, add_exercise.data
+
+          reused_session = client.post("/seances", headers=headers)
+          assert reused_session.status_code == 200, reused_session.data
+          assert reused_session.get_json()["seance_id"] == first_id
+          assert reused_session.get_json()["reused"] is True
 
           duplicate_exercise = client.post(
               f"/seances/{first_id}/exercices",
