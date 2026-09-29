@@ -254,7 +254,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: mobile/package-lock.json
 
@@ -265,6 +265,10 @@ jobs:
       - name: TypeScript typecheck
         working-directory: mobile
         run: npx tsc --noEmit
+
+      - name: Export web production bundle
+        working-directory: mobile
+        run: npx expo export --platform web
 
       - name: Expo doctor
         working-directory: mobile
