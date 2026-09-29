@@ -513,7 +513,40 @@ export default function SeanceScreen() {
 
       const data = await response.json().catch(() => ({}));
 
-      if (!response.ok && response.status !== 409) {
+      if (response.status === 409) {
+        // Le serveur possède déjà cet exercice : resynchroniser l'écran
+        // plutôt que de créer un doublon dans l'état local.
+        const syncResponse = await apiFetch(
+          `${API_URL}/seances/active`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (syncResponse.ok) {
+          const syncData = await syncResponse.json();
+          if (syncData.seance?.id) {
+            const exercicesSynchronises =
+              construireExercicesDepuisSeance(
+                syncData.seance.exercices ?? [],
+                syncData.seance.series ?? []
+              );
+            setSeanceId(syncData.seance.id);
+            setExercices(exercicesSynchronises);
+            setMenuExercices(false);
+            await Promise.all(
+              exercicesSynchronises.map((item) => chargerPrevious(item))
+            );
+            return;
+          }
+        }
+
+        throw new Error(t('exerciseAlreadyAdded'));
+      }
+
+      if (!response.ok) {
         throw new Error(data.error || t('cannotAddExercise'));
       }
 
