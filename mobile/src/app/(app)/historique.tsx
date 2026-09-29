@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useI18n } from '@/context/I18nContext';
 import { API_URL, apiFetch } from '@/config/api';
@@ -156,9 +157,11 @@ export default function HistoriqueScreen() {
     }
   }, [token, t]);
 
-  useEffect(() => {
-    chargerHistorique();
-  }, [chargerHistorique]);
+  useFocusEffect(
+    useCallback(() => {
+      chargerHistorique();
+    }, [chargerHistorique])
+  );
 
   const onRefresh = () => {
     setRafraichissement(true);
