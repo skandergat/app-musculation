@@ -9,6 +9,33 @@ import math
 
 app = Flask(__name__)
 
+# Configure les origines Web explicitement dans LIFTELY_CORS_ORIGINS
+# (liste séparée par des virgules). Par défaut, aucune origine navigateur
+# n'est autorisée ; les clients mobiles natifs ne sont pas concernés.
+@app.after_request
+def ajouter_entetes_cors(response):
+    origine = request.headers.get("Origin")
+    origines_configurees = {
+        valeur.strip()
+        for valeur in os.getenv("LIFTELY_CORS_ORIGINS", "").split(",")
+        if valeur.strip()
+    }
+
+    if origine:
+        response.headers.add("Vary", "Origin")
+
+    if origine and origine in origines_configurees:
+        response.headers["Access-Control-Allow-Origin"] = origine
+        response.headers["Access-Control-Allow-Methods"] = (
+            "GET, POST, PUT, DELETE, OPTIONS"
+        )
+        response.headers["Access-Control-Allow-Headers"] = (
+            "Authorization, Content-Type"
+        )
+        response.headers["Access-Control-Max-Age"] = "600"
+
+    return response
+
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
