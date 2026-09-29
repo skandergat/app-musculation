@@ -68,11 +68,6 @@ export default function HomeScreen() {
         throw new Error(data.error || t('cannotStartExercise'));
       }
 
-      if (data.reused) {
-        router.push('/seance');
-        return;
-      }
-
       const ajoutResponse = await apiFetch(
         API_URL + '/seances/' + data.seance_id + '/exercices',
         {
@@ -87,10 +82,12 @@ export default function HomeScreen() {
 
       const ajoutData = await ajoutResponse.json().catch(() => ({}));
 
-      if (!ajoutResponse.ok) {
+      if (!ajoutResponse.ok && ajoutResponse.status !== 409) {
         throw new Error(ajoutData.error || t('cannotAddExercise'));
       }
 
+      // Même lorsqu'une séance existante est réutilisée, l'exercice
+      // choisi doit être ajouté à cette séance avant d'ouvrir l'écran.
       router.push('/seance');
     } catch (error: any) {
       setDemarrageId(null);
