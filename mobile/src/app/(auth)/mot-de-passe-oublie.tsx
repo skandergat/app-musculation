@@ -8,17 +8,17 @@ import {
   Text,
   TextInput,
   View,
-  useColorScheme,
 } from 'react-native';
 import { router } from 'expo-router';
 
 import { useAuth } from '@/context/AuthContext';
 import { useI18n } from '@/context/I18nContext';
+import { useAppColorScheme } from '@/context/ColorSchemeContext';
 
 export default function MotDePasseOublieScreen() {
   const { requestPasswordReset } = useAuth();
   const { t } = useI18n();
-  const dark = useColorScheme() === 'dark';
+  const dark = useAppColorScheme() === 'dark';
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');

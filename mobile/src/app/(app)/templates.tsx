@@ -2,10 +2,11 @@ import { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
   ActivityIndicator, Alert, Pressable, RefreshControl, SafeAreaView,
-  ScrollView, StyleSheet, Text, TextInput, View, useColorScheme,
+  ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useI18n } from '@/context/I18nContext';
+import { useAppColorScheme } from '@/context/ColorSchemeContext';
 import { API_URL, apiFetch } from '@/config/api';
 
 const templateText = {
@@ -76,7 +77,7 @@ export default function TemplatesScreen() {
   const { language, t, exerciseName, muscleGroupName } = useI18n();
   const copy = templateText[language];
   const router = useRouter();
-  const dark = useColorScheme() === 'dark';
+  const dark = useAppColorScheme() === 'dark';
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selected, setSelected] = useState<Template | null>(null);
   const [templateExercises, setTemplateExercises] = useState<TemplateExercise[]>([]);

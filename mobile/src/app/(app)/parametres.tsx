@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
-  ActivityIndicator, Appearance, Linking, Modal, Pressable, SafeAreaView,
-  ScrollView, StatusBar, StyleSheet, Switch, Text, TextInput, View, useColorScheme,
+  ActivityIndicator, Linking, Modal, Pressable, SafeAreaView,
+  ScrollView, StatusBar, StyleSheet, Switch, Text, TextInput, View,
 } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { Language, useI18n } from '@/context/I18nContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '@/config/api';
+import { useColorSchemePreference } from '@/context/ColorSchemeContext';
 
 const LANGUAGES: { code: Language; label: string; native: string }[] = [
   { code: 'fr', label: 'Français', native: 'Français' },
@@ -18,9 +18,8 @@ const LANGUAGES: { code: Language; label: string; native: string }[] = [
 export default function ParametresScreen() {
   const { user, logout, deleteAccount } = useAuth();
   const { language, setLanguage, t } = useI18n();
-  const scheme = useColorScheme();
-  const dark = scheme === 'dark';
-  const [darkMode, setDarkMode] = useState(false);
+  const { colorScheme, darkMode, setDarkMode } = useColorSchemePreference();
+  const dark = colorScheme === 'dark';
   const [deconnexionEnCours, setDeconnexionEnCours] = useState(false);
   const [deconnexionOuverte, setDeconnexionOuverte] = useState(false);
   const [languesOuvertes, setLanguesOuvertes] = useState(false);
@@ -30,18 +29,8 @@ export default function ParametresScreen() {
   const [erreurSuppression, setErreurSuppression] = useState('');
   const [erreurLien, setErreurLien] = useState('');
 
-  useEffect(() => {
-    AsyncStorage.getItem('@app_musculation_dark_mode').then((value) => {
-      const enabled = value === 'true';
-      setDarkMode(enabled);
-      Appearance.setColorScheme(enabled ? 'dark' : 'light');
-    });
-  }, []);
-
   const basculerModeSombre = async (enabled: boolean) => {
-    setDarkMode(enabled);
-    await AsyncStorage.setItem('@app_musculation_dark_mode', String(enabled));
-    Appearance.setColorScheme(enabled ? 'dark' : 'light');
+    await setDarkMode(enabled);
   };
 
   const demanderDeconnexion = () => {

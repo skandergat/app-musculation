@@ -5,17 +5,21 @@ import {
   ThemeProvider,
 } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { Appearance, StatusBar, useColorScheme } from 'react-native';
+import { StatusBar } from 'react-native';
 import { useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import {
+  ColorSchemeProvider,
+  useColorSchemePreference,
+} from '@/context/ColorSchemeContext';
 import { I18nProvider } from '@/context/I18nContext';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function RootNavigator() {
   const { user, loading } = useAuth();
+  const { colorScheme } = useColorSchemePreference();
 
   useEffect(() => {
     if (!loading) {
@@ -24,45 +28,31 @@ function RootNavigator() {
   }, [loading]);
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={!loading && !!user}>
-        <Stack.Screen name="(app)" />
-      </Stack.Protected>
+    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <StatusBar
+        barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'}
+      />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Protected guard={!loading && !!user}>
+          <Stack.Screen name="(app)" />
+        </Stack.Protected>
 
-      <Stack.Protected guard={!loading && !user}>
-        <Stack.Screen name="(auth)" />
-      </Stack.Protected>
-    </Stack>
+        <Stack.Protected guard={!loading && !user}>
+          <Stack.Screen name="(auth)" />
+        </Stack.Protected>
+      </Stack>
+    </ThemeProvider>
   );
 }
 
 export default function RootLayout() {
-  useEffect(() => {
-    AsyncStorage.getItem('@app_musculation_dark_mode')
-      .then((value) => {
-        Appearance.setColorScheme(value === 'true' ? 'dark' : 'light');
-      })
-      .catch(() => {});
-  }, []);
-
-  const colorScheme = useColorScheme();
-
   return (
     <I18nProvider>
-      <AuthProvider>
-        <ThemeProvider
-          value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}
-        >
-          <StatusBar
-            barStyle={
-              colorScheme === 'dark'
-                ? 'light-content'
-                : 'dark-content'
-            }
-          />
+      <ColorSchemeProvider>
+        <AuthProvider>
           <RootNavigator />
-        </ThemeProvider>
-      </AuthProvider>
+        </AuthProvider>
+      </ColorSchemeProvider>
     </I18nProvider>
   );
 }

@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator, FlatList, Pressable, RefreshControl, SafeAreaView,
-  StatusBar, StyleSheet, Text, View, useColorScheme, TextInput,
+  StatusBar, StyleSheet, Text, View, TextInput,
 } from 'react-native';
 import { useI18n } from '@/context/I18nContext';
+import { useAppColorScheme } from '@/context/ColorSchemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { router } from 'expo-router';
 import { API_URL, apiFetch } from '@/config/api';
@@ -14,7 +15,7 @@ type Exercice = { id:number; nom?:string; name?:string; groupe_musculaire?:strin
 export default function HomeScreen() {
   const { t, exerciseName, muscleGroupName } = useI18n();
   const { token } = useAuth();
-  const scheme = useColorScheme();
+  const scheme = useAppColorScheme();
   const dark = scheme === 'dark';
   const [categorieOuverte, setCategorieOuverte] = useState<Category|null>(null);
   const [exercices, setExercices] = useState<Exercice[]>([]);

@@ -4,3 +4,10 @@ diff --git a/node_modules/expo-router/build/react-navigation/core/getStateFromPa
 @@ -41 +41 @@
 -const queryString = __importStar(require("query-string"));
 +const queryString = __importDefault(require("query-string")).default;
+diff --git a/node_modules/expo-router/build/fork/getPathFromState.js b/node_modules/expo-router/build/fork/getPathFromState.js
+--- a/node_modules/expo-router/build/fork/getPathFromState.js
++++ b/node_modules/expo-router/build/fork/getPathFromState.js
+@@ -39 +39,2 @@
+-const queryString = __importStar(require("query-string"));
++const queryStringModule = __importStar(require("query-string"));
++const queryString = queryStringModule.default || queryStringModule;

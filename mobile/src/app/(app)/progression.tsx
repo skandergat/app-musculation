@@ -10,10 +10,10 @@ import {
   Text,
   TouchableOpacity,
   View,
-  useColorScheme,
 } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useI18n } from '@/context/I18nContext';
+import { useAppColorScheme } from '@/context/ColorSchemeContext';
 import { API_URL, apiFetch } from '@/config/api';
 
 type HistoriquePoint = {
@@ -44,7 +44,7 @@ const formatNumber = (value: number | null | undefined) => {
 export default function ProgressionScreen() {
   const { token } = useAuth();
   const { t, exerciseName, muscleGroupName } = useI18n();
-  const dark = useColorScheme() === 'dark';
+  const dark = useAppColorScheme() === 'dark';
   const [items, setItems] = useState<Progression[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

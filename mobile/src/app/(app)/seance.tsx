@@ -11,11 +11,11 @@ import {
   TouchableOpacity,
   Vibration,
   View,
-  useColorScheme,
 } from 'react-native';
 import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { useAuth } from '@/context/AuthContext';
 import { useI18n } from '@/context/I18nContext';
+import { useAppColorScheme } from '@/context/ColorSchemeContext';
 import { API_URL, apiFetch } from '@/config/api';
 
 
@@ -113,7 +113,7 @@ function construireExercicesDepuisSeance(
 export default function SeanceScreen() {
   const { token, user } = useAuth();
   const { t, exerciseName, muscleGroupName } = useI18n();
-  const dark = useColorScheme() === 'dark';
+  const dark = useAppColorScheme() === 'dark';
 
   const sonFinTimer = useAudioPlayer(SON_FIN_TIMER);
 

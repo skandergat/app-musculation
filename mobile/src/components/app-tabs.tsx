@@ -1,10 +1,10 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { useColorScheme } from 'react-native';
 import { Colors } from '@/constants/theme';
 import { useI18n } from '@/context/I18nContext';
+import { useAppColorScheme } from '@/context/ColorSchemeContext';
 
 export default function AppTabs() {
-  const scheme = useColorScheme();
+  const scheme = useAppColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
   const { t } = useI18n();
 

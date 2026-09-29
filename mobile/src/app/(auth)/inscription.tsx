@@ -7,18 +7,19 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  View, useColorScheme, Linking,
+  View, Linking,
 } from 'react-native';
 import { router } from 'expo-router';
 
 import { useAuth } from '@/context/AuthContext';
 import { useI18n } from '@/context/I18nContext';
+import { useAppColorScheme } from '@/context/ColorSchemeContext';
 import { API_URL } from '@/config/api';
 
 export default function InscriptionScreen() {
   const { register } = useAuth();
   const { t } = useI18n();
-  const dark = useColorScheme() === 'dark';
+  const dark = useAppColorScheme() === 'dark';
 
   const [nom, setNom] = useState('');
   const [email, setEmail] = useState('');

@@ -13,8 +13,8 @@ import {
   Text,
   TouchableOpacity,
   View,
-  useColorScheme,
 } from 'react-native';
+import { useAppColorScheme } from '@/context/ColorSchemeContext';
 
 
 type Serie = {
@@ -117,7 +117,7 @@ const grouperParExercice = (
 export default function HistoriqueScreen() {
   const { token } = useAuth();
   const { language, t, exerciseName } = useI18n();
-  const dark = useColorScheme() === 'dark';
+  const dark = useAppColorScheme() === 'dark';
   const [seances, setSeances] = useState<Seance[]>([]);
   const [chargement, setChargement] = useState(true);
   const [rafraichissement, setRafraichissement] =

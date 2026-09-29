@@ -7,17 +7,18 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  View, useColorScheme,
+  View,
 } from 'react-native';
 import { router } from 'expo-router';
 
 import { useAuth } from '@/context/AuthContext';
 import { useI18n } from '@/context/I18nContext';
+import { useAppColorScheme } from '@/context/ColorSchemeContext';
 
 export default function ConnexionScreen() {
   const { login, resendVerificationEmail, authNotice, clearAuthNotice } = useAuth();
   const { t } = useI18n();
-  const dark = useColorScheme() === 'dark';
+  const dark = useAppColorScheme() === 'dark';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
