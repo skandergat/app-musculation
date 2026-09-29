@@ -34,6 +34,7 @@ jobs:
       - name: Backend smoke test
         env:
           LIFTELY_DB_PATH: ${{ runner.temp }}/liftely-smoke.db
+          LIFTELY_CORS_ORIGINS: https://ci.example.test
         run: |
           python - <<'PY'
           import sqlite3
@@ -52,6 +53,18 @@ jobs:
           conn.close()
 
           client = app.app.test_client()
+
+          preflight = client.options(
+              "/auth/me",
+              headers={
+                  "Origin": "https://ci.example.test",
+                  "Access-Control-Request-Method": "GET",
+                  "Access-Control-Request-Headers": "authorization",
+              },
+          )
+          assert preflight.status_code == 200, preflight.data
+          assert preflight.headers["Access-Control-Allow-Origin"] == "https://ci.example.test"
+          assert "Authorization" in preflight.headers["Access-Control-Allow-Headers"]
 
           response = client.post(
               "/auth/register",
