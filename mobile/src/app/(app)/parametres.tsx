@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Appearance, Pressable, SafeAreaView, StatusBar, StyleSheet, Switch, Text, View, useColorScheme,
+  ActivityIndicator, Appearance, Linking, Modal, Pressable, SafeAreaView,
+  ScrollView, StatusBar, StyleSheet, Switch, Text, TextInput, View, useColorScheme,
 } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { Language, useI18n } from '@/context/I18nContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '@/config/api';
 
 const LANGUAGES: { code: Language; label: string; native: string }[] = [
   { code: 'fr', label: 'Français', native: 'Français' },
@@ -14,13 +16,19 @@ const LANGUAGES: { code: Language; label: string; native: string }[] = [
 ];
 
 export default function ParametresScreen() {
-  const { user, logout } = useAuth();
+  const { user, logout, deleteAccount } = useAuth();
   const { language, setLanguage, t } = useI18n();
   const scheme = useColorScheme();
   const dark = scheme === 'dark';
   const [darkMode, setDarkMode] = useState(false);
   const [deconnexionEnCours, setDeconnexionEnCours] = useState(false);
+  const [deconnexionOuverte, setDeconnexionOuverte] = useState(false);
   const [languesOuvertes, setLanguesOuvertes] = useState(false);
+  const [suppressionOuverte, setSuppressionOuverte] = useState(false);
+  const [motDePasseSuppression, setMotDePasseSuppression] = useState('');
+  const [suppressionEnCours, setSuppressionEnCours] = useState(false);
+  const [erreurSuppression, setErreurSuppression] = useState('');
+  const [erreurLien, setErreurLien] = useState('');
 
   useEffect(() => {
     AsyncStorage.getItem('@app_musculation_dark_mode').then((value) => {
@@ -37,21 +45,44 @@ export default function ParametresScreen() {
   };
 
   const demanderDeconnexion = () => {
-    Alert.alert(t('logout'), t('logoutQuestion'), [
-      { text: t('cancel'), style: 'cancel' },
-      {
-        text: t('logout'),
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            setDeconnexionEnCours(true);
-            await logout();
-          } finally {
-            setDeconnexionEnCours(false);
-          }
-        },
-      },
-    ]);
+    setDeconnexionOuverte(true);
+  };
+
+  const confirmerDeconnexion = async () => {
+    try {
+      setDeconnexionEnCours(true);
+      await logout();
+      setDeconnexionOuverte(false);
+    } finally {
+      setDeconnexionEnCours(false);
+    }
+  };
+
+  const supprimerMonCompte = async () => {
+    if (!motDePasseSuppression) {
+      setErreurSuppression(t('deleteAccountConfirm'));
+      return;
+    }
+    try {
+      setSuppressionEnCours(true);
+      await deleteAccount(motDePasseSuppression);
+      setSuppressionOuverte(false);
+      setMotDePasseSuppression('');
+      setErreurSuppression('');
+    } catch (error) {
+      setErreurSuppression(
+        error instanceof Error ? error.message : t('unexpectedError'),
+      );
+    } finally {
+      setSuppressionEnCours(false);
+    }
+  };
+
+  const ouvrirLien = (path: string) => {
+    setErreurLien('');
+    void Linking.openURL(API_URL + path).catch(() => {
+      setErreurLien(t('connectionImpossible'));
+    });
   };
 
   const langueActuelle =
@@ -60,7 +91,7 @@ export default function ParametresScreen() {
   return (
     <SafeAreaView style={[styles.container, dark && styles.containerDark]}>
         <StatusBar barStyle={dark ? 'light-content' : 'dark-content'} />
-      <View style={styles.contenu}>
+      <ScrollView contentContainerStyle={styles.contenu}>
         <Text style={[styles.titre, dark && styles.textDark]}>{t('settings')}</Text>
 
         <Text style={[styles.section, dark && styles.mutedDark]}>{t('profile')}</Text>
@@ -126,6 +157,34 @@ export default function ParametresScreen() {
           </View>
         </View>
 
+        <View style={[styles.liensConfidentialite, dark && styles.cardDark]}>
+          <Pressable onPress={() => ouvrirLien('/privacy')} style={styles.lienLegal}>
+            <Text style={styles.lienLegalTexte}>{t('privacyPolicy')}</Text>
+          </Pressable>
+          <Pressable onPress={() => ouvrirLien('/account-deletion')} style={styles.lienLegal}>
+            <Text style={styles.lienLegalTexte}>{t('requestDeletion')}</Text>
+          </Pressable>
+        </View>
+        {erreurLien ? (
+          <Text style={[styles.erreur, dark && styles.erreurDark]} accessibilityLiveRegion="polite">
+            {erreurLien}
+          </Text>
+        ) : null}
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.boutonSuppression,
+            pressed && styles.presse,
+          ]}
+          onPress={() => {
+            setErreurSuppression('');
+            setSuppressionOuverte(true);
+          }}
+          disabled={suppressionEnCours}
+        >
+          <Text style={styles.texteSuppression}>{t('deleteAccount')}</Text>
+        </Pressable>
+
         <Pressable
           style={({ pressed }) => [
             styles.boutonDeconnexion,
@@ -140,7 +199,106 @@ export default function ParametresScreen() {
             <Text style={styles.texteDeconnexion}>{t('logout')}</Text>
           )}
         </Pressable>
-      </View>
+      </ScrollView>
+
+      <Modal
+        visible={suppressionOuverte}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSuppressionOuverte(false)}
+      >
+        <View style={styles.modalFond}>
+          <View style={[styles.modalCarte, dark && styles.cardDark]}>
+            <Text style={[styles.modalTitre, dark && styles.textDark]}>
+              {t('deleteAccountTitle')}
+            </Text>
+            <Text style={[styles.modalDescription, dark && styles.mutedDark]}>
+              {t('deleteAccountDescription')}
+            </Text>
+            <Text style={[styles.modalDescription, dark && styles.mutedDark]}>
+              {t('deleteAccountConfirm')}
+            </Text>
+            <TextInput
+              style={[styles.inputSuppression, dark && styles.inputDark]}
+              placeholder={t('password')}
+              placeholderTextColor={dark ? '#8E8E93' : '#8A8A8E'}
+              value={motDePasseSuppression}
+              onChangeText={(value) => {
+                setMotDePasseSuppression(value);
+                setErreurSuppression('');
+              }}
+              secureTextEntry
+              autoCapitalize="none"
+              autoComplete="current-password"
+            />
+            {erreurSuppression ? (
+              <Text style={[styles.erreur, dark && styles.erreurDark]} accessibilityLiveRegion="polite">
+                {erreurSuppression}
+              </Text>
+            ) : null}
+            <View style={styles.modalActions}>
+              <Pressable
+                onPress={() => {
+                  setSuppressionOuverte(false);
+                  setMotDePasseSuppression('');
+                  setErreurSuppression('');
+                }}
+                disabled={suppressionEnCours}
+              >
+                <Text style={styles.modalCancel}>{t('cancel')}</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.modalDelete, suppressionEnCours && styles.presse]}
+                onPress={() => void supprimerMonCompte()}
+                disabled={suppressionEnCours}
+              >
+                {suppressionEnCours ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.modalDeleteText}>{t('deleteAccountButton')}</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={deconnexionOuverte}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDeconnexionOuverte(false)}
+      >
+        <View style={styles.modalFond}>
+          <View style={[styles.modalCarte, dark && styles.cardDark]}>
+            <Text style={[styles.modalTitre, dark && styles.textDark]}>
+              {t('logout')}
+            </Text>
+            <Text style={[styles.modalDescription, dark && styles.mutedDark]}>
+              {t('logoutQuestion')}
+            </Text>
+            <View style={styles.modalActions}>
+              <Pressable
+                onPress={() => setDeconnexionOuverte(false)}
+                disabled={deconnexionEnCours}
+              >
+                <Text style={styles.modalCancel}>{t('cancel')}</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.modalDelete, deconnexionEnCours && styles.presse]}
+                onPress={() => void confirmerDeconnexion()}
+                disabled={deconnexionEnCours}
+              >
+                {deconnexionEnCours ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.modalDeleteText}>{t('logout')}</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -148,7 +306,7 @@ export default function ParametresScreen() {
 const styles = StyleSheet.create({
   container:{flex:1,backgroundColor:'#F5F5F7'},
   containerDark:{backgroundColor:'#0B0B0D'},
-  contenu:{flex:1,padding:20},
+  contenu:{flexGrow:1,padding:20,paddingBottom:36},
   titre:{fontSize:32,fontWeight:'700',color:'#111',marginTop:8,marginBottom:24},
   section:{fontSize:13,fontWeight:'700',color:'#8A8A8E',textTransform:'uppercase',marginBottom:8,marginTop:6},
   carte:{backgroundColor:'#FFF',borderRadius:16,padding:18,flexDirection:'row',alignItems:'center',marginBottom:22},
@@ -166,9 +324,26 @@ const styles = StyleSheet.create({
   langueOption:{height:52,paddingHorizontal:18,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
   langueNom:{fontSize:15,color:'#111'},
   check:{fontSize:18,color:'#0A84FF',fontWeight:'700'},
+  liensConfidentialite:{backgroundColor:'#FFF',borderRadius:12,paddingHorizontal:16,marginTop:8,marginBottom:14},
+  lienLegal:{paddingVertical:14,borderBottomWidth:1,borderBottomColor:'#E5E5EA'},
+  lienLegalTexte:{color:'#0A84FF',fontSize:15,fontWeight:'600'},
+  boutonSuppression:{borderRadius:12,paddingVertical:14,alignItems:'center',borderWidth:1,borderColor:'#FF3B30',marginBottom:12},
+  texteSuppression:{color:'#FF3B30',fontSize:15,fontWeight:'600'},
   boutonDeconnexion:{backgroundColor:'#FFF',borderRadius:12,paddingVertical:16,alignItems:'center',borderWidth:1,borderColor:'#FF3B30'},
   texteDeconnexion:{color:'#FF3B30',fontSize:16,fontWeight:'600'},
   presse:{opacity:0.6},
+  modalFond:{flex:1,backgroundColor:'rgba(0,0,0,0.55)',justifyContent:'center',padding:22},
+  modalCarte:{backgroundColor:'#FFF',borderRadius:18,padding:22},
+  modalTitre:{fontSize:21,fontWeight:'700',color:'#111',marginBottom:10},
+  modalDescription:{fontSize:14,color:'#555',lineHeight:21,marginBottom:10},
+  inputSuppression:{height:50,backgroundColor:'#F5F5F7',borderRadius:12,paddingHorizontal:14,fontSize:16,color:'#111',marginTop:6},
+  inputDark:{backgroundColor:'#2C2C2E',color:'#FFF'},
+  modalActions:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:18},
+  modalCancel:{color:'#0A84FF',fontSize:16,fontWeight:'600',padding:10},
+  modalDelete:{backgroundColor:'#FF3B30',borderRadius:10,paddingVertical:12,paddingHorizontal:14,minWidth:132,alignItems:'center'},
+  modalDeleteText:{color:'#FFF',fontSize:14,fontWeight:'700'},
+  erreur:{color:'#C62828',fontSize:14,lineHeight:20,marginTop:8},
+  erreurDark:{color:'#FF8A80'},
   cardDark:{backgroundColor:'#1C1C1E'},
   textDark:{color:'#FFFFFF'},
   mutedDark:{color:'#A1A1A6'},

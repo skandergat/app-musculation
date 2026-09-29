@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -16,34 +15,60 @@ import { useAuth } from '@/context/AuthContext';
 import { useI18n } from '@/context/I18nContext';
 
 export default function ConnexionScreen() {
-  const { login } = useAuth();
+  const { login, resendVerificationEmail, authNotice, clearAuthNotice } = useAuth();
   const { t } = useI18n();
   const dark = useColorScheme() === 'dark';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [messageSuccess, setMessageSuccess] = useState(false);
+  const [resendPossible, setResendPossible] = useState(false);
+
+  const messageAffiche = message || (authNotice ? t(authNotice) : '');
+  const messageEstSucces = messageSuccess || Boolean(authNotice);
 
   const seConnecter = async () => {
     if (!email.trim() || !password) {
-      Alert.alert(
-        t('missingFields'),
-        t('fillAllFields')
-      );
+      setMessage(t('fillAllFields'));
+      setMessageSuccess(false);
+      setResendPossible(false);
       return;
     }
 
     try {
       setLoading(true);
+      setMessage('');
+      setResendPossible(false);
 
       await login(email, password);
 
       router.replace('/');
     } catch (error: any) {
-      Alert.alert(
-        t('connectionImpossible'),
-        error.message || t('unexpectedError')
-      );
+      if (error.message === t('emailNotVerified')) {
+        setMessage(t('emailNotVerified'));
+        setMessageSuccess(false);
+        setResendPossible(true);
+      } else {
+        setMessage(error.message || t('unexpectedError'));
+        setMessageSuccess(false);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renvoyerEmail = async () => {
+    try {
+      setLoading(true);
+      await resendVerificationEmail(email);
+      setMessage(t('verifyEmailSent'));
+      setMessageSuccess(true);
+      setResendPossible(false);
+    } catch {
+      setMessage(t('connectionImpossible'));
+      setMessageSuccess(false);
     } finally {
       setLoading(false);
     }
@@ -68,7 +93,11 @@ export default function ConnexionScreen() {
           placeholder={t("email")}
           placeholderTextColor={dark ? '#8E8E93' : '#8A8A8E'}
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(value) => {
+            setEmail(value);
+            setMessage('');
+            clearAuthNotice();
+          }}
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="email-address"
@@ -79,10 +108,40 @@ export default function ConnexionScreen() {
           placeholder={t("password")}
           placeholderTextColor={dark ? '#8E8E93' : '#8A8A8E'}
           value={password}
-          onChangeText={setPassword}
+          onChangeText={(value) => {
+            setPassword(value);
+            setMessage('');
+            clearAuthNotice();
+          }}
           secureTextEntry
           autoCapitalize="none"
         />
+
+        <Pressable
+          style={styles.lienMotDePasseOublie}
+          onPress={() => router.push('/mot-de-passe-oublie')}
+        >
+          <Text style={styles.lien}>{t('forgotPassword')}</Text>
+        </Pressable>
+
+        {messageAffiche ? (
+          <Text
+            accessibilityLiveRegion="polite"
+            style={[
+              styles.message,
+              dark && styles.messageDark,
+              messageEstSucces && styles.messageSuccess,
+              dark && messageEstSucces && styles.messageSuccessDark,
+            ]}
+          >
+            {messageAffiche}
+          </Text>
+        ) : null}
+        {resendPossible ? (
+          <Pressable onPress={() => void renvoyerEmail()} disabled={loading}>
+            <Text style={styles.lien}>{t('resendVerification')}</Text>
+          </Pressable>
+        ) : null}
 
         <Pressable
           style={[
@@ -157,6 +216,11 @@ const styles = StyleSheet.create({
     color: '#111111',
     marginBottom: 12,
   },
+  lienMotDePasseOublie: {
+    alignSelf: 'flex-end',
+    paddingVertical: 4,
+    marginBottom: 8,
+  },
   bouton: {
     height: 52,
     borderRadius: 12,
@@ -187,4 +251,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
+  message: { color: '#C62828', fontSize: 14, lineHeight: 20, marginBottom: 8 },
+  messageSuccess: { color: '#237A3B' },
+  messageDark: { color: '#FF8A80' },
+  messageSuccessDark: { color: '#63D985' },
 });

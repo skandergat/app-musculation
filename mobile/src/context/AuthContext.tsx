@@ -29,6 +29,11 @@ type AuthContextType = {
     email: string,
     password: string
   ) => Promise<void>;
+  resendVerificationEmail: (email: string) => Promise<void>;
+  requestPasswordReset: (email: string) => Promise<void>;
+  deleteAccount: (password: string) => Promise<void>;
+  authNotice: string | null;
+  clearAuthNotice: () => void;
   logout: () => Promise<void>;
 };
 
@@ -87,6 +92,7 @@ export function AuthProvider({
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authNotice, setAuthNotice] = useState<string | null>(null);
   const { t } = useI18n();
 
   const chargerSession = useCallback(async () => {
@@ -195,9 +201,13 @@ export function AuthProvider({
       if (response.status === 401) {
         throw new Error(t('invalidCredentials'));
       }
-      throw new Error(t('connectionImpossible'));
+      if (response.status === 403 && data.code === 'email_not_verified') {
+        throw new Error(t('emailNotVerified'));
+      }
+      throw new Error(data.error || t('connectionImpossible'));
     }
 
+    setAuthNotice(null);
     await sauvegarderSession(data.token, data.user);
   };
 
@@ -208,9 +218,7 @@ export function AuthProvider({
   ) => {
     const response = await apiFetch(`${API_URL}/auth/register`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         nom: nom.trim(),
         email: email.trim().toLowerCase(),
@@ -219,15 +227,62 @@ export function AuthProvider({
     });
 
     const data = await response.json().catch(() => ({}));
-
     if (!response.ok) {
       if (response.status === 409) {
         throw new Error(t('emailAlreadyUsed'));
       }
-      throw new Error(t('creationImpossible'));
+      if (data.code === 'email_delivery_failed') {
+        throw new Error(t('emailDeliveryFailed'));
+      }
+      if (data.code === 'email_rate_limited') {
+        throw new Error(t('emailRateLimited'));
+      }
+      throw new Error(data.error || t('creationImpossible'));
+    }
+  };
+
+  const demanderLienEmail = async (
+    endpoint: string,
+    email: string,
+  ): Promise<void> => {
+    const response = await apiFetch(`${API_URL}${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim().toLowerCase() }),
+    });
+    if (!response.ok) throw new Error(t('connectionImpossible'));
+  };
+
+  const resendVerificationEmail = (email: string) =>
+    demanderLienEmail('/auth/verify-email-request', email);
+
+  const requestPasswordReset = (email: string) =>
+    demanderLienEmail('/auth/password-reset-request', email);
+
+  const deleteAccount = async (password: string) => {
+    if (!token) throw new Error(t('connectionImpossible'));
+    const response = await apiFetch(`${API_URL}/auth/account`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ password }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(
+        response.status === 403
+          ? t('invalidPassword')
+          : data.error || t('connectionImpossible')
+      );
     }
 
-    await sauvegarderSession(data.token, data.user);
+    await removeStoredToken();
+    await AsyncStorage.removeItem(USER_KEY);
+    setAuthNotice('accountDeleted');
+    setToken(null);
+    setUser(null);
   };
 
   const logout = async () => {
@@ -258,6 +313,11 @@ export function AuthProvider({
         loading,
         login,
         register,
+        resendVerificationEmail,
+        requestPasswordReset,
+        deleteAccount,
+        authNotice,
+        clearAuthNotice: () => setAuthNotice(null),
         logout,
       }}
     >

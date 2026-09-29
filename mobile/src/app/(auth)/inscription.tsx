@@ -1,19 +1,19 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
-  View, useColorScheme,
+  View, useColorScheme, Linking,
 } from 'react-native';
 import { router } from 'expo-router';
 
 import { useAuth } from '@/context/AuthContext';
 import { useI18n } from '@/context/I18nContext';
+import { API_URL } from '@/config/api';
 
 export default function InscriptionScreen() {
   const { register } = useAuth();
@@ -25,43 +25,44 @@ export default function InscriptionScreen() {
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [messageSuccess, setMessageSuccess] = useState(false);
+  const [creationReussie, setCreationReussie] = useState(false);
 
   const creerCompte = async () => {
+    if (creationReussie) {
+      router.replace('/connexion');
+      return;
+    }
     if (!nom.trim() || !email.trim() || !password || !confirmation) {
-      Alert.alert(
-        t('missingFields'),
-        t('fillAllFields')
-      );
+      setMessage(t('fillAllFields'));
+      setMessageSuccess(false);
       return;
     }
 
     if (password.length < 8) {
-      Alert.alert(
-        t('passwordTitle'),
-        t('passwordMin')
-      );
+      setMessage(t('passwordMin'));
+      setMessageSuccess(false);
       return;
     }
 
     if (password !== confirmation) {
-      Alert.alert(
-        t('passwordTitle'),
-        t('passwordsMismatch')
-      );
+      setMessage(t('passwordsMismatch'));
+      setMessageSuccess(false);
       return;
     }
 
     try {
       setLoading(true);
+      setMessage('');
 
       await register(nom, email, password);
-
-      router.replace('/');
+      setMessage(t('verifyEmailSent'));
+      setMessageSuccess(true);
+      setCreationReussie(true);
     } catch (error: any) {
-      Alert.alert(
-        t('creationImpossible'),
-        error.message || t('unexpectedError')
-      );
+      setMessage(error.message || t('unexpectedError'));
+      setMessageSuccess(false);
     } finally {
       setLoading(false);
     }
@@ -91,8 +92,9 @@ export default function InscriptionScreen() {
           placeholder={t("name")}
           placeholderTextColor={dark ? '#8E8E93' : '#8A8A8E'}
           value={nom}
-          onChangeText={setNom}
+          onChangeText={(value) => { setNom(value); setMessage(''); }}
           autoCapitalize="words"
+          editable={!creationReussie}
         />
 
         <TextInput
@@ -100,10 +102,11 @@ export default function InscriptionScreen() {
           placeholder={t("email")}
           placeholderTextColor={dark ? '#8E8E93' : '#8A8A8E'}
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(value) => { setEmail(value); setMessage(''); }}
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="email-address"
+          editable={!creationReussie}
         />
 
         <TextInput
@@ -111,9 +114,10 @@ export default function InscriptionScreen() {
           placeholder={t("password")}
           placeholderTextColor="#8A8A8E"
           value={password}
-          onChangeText={setPassword}
+          onChangeText={(value) => { setPassword(value); setMessage(''); }}
           secureTextEntry
           autoCapitalize="none"
+          editable={!creationReussie}
         />
 
         <TextInput
@@ -121,10 +125,39 @@ export default function InscriptionScreen() {
           placeholder={t("confirmPassword")}
           placeholderTextColor="#8A8A8E"
           value={confirmation}
-          onChangeText={setConfirmation}
+          onChangeText={(value) => { setConfirmation(value); setMessage(''); }}
           secureTextEntry
           autoCapitalize="none"
+          editable={!creationReussie}
         />
+
+        <View style={styles.privacyNotice}>
+          <Text style={[styles.question, dark && styles.mutedDark]}>
+            {t('privacyNotice')}
+          </Text>
+          <Pressable onPress={() => {
+            void Linking.openURL(API_URL + '/privacy').catch(() => {
+              setMessage(t('connectionImpossible'));
+              setMessageSuccess(false);
+            });
+          }}>
+            <Text style={styles.lien}>{t('privacyPolicy')}</Text>
+          </Pressable>
+        </View>
+
+        {message ? (
+          <Text
+            accessibilityLiveRegion="polite"
+            style={[
+              styles.message,
+              dark && styles.messageDark,
+              messageSuccess && styles.messageSuccess,
+              dark && messageSuccess && styles.messageSuccessDark,
+            ]}
+          >
+            {message}
+          </Text>
+        ) : null}
 
         <Pressable
           style={[
@@ -137,7 +170,9 @@ export default function InscriptionScreen() {
           {loading ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text style={styles.boutonTexte}>{t("createAccountButton")}</Text>
+            <Text style={styles.boutonTexte}>
+              {creationReussie ? t('loginButton') : t('createAccountButton')}
+            </Text>
           )}
         </Pressable>
 
@@ -200,6 +235,11 @@ const styles = StyleSheet.create({
     color: '#111111',
     marginBottom: 12,
   },
+  privacyNotice: {
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 8,
+  },
   bouton: {
     height: 52,
     borderRadius: 12,
@@ -230,4 +270,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
+  message: { color: '#C62828', fontSize: 14, lineHeight: 20, textAlign: 'center', marginBottom: 8 },
+  messageSuccess: { color: '#237A3B' },
+  messageDark: { color: '#FF8A80' },
+  messageSuccessDark: { color: '#63D985' },
 });

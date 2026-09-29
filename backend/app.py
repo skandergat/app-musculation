@@ -1,4 +1,4 @@
-﻿from flask import Flask, jsonify, request
+﻿from flask import Flask, jsonify, render_template, request
 import sqlite3
 from datetime import datetime, timedelta
 import hashlib
@@ -6,6 +6,11 @@ import secrets
 import re
 import os
 import math
+import threading
+import smtplib
+import ssl
+from email.message import EmailMessage
+from urllib.parse import urlencode
 
 app = Flask(__name__)
 
@@ -34,6 +39,14 @@ def ajouter_entetes_cors(response):
         )
         response.headers["Access-Control-Max-Age"] = "600"
 
+    if request.path.startswith("/email/"):
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; form-action 'self'; connect-src 'self'; "
+            "base-uri 'none'; frame-ancestors 'none'"
+        )
+
     return response
 
 from pathlib import Path
@@ -42,6 +55,40 @@ BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = os.getenv("LIFTELY_DB_PATH", str(BASE_DIR / "musculation.db"))
 Path(DB_PATH).expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)
 SESSION_DURATION_DAYS = 30
+EMAIL_VERIFICATION_TTL_HOURS = 48
+PASSWORD_RESET_TTL_HOURS = 1
+ACCOUNT_DELETION_TTL_HOURS = 24
+PENDING_ACCOUNT_RETENTION_DAYS = 7
+_LAST_AUTH_CLEANUP = datetime.min
+_AUTH_CLEANUP_LOCK = threading.Lock()
+
+
+@app.before_request
+def purger_auth_temporaire_periodiquement():
+    global _LAST_AUTH_CLEANUP
+    maintenant = datetime.now()
+    if maintenant - _LAST_AUTH_CLEANUP < timedelta(hours=1):
+        return
+    with _AUTH_CLEANUP_LOCK:
+        maintenant = datetime.now()
+        if maintenant - _LAST_AUTH_CLEANUP < timedelta(hours=1):
+            return
+        conn = get_db()
+        conn.execute(
+            "DELETE FROM auth_action_tokens WHERE date_expiration <= ?",
+            (maintenant.isoformat(),),
+        )
+        conn.execute(
+            "DELETE FROM auth_mail_limits WHERE window_start <= ?",
+            ((maintenant - timedelta(days=1)).isoformat(),),
+        )
+        conn.execute(
+            "DELETE FROM users WHERE email_verified_at IS NULL AND date_creation <= ?",
+            ((maintenant - timedelta(days=PENDING_ACCOUNT_RETENTION_DAYS)).isoformat(),),
+        )
+        conn.commit()
+        conn.close()
+        _LAST_AUTH_CLEANUP = maintenant
 
 
 # ============================================================
@@ -238,9 +285,22 @@ def assurer_base():
             nom TEXT NOT NULL,
             email TEXT NOT NULL UNIQUE,
             password_hash TEXT NOT NULL,
-            date_creation TEXT NOT NULL
+            date_creation TEXT NOT NULL,
+            email_verified_at TEXT
         )
     """)
+
+    colonnes_utilisateurs = {
+        colonne[1]
+        for colonne in cursor.execute("PRAGMA table_info(users)").fetchall()
+    }
+    if "email_verified_at" not in colonnes_utilisateurs:
+        cursor.execute("ALTER TABLE users ADD COLUMN email_verified_at TEXT")
+        # Les comptes antérieurs à la vérification e-mail restent utilisables.
+        cursor.execute(
+            "UPDATE users SET email_verified_at = date_creation "
+            "WHERE email_verified_at IS NULL"
+        )
 
     # --------------------------------------------------------
     # SESSIONS DE CONNEXION
@@ -272,6 +332,49 @@ def assurer_base():
             "UPDATE sessions SET date_expiration = ? WHERE date_expiration IS NULL",
             (expiration_defaut,),
         )
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS auth_action_tokens (
+            token_hash TEXT PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            purpose TEXT NOT NULL CHECK (
+                purpose IN ('verify_email', 'password_reset', 'delete_account')
+            ),
+            date_creation TEXT NOT NULL,
+            date_expiration TEXT NOT NULL,
+            date_utilisation TEXT,
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_auth_action_user_purpose
+        ON auth_action_tokens(user_id, purpose, date_expiration)
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS auth_mail_limits (
+            key_hash TEXT PRIMARY KEY,
+            window_start TEXT NOT NULL,
+            request_count INTEGER NOT NULL
+        )
+    """)
+
+    # Nettoyer les tokens temporaires et les comptes jamais vérifiés.
+    now_cleanup = datetime.now()
+    cursor.execute(
+        "DELETE FROM auth_action_tokens WHERE date_expiration <= ?",
+        (now_cleanup.isoformat(),),
+    )
+    cursor.execute(
+        "DELETE FROM auth_mail_limits WHERE window_start <= ?",
+        ((now_cleanup - timedelta(days=1)).isoformat(),),
+    )
+    date_limite_compte_en_attente = (
+        now_cleanup - timedelta(days=PENDING_ACCOUNT_RETENTION_DAYS)
+    ).isoformat()
+    cursor.execute(
+        "DELETE FROM users WHERE email_verified_at IS NULL AND date_creation <= ?",
+        (date_limite_compte_en_attente,),
+    )
 
     # --------------------------------------------------------
     # TEMPLATES
@@ -1377,130 +1480,431 @@ assurer_base()
 
 
 # ============================================================
-# AUTH - CREATION DE COMPTE
+# AUTH - OUTILS EMAIL ET SUPPRESSION DE COMPTE
+# ============================================================
+
+def creer_token_action(conn, user_id, purpose, duree):
+    token = secrets.token_urlsafe(32)
+    maintenant = datetime.now()
+    conn.execute(
+        """
+        INSERT INTO auth_action_tokens
+        (token_hash, user_id, purpose, date_creation, date_expiration)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (
+            hash_token(token),
+            user_id,
+            purpose,
+            maintenant.isoformat(),
+            (maintenant + duree).isoformat(),
+        ),
+    )
+    return token
+
+
+def autoriser_envoi_email(conn, email):
+    maintenant = datetime.now()
+    # Render sends the visitor's public IP as the first X-Forwarded-For value;
+    # request.remote_addr is the proxy address and would rate-limit all users together.
+    ip_client = request.access_route[0] if request.access_route else request.remote_addr
+    clefs = [
+        ("email:" + email, 3),
+        ("ip:" + (ip_client or "inconnue"), 20),
+    ]
+    empreintes = [(hash_token(cle), limite) for cle, limite in clefs]
+    limites = {}
+
+    for empreinte, maximum in empreintes:
+        ligne = conn.execute(
+            """
+            SELECT window_start, request_count
+            FROM auth_mail_limits
+            WHERE key_hash = ?
+            """,
+            (empreinte,),
+        ).fetchone()
+        fenetre_active = (
+            ligne
+            and datetime.fromisoformat(ligne["window_start"])
+            > maintenant - timedelta(hours=1)
+        )
+        nombre = ligne["request_count"] if fenetre_active else 0
+        if nombre >= maximum:
+            return False
+        limites[empreinte] = (
+            ligne["window_start"] if fenetre_active else maintenant.isoformat(),
+            nombre + 1,
+        )
+
+    for empreinte, (debut, nombre) in limites.items():
+        conn.execute(
+            """
+            INSERT INTO auth_mail_limits (key_hash, window_start, request_count)
+            VALUES (?, ?, ?)
+            ON CONFLICT(key_hash) DO UPDATE SET
+                window_start = excluded.window_start,
+                request_count = excluded.request_count
+            """,
+            (empreinte, debut, nombre),
+        )
+    return True
+
+
+def envoyer_email_action(destinataire, sujet, message, chemin, token):
+    if app.config.get("TESTING"):
+        base_url = os.getenv(
+            "LIFTELY_PUBLIC_BASE_URL",
+            request.url_root.rstrip("/"),
+        ).rstrip("/")
+        url_action = (
+            base_url + chemin + "#"
+            + urlencode({"token": token})
+        )
+        app.config.setdefault("TEST_EMAIL_OUTBOX", []).append({
+            "to": destinataire,
+            "subject": sujet,
+            "body": message + "\n\n" + url_action,
+        })
+        return True
+
+    base_url = os.getenv("LIFTELY_PUBLIC_BASE_URL", "").strip().rstrip("/")
+    smtp_host = os.getenv("LIFTELY_SMTP_HOST", "").strip()
+    sender = os.getenv("LIFTELY_EMAIL_FROM", "").strip()
+    if (
+        not base_url.startswith("https://")
+        or not smtp_host
+        or not sender
+    ):
+        app.logger.error(
+            "Email action unavailable: HTTPS base URL, SMTP host, and sender are required."
+        )
+        return False
+
+    url_action = base_url + chemin + "#" + urlencode({"token": token})
+    try:
+        email = EmailMessage()
+        email["Subject"] = sujet
+        email["From"] = sender
+        email["To"] = destinataire
+        email.set_content(message + "\n\n" + url_action)
+
+        port = int(os.getenv("LIFTELY_SMTP_PORT", "587"))
+        username = os.getenv("LIFTELY_SMTP_USERNAME", "").strip()
+        password = os.getenv("LIFTELY_SMTP_PASSWORD", "")
+        mode_ssl = os.getenv("LIFTELY_SMTP_USE_SSL", "").lower() in {
+            "1", "true", "yes",
+        }
+        if mode_ssl:
+            with smtplib.SMTP_SSL(
+                smtp_host,
+                port,
+                timeout=15,
+                context=ssl.create_default_context(),
+            ) as serveur:
+                if username:
+                    serveur.login(username, password)
+                serveur.send_message(email)
+        else:
+            with smtplib.SMTP(smtp_host, port, timeout=15) as serveur:
+                serveur.ehlo()
+                serveur.starttls(context=ssl.create_default_context())
+                serveur.ehlo()
+                if username:
+                    serveur.login(username, password)
+                serveur.send_message(email)
+        return True
+    except (OSError, smtplib.SMTPException, ValueError):
+        app.logger.exception("Email action delivery failed.")
+        return False
+
+
+def supprimer_donnees_compte(conn, user_id):
+    if not conn.in_transaction:
+        conn.execute("BEGIN IMMEDIATE")
+    compte = conn.execute(
+        "SELECT email FROM users WHERE id = ?",
+        (user_id,),
+    ).fetchone()
+    if compte:
+        # Effacer aussi l’empreinte d’e-mail utilisée par le limiteur ; les
+        # empreintes d’IP partagées expirent seules au bout de 24 heures.
+        conn.execute(
+            "DELETE FROM auth_mail_limits WHERE key_hash = ?",
+            (hash_token("email:" + compte["email"]),),
+        )
+    conn.execute(
+        """
+        DELETE FROM template_exercices
+        WHERE template_id IN (
+            SELECT id FROM templates WHERE user_id = ?
+        )
+        """,
+        (user_id,),
+    )
+    conn.execute("DELETE FROM templates WHERE user_id = ?", (user_id,))
+    conn.execute(
+        """
+        DELETE FROM series
+        WHERE seance_id IN (SELECT id FROM seances WHERE user_id = ?)
+        """,
+        (user_id,),
+    )
+    conn.execute(
+        """
+        DELETE FROM seance_exercices
+        WHERE seance_id IN (SELECT id FROM seances WHERE user_id = ?)
+        """,
+        (user_id,),
+    )
+    conn.execute("DELETE FROM seances WHERE user_id = ?", (user_id,))
+    conn.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
+    conn.execute(
+        "DELETE FROM auth_action_tokens WHERE user_id = ?",
+        (user_id,),
+    )
+    conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+
+
+def page_publique(chemin_template):
+    return render_template(chemin_template)
+
+
+@app.get("/privacy")
+def privacy_policy():
+    champs = {
+        "responsable": os.getenv("LIFTELY_DATA_CONTROLLER", "").strip(),
+        "adresse": os.getenv("LIFTELY_DATA_CONTROLLER_ADDRESS", "").strip(),
+        "contact": os.getenv("LIFTELY_PRIVACY_CONTACT", "").strip(),
+        "region": os.getenv("LIFTELY_HOSTING_REGION", "").strip(),
+        "hebergeur": os.getenv("LIFTELY_HOSTING_PROVIDER", "Render").strip(),
+        "email_provider": os.getenv("LIFTELY_EMAIL_PROVIDER", "").strip(),
+        "retention_sauvegarde": os.getenv("LIFTELY_BACKUP_RETENTION", "").strip(),
+        "retention_logs": os.getenv("LIFTELY_LOG_RETENTION", "").strip(),
+    }
+    manquants = [
+        libelle
+        for cle, libelle in (
+            ("responsable", "nom légal du responsable"),
+            ("adresse", "adresse postale"),
+            ("contact", "e-mail de contact confidentialité"),
+            ("region", "région d’hébergement"),
+            ("email_provider", "fournisseur d’e-mails"),
+            ("retention_sauvegarde", "durée de conservation des sauvegardes"),
+            ("retention_logs", "durée de conservation des journaux techniques"),
+        )
+        if not champs[cle]
+    ]
+    return render_template(
+        "privacy.html",
+        **champs,
+        configuration_incomplete=bool(manquants),
+        champs_manquants=manquants,
+    )
+
+
+@app.get("/account-deletion")
+def account_deletion_page():
+    return page_publique("account_deletion.html")
+
+
+@app.get("/email/verify")
+def verification_email_page():
+    return page_publique("verify_email.html")
+
+
+@app.get("/email/reset-password")
+def reinitialisation_mot_de_passe_page():
+    return page_publique("reset_password.html")
+
+
+@app.get("/email/delete-account")
+def confirmation_suppression_page():
+    return page_publique("confirm_account_deletion.html")
+
+
+# ============================================================
+# AUTH - CREATION ET VERIFICATION DE COMPTE
 # ============================================================
 
 @app.route("/auth/register", methods=["POST"])
 def register():
-
     data = request.get_json(silent=True) or {}
-
     nom = str(data.get("nom", "")).strip()
     email = str(data.get("email", "")).strip().lower()
     password = str(data.get("password", ""))
 
-    # Validation du nom
     if not nom:
-        return jsonify({
-            "error": "Le nom est obligatoire"
-        }), 400
-
+        return jsonify({"error": "Le nom est obligatoire"}), 400
     if len(nom) > 100:
-        return jsonify({
-            "error": "Le nom est trop long"
-        }), 400
-
-    # Validation email
-    if not email:
-        return jsonify({
-            "error": "L'email est obligatoire"
-        }), 400
-
-    if not email_valide(email):
-        return jsonify({
-            "error": "Adresse email invalide"
-        }), 400
-
-    # Validation mot de passe
+        return jsonify({"error": "Le nom est trop long"}), 400
+    if not email or not email_valide(email):
+        return jsonify({"error": "Adresse email invalide"}), 400
     if len(password) < 8:
         return jsonify({
             "error": "Le mot de passe doit contenir au moins 8 caractères"
         }), 400
-
     if len(password) > 256:
-        return jsonify({
-            "error": "Le mot de passe est trop long"
-        }), 400
+        return jsonify({"error": "Le mot de passe est trop long"}), 400
 
     conn = get_db()
-
-    # Vérifier si email déjà utilisé
-    utilisateur_existant = conn.execute(
-        """
-        SELECT id
-        FROM users
-        WHERE email = ?
-        """,
-        (email,),
-    ).fetchone()
-
-    if utilisateur_existant:
-        conn.close()
-
-        return jsonify({
-            "error": "Cette adresse email est déjà utilisée"
-        }), 409
-
-    # Créer le hash du mot de passe
-    password_hash = hash_password(password)
-
-    date_creation = datetime.now().isoformat()
-
-    cursor = conn.cursor()
-
     try:
-        cursor.execute(
+        conn.execute("BEGIN IMMEDIATE")
+        utilisateur_existant = conn.execute(
+            "SELECT id FROM users WHERE email = ?",
+            (email,),
+        ).fetchone()
+        if utilisateur_existant:
+            conn.rollback()
+            return jsonify({
+                "error": "Cette adresse email est déjà utilisée"
+            }), 409
+
+        if not autoriser_envoi_email(conn, email):
+            conn.rollback()
+            return jsonify({
+                "error": "Trop de demandes. Réessayez plus tard.",
+                "code": "email_rate_limited",
+            }), 429
+
+        date_creation = datetime.now().isoformat()
+        cursor = conn.execute(
             """
             INSERT INTO users
-            (nom, email, password_hash, date_creation)
-            VALUES (?, ?, ?, ?)
+            (nom, email, password_hash, date_creation, email_verified_at)
+            VALUES (?, ?, ?, ?, NULL)
             """,
-            (
-                nom,
-                email,
-                password_hash,
-                date_creation,
-            ),
+            (nom, email, hash_password(password), date_creation),
         )
+        user_id = cursor.lastrowid
+        token = creer_token_action(
+            conn,
+            user_id,
+            "verify_email",
+            timedelta(hours=EMAIL_VERIFICATION_TTL_HOURS),
+        )
+        conn.commit()
     except sqlite3.IntegrityError:
-        conn.close()
+        conn.rollback()
         return jsonify({
             "error": "Cette adresse email est déjà utilisée"
         }), 409
+    finally:
+        conn.close()
 
-    user_id = cursor.lastrowid
-
-    # Création du token de connexion
-    token = secrets.token_urlsafe(32)
-    token_hash = hash_token(token)
-
-    cursor.execute(
-        """
-        INSERT INTO sessions
-        (token_hash, user_id, date_creation, date_expiration)
-        VALUES (?, ?, ?, ?)
-        """,
+    sent = envoyer_email_action(
+        email,
+        "Confirme ton adresse e-mail LIFTELY",
         (
-            token_hash,
-            user_id,
-            date_creation,
-            (datetime.now() + timedelta(days=SESSION_DURATION_DAYS)).isoformat(),
+            "Bonjour " + nom + ",\n\n"
+            "Confirme ton adresse e-mail pour activer ton compte LIFTELY. "
+            "Ce lien expire dans 48 heures."
         ),
+        "/email/verify",
+        token,
     )
-
-    conn.commit()
-    conn.close()
-
+    if not sent:
+        return jsonify({
+            "error": "Le compte a été créé, mais l’e-mail de confirmation "
+                     "n’a pas pu être envoyé. Demande un nouvel e-mail.",
+            "code": "email_delivery_failed",
+        }), 503
     return jsonify({
-        "message": "Compte créé avec succès",
-        "token": token,
-        "user": {
-            "id": user_id,
-            "nom": nom,
-            "email": email,
-            "date_creation": date_creation,
-        },
+        "message": "Compte créé. Consulte ta boîte e-mail pour le confirmer."
     }), 201
+
+
+@app.post("/auth/verify-email-request")
+def demander_verification_email():
+    data = request.get_json(silent=True) or {}
+    email = str(data.get("email", "")).strip().lower()
+    conn = get_db()
+    token = None
+    nom = ""
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        if email_valide(email):
+            user = conn.execute(
+                """
+                SELECT id, nom FROM users
+                WHERE email = ? AND email_verified_at IS NULL
+                """,
+                (email,),
+            ).fetchone()
+        else:
+            user = None
+
+        if user and autoriser_envoi_email(conn, email):
+            nom = user["nom"]
+            token = creer_token_action(
+                conn,
+                user["id"],
+                "verify_email",
+                timedelta(hours=EMAIL_VERIFICATION_TTL_HOURS),
+            )
+            conn.commit()
+        else:
+            conn.rollback()
+    finally:
+        conn.close()
+
+    if token:
+        envoyer_email_action(
+            email,
+            "Confirme ton adresse e-mail LIFTELY",
+            (
+                "Bonjour " + nom + ",\n\n"
+                "Confirme ton adresse e-mail pour activer ton compte. "
+                "Ce lien expire dans 48 heures."
+            ),
+            "/email/verify",
+            token,
+        )
+    return jsonify({
+        "message": "Si le compte peut recevoir un e-mail, un lien va être envoyé."
+    }), 202
+
+
+@app.post("/auth/verify-email")
+def verifier_email():
+    data = request.get_json(silent=True) or {}
+    token = str(data.get("token", "")).strip()
+    if not token:
+        return jsonify({"error": "Lien invalide ou expiré."}), 400
+
+    maintenant = datetime.now().isoformat()
+    conn = get_db()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        action = conn.execute(
+            """
+            SELECT user_id FROM auth_action_tokens
+            WHERE token_hash = ?
+              AND purpose = 'verify_email'
+              AND date_utilisation IS NULL
+              AND date_expiration > ?
+            """,
+            (hash_token(token), maintenant),
+        ).fetchone()
+        if not action:
+            conn.rollback()
+            return jsonify({"error": "Lien invalide ou expiré."}), 400
+
+        conn.execute(
+            "UPDATE users SET email_verified_at = COALESCE(email_verified_at, ?) "
+            "WHERE id = ?",
+            (maintenant, action["user_id"]),
+        )
+        conn.execute(
+            "UPDATE auth_action_tokens SET date_utilisation = ? "
+            "WHERE user_id = ? AND purpose = 'verify_email' "
+            "AND date_utilisation IS NULL",
+            (maintenant, action["user_id"]),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return jsonify({"message": "Adresse e-mail confirmée."})
 
 
 # ============================================================
@@ -1509,67 +1913,50 @@ def register():
 
 @app.route("/auth/login", methods=["POST"])
 def login():
-
     data = request.get_json(silent=True) or {}
-
     email = str(data.get("email", "")).strip().lower()
     password = str(data.get("password", ""))
 
     if not email or not password:
-        return jsonify({
-            "error": "Email et mot de passe obligatoires"
-        }), 400
+        return jsonify({"error": "Email et mot de passe obligatoires"}), 400
 
     conn = get_db()
-
     user = conn.execute(
         """
-        SELECT id, nom, email, password_hash, date_creation
+        SELECT id, nom, email, password_hash, date_creation, email_verified_at
         FROM users
         WHERE email = ?
         """,
         (email,),
     ).fetchone()
 
-    if not user:
+    if not user or not verify_password(password, user["password_hash"]):
         conn.close()
-
         return jsonify({
-            "error": "Email ou mot de passe incorrect"
+            "error": "Email ou mot de passe incorrect",
+            "code": "invalid_credentials",
         }), 401
-
-    if not verify_password(
-        password,
-        user["password_hash"],
-    ):
+    if not user["email_verified_at"]:
         conn.close()
-
         return jsonify({
-            "error": "Email ou mot de passe incorrect"
-        }), 401
+            "error": "Confirme ton adresse e-mail avant de te connecter.",
+            "code": "email_not_verified",
+        }), 403
 
-    # Nouveau token de session
     token = secrets.token_urlsafe(32)
     token_hash = hash_token(token)
     date_creation = datetime.now().isoformat()
     date_expiration = (
         datetime.now() + timedelta(days=SESSION_DURATION_DAYS)
     ).isoformat()
-
     conn.execute(
         """
         INSERT INTO sessions
         (token_hash, user_id, date_creation, date_expiration)
         VALUES (?, ?, ?, ?)
         """,
-        (
-            token_hash,
-            user["id"],
-            date_creation,
-            date_expiration,
-        ),
+        (token_hash, user["id"], date_creation, date_expiration),
     )
-
     conn.commit()
     conn.close()
 
@@ -1585,18 +1972,117 @@ def login():
     })
 
 
+@app.post("/auth/password-reset-request")
+def demander_reinitialisation_mot_de_passe():
+    data = request.get_json(silent=True) or {}
+    email = str(data.get("email", "")).strip().lower()
+    conn = get_db()
+    user = None
+    token = None
+    nom = ""
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        if email_valide(email):
+            user = conn.execute(
+                """
+                SELECT id, nom FROM users
+                WHERE email = ? AND email_verified_at IS NOT NULL
+                """,
+                (email,),
+            ).fetchone()
+
+        if user and autoriser_envoi_email(conn, email):
+            nom = user["nom"]
+            token = creer_token_action(
+                conn,
+                user["id"],
+                "password_reset",
+                timedelta(hours=PASSWORD_RESET_TTL_HOURS),
+            )
+            conn.commit()
+        else:
+            conn.rollback()
+    finally:
+        conn.close()
+
+    if token:
+        envoyer_email_action(
+            email,
+            "Réinitialisation du mot de passe LIFTELY",
+            (
+                "Bonjour " + nom + ",\n\n"
+                "Utilise le lien suivant pour choisir un nouveau mot de passe. "
+                "Il expire dans une heure."
+            ),
+            "/email/reset-password",
+            token,
+        )
+    return jsonify({
+        "message": "Si un compte vérifié correspond à cette adresse, "
+                   "un e-mail de réinitialisation va être envoyé."
+    }), 202
+
+
+@app.post("/auth/password-reset")
+def reinitialiser_mot_de_passe():
+    data = request.get_json(silent=True) or {}
+    token = str(data.get("token", "")).strip()
+    password = str(data.get("password", ""))
+    if len(password) < 8 or len(password) > 256:
+        return jsonify({
+            "error": "Le mot de passe doit contenir entre 8 et 256 caractères."
+        }), 400
+    if not token:
+        return jsonify({"error": "Lien invalide ou expiré."}), 400
+
+    maintenant = datetime.now().isoformat()
+    conn = get_db()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        action = conn.execute(
+            """
+            SELECT user_id FROM auth_action_tokens
+            WHERE token_hash = ?
+              AND purpose = 'password_reset'
+              AND date_utilisation IS NULL
+              AND date_expiration > ?
+            """,
+            (hash_token(token), maintenant),
+        ).fetchone()
+        if not action:
+            conn.rollback()
+            return jsonify({"error": "Lien invalide ou expiré."}), 400
+        conn.execute(
+            "UPDATE users SET password_hash = ? WHERE id = ?",
+            (hash_password(password), action["user_id"]),
+        )
+        conn.execute(
+            "DELETE FROM sessions WHERE user_id = ?",
+            (action["user_id"],),
+        )
+        conn.execute(
+            "UPDATE auth_action_tokens SET date_utilisation = ? "
+            "WHERE user_id = ? AND purpose = 'password_reset' "
+            "AND date_utilisation IS NULL",
+            (maintenant, action["user_id"]),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return jsonify({
+        "message": "Mot de passe modifié. Tu peux maintenant te connecter."
+    })
+
+
 # ============================================================
-# AUTH - UTILISATEUR CONNECTE
+# AUTH - UTILISATEUR CONNECTE / SUPPRESSION
 # ============================================================
 
 @app.route("/auth/me")
 def me():
-
     user = get_user_from_request()
-
     if not user:
         return utilisateur_non_connecte()
-
     return jsonify({
         "user": {
             "id": user["id"],
@@ -1607,47 +2093,132 @@ def me():
     })
 
 
-# ============================================================
-# AUTH - DECONNEXION
-# ============================================================
-
-@app.route("/auth/logout", methods=["POST"])
+@app.post("/auth/logout")
 def logout():
+    authorization = request.headers.get("Authorization", "")
+    if authorization.startswith("Bearer "):
+        token = authorization[7:].strip()
+        if token:
+            conn = get_db()
+            conn.execute(
+                "DELETE FROM sessions WHERE token_hash = ?",
+                (hash_token(token),),
+            )
+            conn.commit()
+            conn.close()
+    return jsonify({"message": "Déconnexion réussie"})
 
-    authorization = request.headers.get(
-        "Authorization",
-        "",
-    )
 
-    if not authorization.startswith("Bearer "):
-        return jsonify({
-            "message": "Déconnexion réussie"
-        })
+@app.post("/auth/account-deletion-request")
+def demander_suppression_compte():
+    data = request.get_json(silent=True) or {}
+    email = str(data.get("email", "")).strip().lower()
+    conn = get_db()
+    user = None
+    token = None
+    nom = ""
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        if email_valide(email):
+            user = conn.execute(
+                "SELECT id, nom FROM users WHERE email = ?",
+                (email,),
+            ).fetchone()
 
-    token = authorization[7:].strip()
-
-    if token:
-        token_hash = hash_token(token)
-
-        conn = get_db()
-
-        conn.execute(
-            """
-            DELETE FROM sessions
-            WHERE token_hash = ?
-            """,
-            (token_hash,),
-        )
-
-        conn.commit()
+        if user and autoriser_envoi_email(conn, email):
+            nom = user["nom"]
+            token = creer_token_action(
+                conn,
+                user["id"],
+                "delete_account",
+                timedelta(hours=ACCOUNT_DELETION_TTL_HOURS),
+            )
+            conn.commit()
+        else:
+            conn.rollback()
+    finally:
         conn.close()
 
+    if token:
+        envoyer_email_action(
+            email,
+            "Demande de suppression du compte LIFTELY",
+            (
+                "Bonjour " + nom + ",\n\n"
+                "Confirme la suppression définitive de ton compte et des "
+                "données LIFTELY associées. Ce lien expire dans 24 heures. "
+                "Si tu n'es pas à l'origine de la demande, ignore cet e-mail."
+            ),
+            "/email/delete-account",
+            token,
+        )
     return jsonify({
-        "message": "Déconnexion réussie"
-    })
+        "message": "Si un compte correspond à cette adresse, "
+                   "un e-mail de confirmation va être envoyé."
+    }), 202
 
 
-# ============================================================
+@app.post("/auth/account-delete-confirm")
+def confirmer_suppression_compte():
+    data = request.get_json(silent=True) or {}
+    token = str(data.get("token", "")).strip()
+    if not token:
+        return jsonify({"error": "Lien invalide ou expiré."}), 400
+
+    maintenant = datetime.now().isoformat()
+    conn = get_db()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        action = conn.execute(
+            """
+            SELECT user_id FROM auth_action_tokens
+            WHERE token_hash = ?
+              AND purpose = 'delete_account'
+              AND date_utilisation IS NULL
+              AND date_expiration > ?
+            """,
+            (hash_token(token), maintenant),
+        ).fetchone()
+        if not action:
+            conn.rollback()
+            return jsonify({"error": "Lien invalide ou expiré."}), 400
+        supprimer_donnees_compte(conn, action["user_id"])
+        conn.commit()
+    finally:
+        conn.close()
+    return jsonify({"message": "Compte et données supprimés."})
+
+
+@app.delete("/auth/account")
+def supprimer_compte_connecte():
+    user = get_user_from_request()
+    if not user:
+        return utilisateur_non_connecte()
+    data = request.get_json(silent=True) or {}
+    password = str(data.get("password", ""))
+    if not password:
+        return jsonify({"error": "Saisis ton mot de passe pour confirmer."}), 400
+
+    conn = get_db()
+    row = conn.execute(
+        "SELECT password_hash FROM users WHERE id = ?",
+        (user["id"],),
+    ).fetchone()
+    if not row or not verify_password(password, row["password_hash"]):
+        conn.close()
+        return jsonify({
+            "error": "Le mot de passe ne correspond pas.",
+            "code": "invalid_password",
+        }), 403
+
+    try:
+        supprimer_donnees_compte(conn, user["id"])
+        conn.commit()
+    finally:
+        conn.close()
+    return jsonify({"message": "Compte et données supprimés."})
+
+
 # EXERCICES
 # ============================================================
 

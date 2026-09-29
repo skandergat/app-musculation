@@ -31,6 +31,9 @@ jobs:
       - name: Validate Python syntax
         run: python -m py_compile backend/app.py init_db.py
 
+      - name: Account lifecycle smoke test
+        run: python -m backend.account_lifecycle_smoke
+
       - name: Backend smoke test
         env:
           LIFTELY_DB_PATH: ${{ runner.temp }}/liftely-smoke.db
@@ -38,7 +41,19 @@ jobs:
         run: |
           python - <<'PY'
           import sqlite3
+          from urllib.parse import parse_qs, urlsplit
           from backend import app
+
+          app.app.config["TESTING"] = True
+
+          def token_for(subject, email):
+              matches = [
+                  item for item in app.app.config["TEST_EMAIL_OUTBOX"]
+                  if item["to"] == email and item["subject"] == subject
+              ]
+              assert matches, (subject, email)
+              link = matches[-1]["body"].splitlines()[-1]
+              return parse_qs(urlsplit(link).fragment)["token"][0]
 
           app.assurer_base()
           conn = sqlite3.connect(app.DB_PATH)
@@ -75,7 +90,31 @@ jobs:
               },
           )
           assert response.status_code == 201, response.data
-          token = response.get_json()["token"]
+          assert "token" not in response.get_json()
+
+          unverified_login = client.post(
+              "/auth/login",
+              json={"email": "ci-test@example.com", "password": "TestPassword123!"},
+          )
+          assert unverified_login.status_code == 403, unverified_login.data
+          assert unverified_login.get_json()["code"] == "email_not_verified"
+
+          verify_token = token_for(
+              "Confirme ton adresse e-mail LIFTELY",
+              "ci-test@example.com",
+          )
+          verified = client.post("/auth/verify-email", json={"token": verify_token})
+          assert verified.status_code == 200, verified.data
+          assert client.post(
+              "/auth/verify-email", json={"token": verify_token}
+          ).status_code == 400
+
+          login = client.post(
+              "/auth/login",
+              json={"email": "ci-test@example.com", "password": "TestPassword123!"},
+          )
+          assert login.status_code == 200, login.data
+          token = login.get_json()["token"]
           headers = {"Authorization": f"Bearer {token}"}
 
           first_session = client.post("/seances", headers=headers)
@@ -260,6 +299,31 @@ jobs:
               json={"exercice_id": exercise_id, "poids": 20, "repetitions": 10},
           )
           assert rejected.status_code == 404, rejected.data
+
+          wrong_delete_password = client.delete(
+              "/auth/account",
+              headers=headers,
+              json={"password": "WrongPassword123!"},
+          )
+          assert wrong_delete_password.status_code == 403, wrong_delete_password.data
+
+          account_deleted = client.delete(
+              "/auth/account",
+              headers=headers,
+              json={"password": "TestPassword123!"},
+          )
+          assert account_deleted.status_code == 200, account_deleted.data
+
+          conn = sqlite3.connect(app.DB_PATH)
+          assert conn.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0
+          for table in ("sessions", "seances", "seance_exercices", "series", "templates", "template_exercices", "auth_action_tokens"):
+              assert conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] == 0, table
+          email_limit_hash = app.hash_token("email:ci-test@example.com")
+          assert conn.execute(
+              "SELECT COUNT(*) FROM auth_mail_limits WHERE key_hash = ?",
+              (email_limit_hash,),
+          ).fetchone()[0] == 0
+          conn.close()
 
           print("LIFTELY backend smoke test: OK")
           PY
