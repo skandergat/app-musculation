@@ -10,17 +10,17 @@ import { API_URL, apiFetch } from '@/config/api';
 
 const templateText = {
   fr: {
-    title: copy.title, subtitle: copy.subtitle,
-    namePlaceholder: 'Nom du template (ex. Push A)', create: 'CRÉER', start: copy.start,
-    closeLibrary: copy.closeLibrary, addExercise: copy.addExercise,
-    deleteTemplate: copy.deleteTemplate, emptyTemplate: copy.emptyTemplate,
-    emptyList: copy.emptyList, cancel: 'Annuler', delete: 'Supprimer',
+    title: 'Mes templates', subtitle: 'Crée tes séances types. Les modifier ici ne modifie jamais une séance déjà commencée.',
+    namePlaceholder: 'Nom du template (ex. Push A)', create: 'CRÉER', start: 'DÉMARRER',
+    closeLibrary: 'FERMER LA BIBLIOTHÈQUE', addExercise: '+ AJOUTER UN EXERCICE',
+    deleteTemplate: 'SUPPRIMER LE TEMPLATE', emptyTemplate: 'Ce template est vide. Ajoute les exercices que tu veux.',
+    emptyList: 'Aucun template. Crée ton premier entraînement type.', cancel: 'Annuler', delete: 'Supprimer',
     deleteQuestion: (name: string) => 'Supprimer « ' + name + ' » ?',
-    loadTemplates: copy.loadTemplates, connection: copy.connection,
-    loadTemplate: copy.loadTemplate, createTemplate: copy.createTemplate,
-    loadExercises: copy.loadExercises, addExerciseError: copy.addExerciseError,
-    removeExerciseError: copy.removeExerciseError, reorderError: copy.reorderError,
-    startError: copy.startError, deleteError: copy.deleteError,
+    loadTemplates: 'Impossible de charger les templates.', connection: 'Erreur de connexion.',
+    loadTemplate: 'Impossible de charger le template.', createTemplate: 'Impossible de créer le template.',
+    loadExercises: 'Impossible de charger les exercices.', addExerciseError: 'Impossible d’ajouter cet exercice.',
+    removeExerciseError: 'Impossible de retirer cet exercice.', reorderError: 'Impossible de réorganiser les exercices.',
+    startError: 'Impossible de démarrer la séance.', deleteError: 'Impossible de supprimer le template.',
     error: 'Erreur', workout: 'Séance',
   },
   en: {
@@ -103,7 +103,7 @@ export default function TemplatesScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [token]);
+  }, [token, language]);
 
   useEffect(() => { loadTemplates(); }, [loadTemplates]);
 
