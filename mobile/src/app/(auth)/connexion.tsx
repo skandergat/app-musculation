@@ -17,12 +17,16 @@ import { useI18n } from '@/context/I18nContext';
 
 export default function ConnexionScreen() {
   const { login } = useAuth();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const dark = useColorScheme() === 'dark';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const visibilityLabel = passwordVisible
+    ? { fr: 'Masquer le mot de passe', en: 'Hide password', ar: 'إخفاء كلمة المرور', de: 'Passwort verbergen' }[language]
+    : { fr: 'Afficher le mot de passe', en: 'Show password', ar: 'إظهار كلمة المرور', de: 'Passwort anzeigen' }[language];
 
   const seConnecter = async () => {
     if (!email.trim() || !password) {
@@ -74,15 +78,26 @@ export default function ConnexionScreen() {
           keyboardType="email-address"
         />
 
-        <TextInput
-          style={[styles.input, dark && styles.inputDark]}
-          placeholder={t("password")}
-          placeholderTextColor={dark ? '#8E8E93' : '#8A8A8E'}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          autoCapitalize="none"
-        />
+        <View style={styles.passwordField}>
+          <TextInput
+            style={[styles.input, styles.passwordInput, dark && styles.inputDark]}
+            placeholder={t("password")}
+            placeholderTextColor={dark ? '#8E8E93' : '#8A8A8E'}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!passwordVisible}
+            autoCapitalize="none"
+          />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={visibilityLabel}
+            onPress={() => setPasswordVisible((visible) => !visible)}
+            style={styles.passwordToggle}
+            hitSlop={8}
+          >
+            <Text style={styles.passwordToggleText}>{passwordVisible ? '🙈' : '👁️'}</Text>
+          </Pressable>
+        </View>
 
         <Pressable
           style={[
@@ -147,6 +162,24 @@ const styles = StyleSheet.create({
     color: '#8A8A8E',
     lineHeight: 22,
     marginBottom: 24,
+  },
+  passwordField: {
+    position: 'relative',
+  },
+  passwordInput: {
+    paddingRight: 56,
+  },
+  passwordToggle: {
+    position: 'absolute',
+    right: 12,
+    top: 0,
+    bottom: 12,
+    width: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  passwordToggleText: {
+    fontSize: 18,
   },
   input: {
     height: 52,
