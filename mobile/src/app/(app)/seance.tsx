@@ -1,27 +1,33 @@
 import { useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Vibration } from 'react-native';
+import {
+  Alert,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Vibration,
+  View,
+  useColorScheme,
+} from 'react-native';
 import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { useAuth } from '@/context/AuthContext';
 import { useI18n } from '@/context/I18nContext';
 import { API_URL, apiFetch } from '@/config/api';
-import {
-  SafeAreaView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  ScrollView,
-  TextInput,
-  Alert,
-  useColorScheme,
-} from 'react-native';
 
 
 const SON_FIN_TIMER = require('../../../assets/notification-ding.wav');
 
 const TIMER_SERIE_KEY = '@app_musculation_timer_serie';
+let localExerciseIdSequence = 0;
+
+function createLocalExerciseId() {
+  localExerciseIdSequence += 1;
+  return Date.now() * 1000 + localExerciseIdSequence;
+}
 
 type Serie = {
   id: number;
@@ -142,7 +148,7 @@ export default function SeanceScreen() {
     }).catch((error) => {
       console.error(t('error') + ' :', error);
     });
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     const chargerPreferencesTimer = async () => {
@@ -421,6 +427,7 @@ export default function SeanceScreen() {
     }
   };
 
+  // The ref enforces one initialization per mounted workout screen.
   useEffect(() => {
     if (!token || initialisationSeanceEnCoursRef.current) {
       return;
@@ -428,6 +435,7 @@ export default function SeanceScreen() {
 
     initialisationSeanceEnCoursRef.current = true;
     void initialiserSeance();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
   const ajouterExercice = async (
     nom: string,
@@ -551,7 +559,7 @@ export default function SeanceScreen() {
       }
 
       const nouvelExercice: Exercice = {
-        id: Date.now(),
+        id: createLocalExerciseId(),
         backendId,
         nom,
         muscle,

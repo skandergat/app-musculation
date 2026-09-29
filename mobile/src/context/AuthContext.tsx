@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, {
+  useCallback,
   createContext,
   useContext,
   useEffect,
@@ -88,11 +89,7 @@ export function AuthProvider({
   const [loading, setLoading] = useState(true);
   const { t } = useI18n();
 
-  useEffect(() => {
-    chargerSession();
-  }, []);
-
-  const chargerSession = async () => {
+  const chargerSession = useCallback(async () => {
     try {
       const tokenSauvegarde = await getStoredToken();
       const userSauvegarde = await AsyncStorage.getItem(USER_KEY);
@@ -158,7 +155,13 @@ export function AuthProvider({
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // The session bootstrap awaits storage and network before updating state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void chargerSession();
+  }, [chargerSession]);
 
   const sauvegarderSession = async (
     nouveauToken: string,

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
 import {
   ActivityIndicator, Alert, Pressable, RefreshControl, SafeAreaView,
   ScrollView, StyleSheet, Text, TextInput, View, useColorScheme,
@@ -103,9 +103,13 @@ export default function TemplatesScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [token, language]);
+  }, [token, copy.connection, copy.loadTemplates]);
 
-  useEffect(() => { loadTemplates(); }, [loadTemplates]);
+  useFocusEffect(
+    useCallback(() => {
+      void loadTemplates();
+    }, [loadTemplates])
+  );
 
   const openTemplate = async (template: Template) => {
     setSelected(template);

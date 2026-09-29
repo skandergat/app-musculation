@@ -275,6 +275,10 @@ jobs:
         working-directory: mobile
         run: npm ci
 
+      - name: ESLint
+        working-directory: mobile
+        run: npm run lint
+
       - name: TypeScript typecheck
         working-directory: mobile
         run: npx tsc --noEmit

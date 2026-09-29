@@ -219,7 +219,7 @@ const translations: Record<Language, Dictionary> = {
 
 const LANGUAGE_KEY = '@app_musculation_language';
 
-const exercisePhraseTranslations: Record<Language, Array<[string, string]>> = {
+const exercisePhraseTranslations: Record<Language, [string, string][]> = {
   fr: [],
   en: [
     ['Développé couché prise serrée', 'Close-Grip Bench Press'],
@@ -880,7 +880,7 @@ const exercisePhraseTranslations: Record<Language, Array<[string, string]>> = {
   ],
 };
 
-const exerciseExtraTranslations: Record<Language, Array<[string, string]>> = {
+const exerciseExtraTranslations: Record<Language, [string, string][]> = {
   fr: [],
   en: [
     ['Développé couché haltères', 'Dumbbell Bench Press'], ['Pec deck', 'Pec Deck'], ['Pompes', 'Push-Ups'],
@@ -929,7 +929,7 @@ const exerciseExtraTranslations: Record<Language, Array<[string, string]>> = {
   ],
 };
 
-const exerciseFinalTranslations: Record<Language, Array<[string, string]>> = {
+const exerciseFinalTranslations: Record<Language, [string, string][]> = {
   fr: [],
   en: [
     ['Pompes pseudo-planche', 'Pseudo-Planche Push-Ups'],
