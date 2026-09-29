@@ -134,6 +134,7 @@ export default function SeanceScreen() {
   const [timerSerieId, setTimerSerieId] = useState<number | null>(null);
   const [minuteursTermines, setMinuteursTermines] = useState<Set<string>>(new Set());
   const timerFinAtRef = useRef<number | null>(null);
+  const initialisationSeanceEnCoursRef = useRef(false);
 
   useEffect(() => {
     setAudioModeAsync({
@@ -421,11 +422,12 @@ export default function SeanceScreen() {
   };
 
   useEffect(() => {
-    if (!token) {
+    if (!token || initialisationSeanceEnCoursRef.current) {
       return;
     }
 
-    initialiserSeance();
+    initialisationSeanceEnCoursRef.current = true;
+    void initialiserSeance();
   }, [token]);
   const ajouterExercice = async (
     nom: string,
