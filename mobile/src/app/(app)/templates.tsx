@@ -5,7 +5,67 @@ import {
   ScrollView, StyleSheet, Text, TextInput, View, useColorScheme,
 } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
+import { useI18n } from '@/context/I18nContext';
 import { API_URL, apiFetch } from '@/config/api';
+
+const templateText = {
+  fr: {
+    title: copy.title, subtitle: copy.subtitle,
+    namePlaceholder: 'Nom du template (ex. Push A)', create: 'CRÉER', start: copy.start,
+    closeLibrary: copy.closeLibrary, addExercise: copy.addExercise,
+    deleteTemplate: copy.deleteTemplate, emptyTemplate: copy.emptyTemplate,
+    emptyList: copy.emptyList, cancel: 'Annuler', delete: 'Supprimer',
+    deleteQuestion: (name: string) => 'Supprimer « ' + name + ' » ?',
+    loadTemplates: copy.loadTemplates, connection: copy.connection,
+    loadTemplate: copy.loadTemplate, createTemplate: copy.createTemplate,
+    loadExercises: copy.loadExercises, addExerciseError: copy.addExerciseError,
+    removeExerciseError: copy.removeExerciseError, reorderError: copy.reorderError,
+    startError: copy.startError, deleteError: copy.deleteError,
+    error: 'Erreur', workout: 'Séance',
+  },
+  en: {
+    title: 'My templates', subtitle: 'Create workout plans. Editing a template never changes a workout already in progress.',
+    namePlaceholder: 'Template name (e.g. Push A)', create: 'CREATE', start: 'START',
+    closeLibrary: 'CLOSE EXERCISE LIBRARY', addExercise: '+ ADD EXERCISE',
+    deleteTemplate: 'DELETE TEMPLATE', emptyTemplate: 'This template is empty. Add the exercises you want.',
+    emptyList: 'No templates yet. Create your first workout plan.', cancel: 'Cancel', delete: 'Delete',
+    deleteQuestion: (name: string) => 'Delete “' + name + '”?',
+    loadTemplates: 'Unable to load templates.', connection: 'Connection error.',
+    loadTemplate: 'Unable to load this template.', createTemplate: 'Unable to create the template.',
+    loadExercises: 'Unable to load exercises.', addExerciseError: 'Unable to add this exercise.',
+    removeExerciseError: 'Unable to remove this exercise.', reorderError: 'Unable to reorder exercises.',
+    startError: 'Unable to start the workout.', deleteError: 'Unable to delete the template.',
+    error: 'Error', workout: 'Workout',
+  },
+  de: {
+    title: 'Meine Vorlagen', subtitle: 'Erstelle Trainingspläne. Änderungen an einer Vorlage wirken sich nicht auf ein bereits begonnenes Training aus.',
+    namePlaceholder: 'Vorlagenname (z. B. Push A)', create: 'ERSTELLEN', start: 'STARTEN',
+    closeLibrary: 'ÜBUNGSBIBLIOTHEK SCHLIESSEN', addExercise: '+ ÜBUNG HINZUFÜGEN',
+    deleteTemplate: 'VORLAGE LÖSCHEN', emptyTemplate: 'Diese Vorlage ist leer. Füge die gewünschten Übungen hinzu.',
+    emptyList: 'Noch keine Vorlagen. Erstelle deinen ersten Trainingsplan.', cancel: 'Abbrechen', delete: 'Löschen',
+    deleteQuestion: (name: string) => '„' + name + '“ löschen?',
+    loadTemplates: 'Vorlagen konnten nicht geladen werden.', connection: 'Verbindungsfehler.',
+    loadTemplate: 'Diese Vorlage konnte nicht geladen werden.', createTemplate: 'Vorlage konnte nicht erstellt werden.',
+    loadExercises: 'Übungen konnten nicht geladen werden.', addExerciseError: 'Übung konnte nicht hinzugefügt werden.',
+    removeExerciseError: 'Übung konnte nicht entfernt werden.', reorderError: 'Übungen konnten nicht sortiert werden.',
+    startError: 'Training konnte nicht gestartet werden.', deleteError: 'Vorlage konnte nicht gelöscht werden.',
+    error: 'Fehler', workout: 'Training',
+  },
+  ar: {
+    title: 'قوالبي', subtitle: 'أنشئ خططًا للتمرين. تعديل القالب لا يغيّر تمرينًا بدأ بالفعل.',
+    namePlaceholder: 'اسم القالب (مثال: دفع A)', create: 'إنشاء', start: 'بدء',
+    closeLibrary: 'إغلاق مكتبة التمارين', addExercise: '+ إضافة تمرين',
+    deleteTemplate: 'حذف القالب', emptyTemplate: 'هذا القالب فارغ. أضف التمارين التي تريدها.',
+    emptyList: 'لا توجد قوالب بعد. أنشئ أول خطة تمرين.', cancel: 'إلغاء', delete: 'حذف',
+    deleteQuestion: (name: string) => 'هل تريد حذف «' + name + '»؟',
+    loadTemplates: 'تعذر تحميل القوالب.', connection: 'خطأ في الاتصال.',
+    loadTemplate: 'تعذر تحميل هذا القالب.', createTemplate: 'تعذر إنشاء القالب.',
+    loadExercises: 'تعذر تحميل التمارين.', addExerciseError: 'تعذر إضافة هذا التمرين.',
+    removeExerciseError: 'تعذر إزالة هذا التمرين.', reorderError: 'تعذر إعادة ترتيب التمارين.',
+    startError: 'تعذر بدء التمرين.', deleteError: 'تعذر حذف القالب.',
+    error: 'خطأ', workout: 'التمرين',
+  },
+} as const;
 
 type Template = { id:number; nom:string; nombre_exercices:number };
 type Exercise = { id:number; nom:string; groupe_musculaire?:string|null; categorie?:string };
@@ -13,6 +73,8 @@ type TemplateExercise = Exercise & { exercice_id:number; position:number };
 
 export default function TemplatesScreen() {
   const { token } = useAuth();
+  const { language, t, exerciseName, muscleGroupName } = useI18n();
+  const copy = templateText[language];
   const router = useRouter();
   const dark = useColorScheme() === 'dark';
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -33,10 +95,10 @@ export default function TemplatesScreen() {
     try {
       setError(null);
       const r = await apiFetch(API_URL + '/templates', { headers: { Authorization: `Bearer ${token}` } });
-      if (!r.ok) throw new Error('Impossible de charger les templates.');
+      if (!r.ok) throw new Error(copy.loadTemplates);
       setTemplates(await r.json());
     } catch (e:any) {
-      setError(e?.message ?? 'Erreur de connexion.');
+      setError(e?.message ?? copy.connection);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -51,11 +113,11 @@ export default function TemplatesScreen() {
     setBusy(true);
     try {
       const r = await apiFetch(`${API_URL}/templates/${template.id}`, { headers: { Authorization: `Bearer ${token}` } });
-      if (!r.ok) throw new Error('Impossible de charger le template.');
+      if (!r.ok) throw new Error(copy.loadTemplate);
       const data = await r.json();
       setTemplateExercises(data.exercices ?? []);
     } catch (e:any) {
-      Alert.alert('Erreur', e?.message ?? 'Impossible de charger le template.');
+      Alert.alert(copy.error, e?.message ?? copy.loadTemplate);
       setSelected(null);
     } finally {
       setBusy(false);
@@ -70,14 +132,14 @@ export default function TemplatesScreen() {
       const r = await apiFetch(API_URL + '/templates', { method:'POST', headers, body:JSON.stringify({ nom }) });
       if (!r.ok) {
         const data = await r.json().catch(() => ({}));
-        throw new Error(data.error ?? 'Impossible de créer le template.');
+        throw new Error(data.error ?? copy.createTemplate);
       }
       const data = await r.json();
       setNewName('');
       await loadTemplates();
       await openTemplate(data);
     } catch (e:any) {
-      Alert.alert('Erreur', e?.message ?? 'Impossible de créer le template.');
+      Alert.alert(copy.error, e?.message ?? copy.createTemplate);
     } finally {
       setCreating(false);
     }
@@ -87,10 +149,10 @@ export default function TemplatesScreen() {
     setShowLibrary(true);
     try {
       const r = await apiFetch(API_URL + '/exercices?categorie=all');
-      if (!r.ok) throw new Error('Impossible de charger les exercices.');
+      if (!r.ok) throw new Error(copy.loadExercises);
       setLibrary(await r.json());
     } catch (e:any) {
-      Alert.alert('Erreur', e?.message ?? 'Impossible de charger les exercices.');
+      Alert.alert(copy.error, e?.message ?? copy.loadExercises);
     }
   };
 
@@ -103,11 +165,11 @@ export default function TemplatesScreen() {
       });
       if (!r.ok) {
         const data = await r.json().catch(() => ({}));
-        throw new Error(data.error ?? 'Impossible d’ajouter cet exercice.');
+        throw new Error(data.error ?? copy.addExerciseError);
       }
       await openTemplate(selected);
     } catch (e:any) {
-      Alert.alert('Erreur', e?.message ?? 'Impossible d’ajouter cet exercice.');
+      Alert.alert(copy.error, e?.message ?? copy.addExerciseError);
       setBusy(false);
     }
   };
@@ -117,10 +179,10 @@ export default function TemplatesScreen() {
     setBusy(true);
     try {
       const r = await apiFetch(`${API_URL}/templates/${selected.id}/exercices/${exerciseId}`, { method:'DELETE', headers });
-      if (!r.ok) throw new Error('Impossible de retirer cet exercice.');
+      if (!r.ok) throw new Error(copy.removeExerciseError);
       await openTemplate(selected);
     } catch (e:any) {
-      Alert.alert('Erreur', e?.message ?? 'Impossible de retirer cet exercice.');
+      Alert.alert(copy.error, e?.message ?? copy.removeExerciseError);
       setBusy(false);
     }
   };
@@ -137,9 +199,9 @@ export default function TemplatesScreen() {
         method:'PUT', headers,
         body:JSON.stringify({ exercices: next.map(x => ({ exercice_id:x.exercice_id })) }),
       });
-      if (!r.ok) throw new Error('Impossible de réorganiser les exercices.');
+      if (!r.ok) throw new Error(copy.reorderError);
     } catch (e:any) {
-      Alert.alert('Erreur', e?.message ?? 'Impossible de réorganiser les exercices.');
+      Alert.alert(copy.error, e?.message ?? copy.reorderError);
       openTemplate(selected);
     }
   };
@@ -150,10 +212,10 @@ export default function TemplatesScreen() {
     try {
       const r = await apiFetch(`${API_URL}/templates/${selected.id}/start`, { method:'POST', headers });
       const data = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(data.error ?? 'Impossible de démarrer la séance.');
+      if (!r.ok) throw new Error(data.error ?? copy.startError);
       router.push('/(app)/seance');
     } catch (e:any) {
-      Alert.alert('Séance', e?.message ?? 'Impossible de démarrer la séance.');
+      Alert.alert(copy.workout, e?.message ?? copy.startError);
     } finally {
       setBusy(false);
     }
@@ -161,18 +223,18 @@ export default function TemplatesScreen() {
 
   const deleteTemplate = () => {
     if (!selected) return;
-    Alert.alert('Supprimer le template', `Supprimer « ${selected.nom} » ?`, [
-      { text:'Annuler', style:'cancel' },
-      { text:'Supprimer', style:'destructive', onPress: async () => {
+    Alert.alert(copy.deleteTemplate, copy.deleteQuestion(selected.nom), [
+      { text:copy.cancel, style:'cancel' },
+      { text:copy.delete, style:'destructive', onPress: async () => {
         setBusy(true);
         try {
           const r = await apiFetch(`${API_URL}/templates/${selected.id}`, { method:'DELETE', headers });
-          if (!r.ok) throw new Error('Impossible de supprimer le template.');
+          if (!r.ok) throw new Error(copy.deleteError);
           setSelected(null);
           setTemplateExercises([]);
           await loadTemplates();
         } catch (e:any) {
-          Alert.alert('Erreur', e?.message ?? 'Impossible de supprimer le template.');
+          Alert.alert(copy.error, e?.message ?? copy.deleteError);
         } finally { setBusy(false); }
       }},
     ]);
@@ -189,7 +251,7 @@ export default function TemplatesScreen() {
             <Pressable onPress={() => { setSelected(null); setShowLibrary(false); }}><Text style={styles.back}>‹</Text></Pressable>
             <View style={{flex:1}}>
               <Text style={[styles.title, dark && styles.white]}>{selected.nom}</Text>
-              <Text style={[styles.subtitle, dark && styles.muted]}>{templateExercises.length} exercice(s)</Text>
+              <Text style={[styles.subtitle, dark && styles.muted]}>{templateExercises.length} {templateExercises.length === 1 ? t('exerciseCount') : t('exercisesCount')}</Text>
             </View>
             <Pressable onPress={startTemplate} disabled={busy} style={styles.start}><Text style={styles.startText}>DÉMARRER</Text></Pressable>
           </View>
@@ -201,8 +263,8 @@ export default function TemplatesScreen() {
               <View key={ex.exercice_id} style={styles.exerciseRow}>
                 <View style={styles.number}><Text style={styles.numberText}>{index + 1}</Text></View>
                 <View style={{flex:1}}>
-                  <Text style={[styles.exerciseName, dark && styles.white]}>{ex.nom}</Text>
-                  {!!ex.groupe_musculaire && <Text style={[styles.muted, dark && styles.muted]}>{ex.groupe_musculaire}</Text>}
+                  <Text style={[styles.exerciseName, dark && styles.white]}>{exerciseName(ex.nom)}</Text>
+                  {!!ex.groupe_musculaire && <Text style={[styles.muted, dark && styles.muted]}>{muscleGroupName(ex.groupe_musculaire)}</Text>}
                 </View>
                 <Pressable onPress={() => moveExercise(index,-1)} disabled={index===0 || busy}><Text style={styles.action}>↑</Text></Pressable>
                 <Pressable onPress={() => moveExercise(index,1)} disabled={index===templateExercises.length-1 || busy}><Text style={styles.action}>↓</Text></Pressable>
@@ -212,7 +274,7 @@ export default function TemplatesScreen() {
           </View>
 
           <Pressable style={[styles.addButton, dark && styles.cardDark]} onPress={showLibrary ? () => setShowLibrary(false) : loadLibrary}>
-            <Text style={styles.addText}>{showLibrary ? 'FERMER LA BIBLIOTHÈQUE' : '+ AJOUTER UN EXERCICE'}</Text>
+            <Text style={styles.addText}>{showLibrary ? copy.closeLibrary : copy.addExercise}</Text>
           </Pressable>
 
           {showLibrary && (
@@ -220,8 +282,8 @@ export default function TemplatesScreen() {
               {library.map(ex => (
                 <Pressable key={ex.id} disabled={ids.has(ex.id) || busy} onPress={() => addExercise(ex)} style={styles.libraryRow}>
                   <View style={{flex:1}}>
-                    <Text style={[styles.exerciseName, dark && styles.white]}>{ex.nom}</Text>
-                    {!!ex.groupe_musculaire && <Text style={[styles.muted, dark && styles.muted]}>{ex.groupe_musculaire}</Text>}
+                    <Text style={[styles.exerciseName, dark && styles.white]}>{exerciseName(ex.nom)}</Text>
+                    {!!ex.groupe_musculaire && <Text style={[styles.muted, dark && styles.muted]}>{muscleGroupName(ex.groupe_musculaire)}</Text>}
                   </View>
                   <Text style={[styles.plus, ids.has(ex.id) && styles.disabled]}>{ids.has(ex.id) ? '✓' : '+'}</Text>
                 </Pressable>
@@ -250,14 +312,14 @@ export default function TemplatesScreen() {
           <TextInput
             value={newName}
             onChangeText={setNewName}
-            placeholder="Nom du template (ex. Push A)"
+            placeholder={copy.namePlaceholder}
             placeholderTextColor="#8A8A8E"
             style={[styles.input, dark && styles.inputDark]}
             maxLength={100}
             onSubmitEditing={createTemplate}
           />
           <Pressable onPress={createTemplate} disabled={!newName.trim() || creating} style={styles.createButton}>
-            <Text style={styles.createText}>{creating ? '...' : 'CRÉER'}</Text>
+            <Text style={styles.createText}>{creating ? '...' : copy.create}</Text>
           </Pressable>
         </View>
 
@@ -270,7 +332,7 @@ export default function TemplatesScreen() {
             <View style={styles.templateIcon}><Text style={styles.templateIconText}>L</Text></View>
             <View style={{flex:1}}>
               <Text style={[styles.templateName, dark && styles.white]}>{template.nom}</Text>
-              <Text style={[styles.muted, dark && styles.muted]}>{template.nombre_exercices} exercice(s)</Text>
+              <Text style={[styles.muted, dark && styles.muted]}>{template.nombre_exercices} {template.nombre_exercices === 1 ? t('exerciseCount') : t('exercisesCount')}</Text>
             </View>
             <Text style={styles.chevron}>›</Text>
           </Pressable>
