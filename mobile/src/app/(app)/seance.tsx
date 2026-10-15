@@ -453,8 +453,10 @@ export default function SeanceScreen() {
     // après que l'exercice a été ajouté côté serveur, sans afficher l'alerte.
     if (demandeReprise) {
       initialisationSeanceEnCoursRef.current = true;
-      void initialiserSeance(true);
-      return;
+      const timeout = setTimeout(() => {
+        void initialiserSeance(true);
+      }, 0);
+      return () => clearTimeout(timeout);
     }
 
     if (initialisationSeanceEnCoursRef.current) {
@@ -462,7 +464,10 @@ export default function SeanceScreen() {
     }
 
     initialisationSeanceEnCoursRef.current = true;
-    void initialiserSeance();
+    const timeout = setTimeout(() => {
+      void initialiserSeance();
+    }, 0);
+    return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, demandeReprise, ouverture]);
   const ajouterExercice = async (
