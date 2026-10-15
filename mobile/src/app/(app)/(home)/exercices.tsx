@@ -103,6 +103,8 @@ export default function ExerciseListScreen() {
       // Même lorsqu'une séance existante est réutilisée, l'exercice
       // choisi doit être ajouté à cette séance avant d'ouvrir l'écran.
       router.push({ pathname: '/(app)/seance', params: { reprendre: '1', ouverture: String(++ouvertureRef.current) } });
+      // Réactiver les boutons si l'utilisateur revient au catalogue après la séance.
+      setDemarrageId(null);
     } catch (error: any) {
       setDemarrageId(null);
       setErreur(error?.message || t('cannotStartExercise'));
