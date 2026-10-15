@@ -55,7 +55,10 @@ export default function ExerciseListScreen() {
       return;
     }
 
-    void chargerExercices(categorieInitiale);
+    const timeout = setTimeout(() => {
+      void chargerExercices(categorieInitiale);
+    }, 0);
+    return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categorieInitiale]);
 
