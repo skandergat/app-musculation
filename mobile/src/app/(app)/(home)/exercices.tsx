@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator, FlatList, Pressable, RefreshControl, SafeAreaView,
   StatusBar, StyleSheet, Text, View, TextInput,
@@ -25,9 +25,10 @@ export default function ExerciseListScreen() {
   const { token } = useAuth();
   const scheme = useAppColorScheme();
   const dark = scheme === 'dark';
-  const [categorieOuverte, setCategorieOuverte] = useState<Category|null>(categorieInitiale);
+  const categorieOuverte = categorieInitiale;
+  const ouvertureRef = useRef(0);
   const [exercices, setExercices] = useState<Exercice[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(categorieInitiale !== null);
   const [refreshing, setRefreshing] = useState(false);
   const [erreur, setErreur] = useState<string|null>(null);
   const [recherche, setRecherche] = useState('');
@@ -54,8 +55,6 @@ export default function ExerciseListScreen() {
       return;
     }
 
-    setCategorieOuverte(categorieInitiale);
-    setLoading(true);
     void chargerExercices(categorieInitiale);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categorieInitiale]);
@@ -100,7 +99,7 @@ export default function ExerciseListScreen() {
 
       // Même lorsqu'une séance existante est réutilisée, l'exercice
       // choisi doit être ajouté à cette séance avant d'ouvrir l'écran.
-      router.push({ pathname: '/(app)/seance', params: { reprendre: '1', ouverture: String(Date.now()) } });
+      router.push({ pathname: '/(app)/seance', params: { reprendre: '1', ouverture: String(++ouvertureRef.current) } });
     } catch (error: any) {
       setDemarrageId(null);
       setErreur(error?.message || t('cannotStartExercise'));
