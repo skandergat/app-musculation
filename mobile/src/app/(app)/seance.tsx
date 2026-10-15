@@ -305,8 +305,6 @@ export default function SeanceScreen() {
 
   const initialiserSeance = async (ouvrirSeanceActive = false) => {
     try {
-      setChargement(true);
-
       const activeResponse = await apiFetch(
         API_URL + '/seances/active',
         {
@@ -315,6 +313,8 @@ export default function SeanceScreen() {
           },
         }
       );
+
+      setChargement(true);
 
       if (!activeResponse.ok) {
         throw new Error(t('connectionImpossible'));
