@@ -115,12 +115,15 @@ export default function SeanceScreen() {
   const { token, user } = useAuth();
   const { t, exerciseName, muscleGroupName } = useI18n();
   const dark = useAppColorScheme() === 'dark';
-  const routeParams = useLocalSearchParams<{ reprendre?: string | string[] }>();
+  const routeParams = useLocalSearchParams<{ reprendre?: string | string[]; ouverture?: string | string[] }>();
   const demandeReprise = (
     Array.isArray(routeParams.reprendre)
       ? routeParams.reprendre[0]
       : routeParams.reprendre
   ) === '1';
+  const ouverture = Array.isArray(routeParams.ouverture)
+    ? routeParams.ouverture[0]
+    : routeParams.ouverture;
 
   const sonFinTimer = useAudioPlayer(SON_FIN_TIMER);
 
@@ -461,7 +464,7 @@ export default function SeanceScreen() {
     initialisationSeanceEnCoursRef.current = true;
     void initialiserSeance();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, demandeReprise]);
+  }, [token, demandeReprise, ouverture]);
   const ajouterExercice = async (
     nom: string,
     muscle: string,
