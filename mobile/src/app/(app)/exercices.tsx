@@ -100,7 +100,7 @@ export default function ExerciseListScreen() {
 
       // Même lorsqu'une séance existante est réutilisée, l'exercice
       // choisi doit être ajouté à cette séance avant d'ouvrir l'écran.
-      router.push({ pathname: '/(app)/seance', params: { reprendre: '1' } });
+      router.push({ pathname: '/(app)/seance', params: { reprendre: '1', ouverture: String(Date.now()) } });
     } catch (error: any) {
       setDemarrageId(null);
       setErreur(error?.message || t('cannotStartExercise'));
