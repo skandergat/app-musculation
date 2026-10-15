@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   Alert,
@@ -114,6 +115,12 @@ export default function SeanceScreen() {
   const { token, user } = useAuth();
   const { t, exerciseName, muscleGroupName } = useI18n();
   const dark = useAppColorScheme() === 'dark';
+  const routeParams = useLocalSearchParams<{ reprendre?: string | string[] }>();
+  const demandeReprise = (
+    Array.isArray(routeParams.reprendre)
+      ? routeParams.reprendre[0]
+      : routeParams.reprendre
+  ) === '1';
 
   const sonFinTimer = useAudioPlayer(SON_FIN_TIMER);
 
@@ -293,7 +300,7 @@ export default function SeanceScreen() {
     }
   };
 
-  const initialiserSeance = async () => {
+  const initialiserSeance = async (ouvrirSeanceActive = false) => {
     try {
       setChargement(true);
 
@@ -354,6 +361,12 @@ export default function SeanceScreen() {
       };
 
       if (activeData.seance) {
+        if (ouvrirSeanceActive) {
+          await chargerSeanceActive();
+          setChargement(false);
+          return;
+        }
+
         setChargement(false);
 
         Alert.alert(
@@ -429,14 +442,26 @@ export default function SeanceScreen() {
 
   // The ref enforces one initialization per mounted workout screen.
   useEffect(() => {
-    if (!token || initialisationSeanceEnCoursRef.current) {
+    if (!token) {
+      return;
+    }
+
+    // Depuis le bouton + du catalogue, ouvrir directement la séance active
+    // après que l'exercice a été ajouté côté serveur, sans afficher l'alerte.
+    if (demandeReprise) {
+      initialisationSeanceEnCoursRef.current = true;
+      void initialiserSeance(true);
+      return;
+    }
+
+    if (initialisationSeanceEnCoursRef.current) {
       return;
     }
 
     initialisationSeanceEnCoursRef.current = true;
     void initialiserSeance();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, demandeReprise]);
   const ajouterExercice = async (
     nom: string,
     muscle: string,
