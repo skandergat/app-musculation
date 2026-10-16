@@ -34,6 +34,9 @@ jobs:
       - name: Account lifecycle smoke test
         run: python -m backend.account_lifecycle_smoke
 
+      - name: Login rate-limit smoke test
+        run: python -m backend.login_rate_limit_smoke
+
       - name: Backend smoke test
         env:
           LIFTELY_DB_PATH: ${{ runner.temp }}/liftely-smoke.db

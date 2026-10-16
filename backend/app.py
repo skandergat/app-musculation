@@ -83,6 +83,10 @@ def purger_auth_temporaire_periodiquement():
             ((maintenant - timedelta(days=1)).isoformat(),),
         )
         conn.execute(
+            "DELETE FROM auth_login_limits WHERE window_start <= ?",
+            ((maintenant - timedelta(days=1)).isoformat(),),
+        )
+        conn.execute(
             "DELETE FROM users WHERE email_verified_at IS NULL AND date_creation <= ?",
             ((maintenant - timedelta(days=PENDING_ACCOUNT_RETENTION_DAYS)).isoformat(),),
         )
@@ -357,6 +361,13 @@ def assurer_base():
             request_count INTEGER NOT NULL
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS auth_login_limits (
+            key_hash TEXT PRIMARY KEY,
+            window_start TEXT NOT NULL,
+            request_count INTEGER NOT NULL
+        )
+    """)
 
     # Nettoyer les tokens temporaires et les comptes jamais vérifiés.
     now_cleanup = datetime.now()
@@ -366,6 +377,10 @@ def assurer_base():
     )
     cursor.execute(
         "DELETE FROM auth_mail_limits WHERE window_start <= ?",
+        ((now_cleanup - timedelta(days=1)).isoformat(),),
+    )
+    cursor.execute(
+        "DELETE FROM auth_login_limits WHERE window_start <= ?",
         ((now_cleanup - timedelta(days=1)).isoformat(),),
     )
     date_limite_compte_en_attente = (
@@ -1574,6 +1589,72 @@ def autoriser_envoi_email(conn, email):
     return True
 
 
+
+def cles_limite_connexion(email):
+    # Render expose l’adresse publique du visiteur via X-Forwarded-For ;
+    # on conserve la même stratégie d’extraction que le limiteur d’e-mails.
+    ip_client = request.access_route[0] if request.access_route else request.remote_addr
+    ip_client = ip_client or "inconnue"
+    return [
+        (hash_token("login-pair:" + email + ":" + ip_client), 10),
+        (hash_token("login-ip:" + ip_client), 60),
+    ]
+
+
+def connexion_est_limitee(conn, email):
+    maintenant = datetime.now()
+    for empreinte, maximum in cles_limite_connexion(email):
+        ligne = conn.execute(
+            "SELECT window_start, request_count FROM auth_login_limits WHERE key_hash = ?",
+            (empreinte,),
+        ).fetchone()
+        if (
+            ligne
+            and datetime.fromisoformat(ligne["window_start"])
+                > maintenant - timedelta(minutes=15)
+            and ligne["request_count"] >= maximum
+        ):
+            return True
+    return False
+
+
+def enregistrer_echec_connexion(conn, email):
+    maintenant = datetime.now()
+    conn.execute("BEGIN IMMEDIATE")
+    for empreinte, _maximum in cles_limite_connexion(email):
+        ligne = conn.execute(
+            "SELECT window_start, request_count FROM auth_login_limits WHERE key_hash = ?",
+            (empreinte,),
+        ).fetchone()
+        fenetre_active = (
+            ligne
+            and datetime.fromisoformat(ligne["window_start"])
+                > maintenant - timedelta(minutes=15)
+        )
+        debut = ligne["window_start"] if fenetre_active else maintenant.isoformat()
+        nombre = ligne["request_count"] + 1 if fenetre_active else 1
+        conn.execute(
+            """
+            INSERT INTO auth_login_limits (key_hash, window_start, request_count)
+            VALUES (?, ?, ?)
+            ON CONFLICT(key_hash) DO UPDATE SET
+                window_start = excluded.window_start,
+                request_count = excluded.request_count
+            """,
+            (empreinte, debut, nombre),
+        )
+    conn.commit()
+
+
+def effacer_echecs_connexion(conn, email):
+    # Une connexion réussie réinitialise la limite propre à cette paire
+    # e-mail/IP, sans effacer le compteur anti-abus global de l’adresse IP.
+    empreinte = hash_token("login-pair:" + email + ":" + (
+        request.access_route[0] if request.access_route else request.remote_addr or "inconnue"
+    ))
+    conn.execute("DELETE FROM auth_login_limits WHERE key_hash = ?", (empreinte,))
+
+
 def envoyer_email_action(destinataire, sujet, message, chemin, token):
     if app.config.get("TESTING"):
         base_url = os.getenv(
@@ -1942,8 +2023,17 @@ def login():
 
     if not email or not password:
         return jsonify({"error": "Email et mot de passe obligatoires"}), 400
+    if len(email) > 254 or len(password) > 256:
+        return jsonify({"error": "Identifiants invalides"}), 400
 
     conn = get_db()
+    if connexion_est_limitee(conn, email):
+        conn.close()
+        return jsonify({
+            "error": "Trop de tentatives de connexion. Réessaie dans 15 minutes.",
+            "code": "login_rate_limited",
+        }), 429
+
     user = conn.execute(
         """
         SELECT id, nom, email, password_hash, date_creation, email_verified_at
@@ -1954,6 +2044,7 @@ def login():
     ).fetchone()
 
     if not user or not verify_password(password, user["password_hash"]):
+        enregistrer_echec_connexion(conn, email)
         conn.close()
         return jsonify({
             "error": "Email ou mot de passe incorrect",
@@ -1966,6 +2057,7 @@ def login():
             "code": "email_not_verified",
         }), 403
 
+    effacer_echecs_connexion(conn, email)
     token = secrets.token_urlsafe(32)
     token_hash = hash_token(token)
     date_creation = datetime.now().isoformat()
