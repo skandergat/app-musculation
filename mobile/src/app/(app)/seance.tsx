@@ -66,6 +66,9 @@ type ExerciceSeance = {
   nom: string;
   groupe_musculaire: string | null;
   categorie?: string;
+  nombre_series_prevu?: number;
+  poids_prevu?: number;
+  repetitions_prevues?: number;
 };
 
 function construireExercicesDepuisSeance(
@@ -82,7 +85,7 @@ function construireExercicesDepuisSeance(
   return [...exercicesSeance]
     .sort((a, b) => a.position - b.position)
     .map((exercice, index) => {
-      const seriesExercice = series
+      const seriesEnregistrees = series
         .filter((serie) => serie.exercice_id === exercice.exercice_id)
         .sort((a, b) => a.id - b.id)
         .map((serie, serieIndex): Serie => ({
@@ -93,21 +96,24 @@ function construireExercicesDepuisSeance(
           sauvegardee: true,
           backendId: serie.id,
         }));
+      const nombreSeriesPrevu = Math.max(1, Math.min(20, exercice.nombre_series_prevu ?? 1));
+      const seriesExercice: Serie[] = [...seriesEnregistrees];
+      while (seriesExercice.length < nombreSeriesPrevu) {
+        seriesExercice.push({
+          id: seriesExercice.length + 1,
+          poids: String(exercice.poids_prevu ?? 0),
+          reps: String(exercice.repetitions_prevues ?? 10),
+          terminee: false,
+          sauvegardee: false,
+        });
+      }
 
       return {
         id: Date.now() + index,
         backendId: exercice.exercice_id,
         nom: exercice.nom,
         muscle: exercice.groupe_musculaire ?? 'Autres',
-        series: seriesExercice.length > 0
-          ? seriesExercice
-          : [{
-              id: 1,
-              poids: '0',
-              reps: '10',
-              terminee: false,
-              sauvegardee: false,
-            }],
+        series: seriesExercice,
       };
     });
 }
@@ -378,18 +384,24 @@ export default function SeanceScreen() {
 
               const seriesFusionnees = [...exerciceLocal.series];
               exerciceServeur.series.forEach((serieServeur) => {
-                const index = seriesFusionnees.findIndex(
-                  (serieLocale) => serieLocale.backendId === serieServeur.backendId
+                const index = seriesFusionnees.findIndex((serieLocale) =>
+                  serieServeur.backendId
+                    ? serieLocale.backendId === serieServeur.backendId
+                    : !serieLocale.backendId && serieLocale.id === serieServeur.id
                 );
                 if (index >= 0) {
-                  seriesFusionnees[index] = {
-                    ...seriesFusionnees[index],
-                    poids: serieServeur.poids,
-                    reps: serieServeur.reps,
-                    terminee: true,
-                    sauvegardee: true,
-                    backendId: serieServeur.backendId,
-                  };
+                  // Le serveur prime pour les séries déjà enregistrées.
+                  // Pour les séries prévues non terminées, garder le brouillon local.
+                  if (serieServeur.backendId) {
+                    seriesFusionnees[index] = {
+                      ...seriesFusionnees[index],
+                      poids: serieServeur.poids,
+                      reps: serieServeur.reps,
+                      terminee: true,
+                      sauvegardee: true,
+                      backendId: serieServeur.backendId,
+                    };
+                  }
                 } else {
                   seriesFusionnees.push(serieServeur);
                 }
@@ -511,7 +523,7 @@ export default function SeanceScreen() {
 
     // Depuis le bouton + du catalogue, ouvrir directement la séance active
     // après que l'exercice a été ajouté côté serveur, sans afficher l'alerte.
-    if (demandeReprise) {
+    if (demandeReprise || ouverture === 'active') {
       initialisationSeanceEnCoursRef.current = true;
       const timeout = setTimeout(() => {
         void initialiserSeance(true);
