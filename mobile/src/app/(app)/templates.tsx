@@ -22,7 +22,7 @@ const templateText = {
     loadExercises: 'Impossible de charger les exercices.', addExerciseError: 'Impossible d’ajouter cet exercice.',
     removeExerciseError: 'Impossible de retirer cet exercice.', reorderError: 'Impossible de réorganiser les exercices.',
     startError: 'Impossible de démarrer la séance.', deleteError: 'Impossible de supprimer le template.',
-    error: 'Erreur', workout: 'Séance',
+    error: 'Erreur', workout: 'Séance', nameRequired: 'Saisis un nom pour ton template.',
   },
   en: {
     title: 'My templates', subtitle: 'Create workout plans. Editing a template never changes a workout already in progress.',
@@ -36,7 +36,7 @@ const templateText = {
     loadExercises: 'Unable to load exercises.', addExerciseError: 'Unable to add this exercise.',
     removeExerciseError: 'Unable to remove this exercise.', reorderError: 'Unable to reorder exercises.',
     startError: 'Unable to start the workout.', deleteError: 'Unable to delete the template.',
-    error: 'Error', workout: 'Workout',
+    error: 'Error', workout: 'Workout', nameRequired: 'Enter a name for your template.',
   },
   de: {
     title: 'Meine Vorlagen', subtitle: 'Erstelle Trainingspläne. Änderungen an einer Vorlage wirken sich nicht auf ein bereits begonnenes Training aus.',
@@ -50,7 +50,7 @@ const templateText = {
     loadExercises: 'Übungen konnten nicht geladen werden.', addExerciseError: 'Übung konnte nicht hinzugefügt werden.',
     removeExerciseError: 'Übung konnte nicht entfernt werden.', reorderError: 'Übungen konnten nicht sortiert werden.',
     startError: 'Training konnte nicht gestartet werden.', deleteError: 'Vorlage konnte nicht gelöscht werden.',
-    error: 'Fehler', workout: 'Training',
+    error: 'Fehler', workout: 'Training', nameRequired: 'Gib einen Namen für deine Vorlage ein.',
   },
   ar: {
     title: 'قوالبي', subtitle: 'أنشئ خططًا للتمرين. تعديل القالب لا يغيّر تمرينًا بدأ بالفعل.',
@@ -64,7 +64,7 @@ const templateText = {
     loadExercises: 'تعذر تحميل التمارين.', addExerciseError: 'تعذر إضافة هذا التمرين.',
     removeExerciseError: 'تعذر إزالة هذا التمرين.', reorderError: 'تعذر إعادة ترتيب التمارين.',
     startError: 'تعذر بدء التمرين.', deleteError: 'تعذر حذف القالب.',
-    error: 'خطأ', workout: 'التمرين',
+    error: 'خطأ', workout: 'التمرين', nameRequired: 'أدخل اسمًا للقالب.',
   },
 } as const;
 
@@ -131,7 +131,11 @@ export default function TemplatesScreen() {
 
   const createTemplate = async () => {
     const nom = newName.trim();
-    if (!nom || creating) return;
+    if (creating) return;
+    if (!nom) {
+      Alert.alert(copy.error, copy.nameRequired);
+      return;
+    }
     setCreating(true);
     try {
       const r = await apiFetch(API_URL + '/templates', { method:'POST', headers, body:JSON.stringify({ nom }) });
@@ -323,7 +327,7 @@ export default function TemplatesScreen() {
             maxLength={100}
             onSubmitEditing={createTemplate}
           />
-          <Pressable onPress={createTemplate} disabled={!newName.trim() || creating} style={styles.createButton}>
+          <Pressable onPress={createTemplate} disabled={creating} style={styles.createButton}>
             <Text style={styles.createText}>{creating ? '...' : copy.create}</Text>
           </Pressable>
         </View>
