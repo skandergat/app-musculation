@@ -23,6 +23,7 @@ import { API_URL, apiFetch } from '@/config/api';
 const SON_FIN_TIMER = require('../../../assets/notification-ding.wav');
 
 const TIMER_SERIE_KEY = '@app_musculation_timer_serie';
+const BROUILLON_SEANCE_KEY = '@liftely_seance_brouillon';
 let localExerciseIdSequence = 0;
 
 function createLocalExerciseId() {
@@ -151,6 +152,16 @@ export default function SeanceScreen() {
   const [minuteursTermines, setMinuteursTermines] = useState<Set<string>>(new Set());
   const timerFinAtRef = useRef<number | null>(null);
   const initialisationSeanceEnCoursRef = useRef(false);
+
+  // Conserver les séries non terminées lorsque l'écran Séance est quitté
+  // pour consulter le catalogue, puis restaurer le brouillon à la réouverture.
+  useEffect(() => {
+    if (!user?.id || !seanceId || chargement) return;
+    AsyncStorage.setItem(
+      `${BROUILLON_SEANCE_KEY}_${user.id}_${seanceId}`,
+      JSON.stringify(exercices)
+    ).catch((error) => console.error('Erreur sauvegarde brouillon séance :', error));
+  }, [exercices, seanceId, user?.id, chargement]);
 
   useEffect(() => {
     setAudioModeAsync({
@@ -352,14 +363,63 @@ export default function SeanceScreen() {
           activeData.seance.exercices ?? [],
           activeData.seance.series ?? []
         );
+        let exercicesFinaux = exercicesRestaures;
 
-        setExercices(exercicesRestaures);
+        try {
+          const cleBrouillon = `${BROUILLON_SEANCE_KEY}_${user?.id}_${activeData.seance.id}`;
+          const texteBrouillon = await AsyncStorage.getItem(cleBrouillon);
+          if (texteBrouillon) {
+            const brouillon = JSON.parse(texteBrouillon) as Exercice[];
+            exercicesFinaux = exercicesRestaures.map((exerciceServeur) => {
+              const exerciceLocal = brouillon.find(
+                (item) => item.backendId === exerciceServeur.backendId
+              );
+              if (!exerciceLocal) return exerciceServeur;
+
+              const seriesFusionnees = [...exerciceLocal.series];
+              exerciceServeur.series.forEach((serieServeur) => {
+                const index = seriesFusionnees.findIndex(
+                  (serieLocale) => serieLocale.backendId === serieServeur.backendId
+                );
+                if (index >= 0) {
+                  seriesFusionnees[index] = {
+                    ...seriesFusionnees[index],
+                    poids: serieServeur.poids,
+                    reps: serieServeur.reps,
+                    terminee: true,
+                    sauvegardee: true,
+                    backendId: serieServeur.backendId,
+                  };
+                } else {
+                  seriesFusionnees.push(serieServeur);
+                }
+              });
+
+              return {
+                ...exerciceServeur,
+                id: exerciceLocal.id,
+                series: seriesFusionnees,
+              };
+            });
+
+            const exercicesLocauxSupplementaires = brouillon.filter(
+              (local) => !exercicesFinaux.some(
+                (serveur) => serveur.backendId === local.backendId
+              )
+            );
+            exercicesFinaux = [...exercicesFinaux, ...exercicesLocauxSupplementaires];
+          }
+        } catch (error) {
+          console.error('Erreur restauration brouillon séance :', error);
+        }
+
+        setExercices(exercicesFinaux);
         setPrevious({});
         setSeanceId(activeData.seance.id);
         setTerminee(false);
 
         await Promise.all(
-          exercicesRestaures.map((exercice) => chargerPrevious(exercice))
+          exercicesFinaux.map((exercice) => chargerPrevious(exercice))
         );
       };
 
@@ -655,42 +715,6 @@ export default function SeanceScreen() {
     }
   };
 
-  const deplacerExercice = async (index: number, direction: -1 | 1) => {
-    if (!seanceId || terminee) return;
-    const targetIndex = index + direction;
-    if (targetIndex < 0 || targetIndex >= exercices.length) return;
-
-    const reordered = [...exercices];
-    [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
-
-    const exerciceIds = reordered
-      .map((item) => item.backendId)
-      .filter((id): id is number => typeof id === 'number');
-
-    if (exerciceIds.length !== reordered.length) return;
-
-    const previousOrder = exercices;
-    setExercices(reordered);
-
-    try {
-      const response = await apiFetch(
-        API_URL + '/seances/' + seanceId + '/exercices/reorder',
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: 'Bearer ' + token,
-          },
-          body: JSON.stringify({ exercice_ids: exerciceIds }),
-        }
-      );
-
-      if (!response.ok) throw new Error(t('cannotReorderExercises'));
-    } catch (error: any) {
-      setExercices(previousOrder);
-      Alert.alert(t('error'), error?.message || t('cannotReorderExercises'));
-    }
-  };
 
   const ajouterSerie = (exerciceId: number) => {
     setExercices((anciens) =>
@@ -1249,53 +1273,37 @@ export default function SeanceScreen() {
             <View
               style={[styles.exerciceCarte, dark && styles.cardDark]}
             >
-              <Text style={[styles.exercice, dark && styles.textDark]}>
-                {exerciseName(exercice.nom)}
-              </Text>
-
-              <Text style={[styles.muscle, dark && styles.mutedDark]}>
-                {muscleGroupName(exercice.muscle)}
-              </Text>
-
-              <View style={styles.actionsExercice}>
+              <View style={styles.enteteExercice}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.exercice, dark && styles.textDark]}>
+                    {exerciseName(exercice.nom)}
+                  </Text>
+                  <Text style={[styles.muscle, dark && styles.mutedDark]}>
+                    {muscleGroupName(exercice.muscle)}
+                  </Text>
+                </View>
                 <TouchableOpacity
-                  style={styles.reordonnerBouton}
+                  style={[styles.supprimerExercice, dark && styles.cardDark]}
                   disabled={terminee}
-                  onPress={() => deplacerExercice(exercices.findIndex((item) => item.id === exercice.id), -1)}
+                  accessibilityLabel={t('removeExercise')}
+                  onPress={() =>
+                    Alert.alert(
+                      t('removeExercise'),
+                      t('removeExerciseQuestion'),
+                      [
+                        { text: t('cancel'), style: 'cancel' },
+                        {
+                          text: t('delete'),
+                          style: 'destructive',
+                          onPress: () => supprimerExercice(exercice),
+                        },
+                      ]
+                    )
+                  }
                 >
-                  <Text style={styles.reordonnerTexte}>↑</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.reordonnerBouton}
-                  disabled={terminee}
-                  onPress={() => deplacerExercice(exercices.findIndex((item) => item.id === exercice.id), 1)}
-                >
-                  <Text style={styles.reordonnerTexte}>↓</Text>
+                  <Text style={styles.supprimerExerciceTexte}>×</Text>
                 </TouchableOpacity>
               </View>
-
-              <TouchableOpacity
-                style={styles.supprimerExercice}
-                disabled={terminee}
-                onPress={() =>
-                  Alert.alert(
-                    t('removeExercise'),
-                    t('removeExerciseQuestion'),
-                    [
-                      { text: t('cancel'), style: 'cancel' },
-                      {
-                        text: t('delete'),
-                        style: 'destructive',
-                        onPress: () => supprimerExercice(exercice),
-                      },
-                    ]
-                  )
-                }
-              >
-                <Text style={styles.supprimerExerciceTexte}>
-                  {t('removeExercise')}
-                </Text>
-              </TouchableOpacity>
             </View>
 
             <View style={styles.headerSeries}>
@@ -1676,34 +1684,26 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
 
-  reordonnerBouton: {
-    width: 34,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: '#F2F2F7',
+  enteteExercice: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  reordonnerTexte: {
-    color: '#0A84FF',
-    fontSize: 18,
-    fontWeight: '800',
+    gap: 12,
   },
 
   supprimerExercice: {
-    marginTop: 12,
-    alignSelf: 'flex-start',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#F2F2F7',
   },
 
   supprimerExerciceTexte: {
     color: '#FF3B30',
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 27,
+    lineHeight: 30,
+    fontWeight: '500',
   },
 
   headerSeries: {
