@@ -298,7 +298,7 @@ export default function TemplatesScreen() {
                 if (!startResponse.ok) {
                   throw new Error(startData.error ?? copy.startError);
                 }
-                router.push('/(app)/seance');
+                router.push({ pathname: '/(app)/seance', params: { ouverture: 'active' } });
               } catch (e:any) {
                 Alert.alert(copy.workout, e?.message ?? copy.startError);
               } finally {
@@ -311,7 +311,7 @@ export default function TemplatesScreen() {
       }
 
       if (!r.ok) throw new Error(data.error ?? copy.startError);
-      router.push('/(app)/seance');
+      router.push({ pathname: '/(app)/seance', params: { ouverture: 'active' } });
     } catch (e:any) {
       Alert.alert(copy.workout, e?.message ?? copy.startError);
     } finally {
