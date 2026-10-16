@@ -23,6 +23,7 @@ const templateText = {
     removeExerciseError: 'Impossible de retirer cet exercice.', reorderError: 'Impossible de réorganiser les exercices.',
     startError: 'Impossible de démarrer la séance.', deleteError: 'Impossible de supprimer le template.',
     error: 'Erreur', workout: 'Séance', nameRequired: 'Saisis un nom pour ton template.',
+    activeWorkoutQuestion: 'Une séance est déjà en cours. Si tu démarres ce modèle, la séance actuelle sera abandonnée et ses données supprimées. Continuer ?', cancelStart: 'Pas maintenant', abandonAndStart: 'Abandonner et démarrer', cancelWorkoutError: 'Impossible d’abandonner la séance actuelle.',
   },
   en: {
     title: 'My templates', subtitle: 'Create workout plans. Editing a template never changes a workout already in progress.',
@@ -37,6 +38,7 @@ const templateText = {
     removeExerciseError: 'Unable to remove this exercise.', reorderError: 'Unable to reorder exercises.',
     startError: 'Unable to start the workout.', deleteError: 'Unable to delete the template.',
     error: 'Error', workout: 'Workout', nameRequired: 'Enter a name for your template.',
+    activeWorkoutQuestion: 'A workout is already in progress. Starting this template will abandon the current workout and delete its data. Continue?', cancelStart: 'Not now', abandonAndStart: 'Abandon and start', cancelWorkoutError: 'Unable to abandon the current workout.',
   },
   de: {
     title: 'Meine Vorlagen', subtitle: 'Erstelle Trainingspläne. Änderungen an einer Vorlage wirken sich nicht auf ein bereits begonnenes Training aus.',
@@ -51,6 +53,7 @@ const templateText = {
     removeExerciseError: 'Übung konnte nicht entfernt werden.', reorderError: 'Übungen konnten nicht sortiert werden.',
     startError: 'Training konnte nicht gestartet werden.', deleteError: 'Vorlage konnte nicht gelöscht werden.',
     error: 'Fehler', workout: 'Training', nameRequired: 'Gib einen Namen für deine Vorlage ein.',
+    activeWorkoutQuestion: 'Ein Training läuft bereits. Wenn du diese Vorlage startest, wird das aktuelle Training abgebrochen und seine Daten werden gelöscht. Fortfahren?', cancelStart: 'Jetzt nicht', abandonAndStart: 'Abbrechen und starten', cancelWorkoutError: 'Das aktuelle Training konnte nicht abgebrochen werden.',
   },
   ar: {
     title: 'قوالبي', subtitle: 'أنشئ خططًا للتمرين. تعديل القالب لا يغيّر تمرينًا بدأ بالفعل.',
@@ -65,6 +68,7 @@ const templateText = {
     removeExerciseError: 'تعذر إزالة هذا التمرين.', reorderError: 'تعذر إعادة ترتيب التمارين.',
     startError: 'تعذر بدء التمرين.', deleteError: 'تعذر حذف القالب.',
     error: 'خطأ', workout: 'التمرين', nameRequired: 'أدخل اسمًا للقالب.',
+    activeWorkoutQuestion: 'يوجد تمرين جارٍ بالفعل. بدء هذا القالب سيؤدي إلى إلغاء التمرين الحالي وحذف بياناته. هل تريد المتابعة؟', cancelStart: 'ليس الآن', abandonAndStart: 'إلغاء الحالي والبدء', cancelWorkoutError: 'تعذر إلغاء التمرين الحالي.'
   },
 } as const;
 
@@ -219,8 +223,45 @@ export default function TemplatesScreen() {
     if (!selected || busy) return;
     setBusy(true);
     try {
-      const r = await apiFetch(`${API_URL}/templates/${selected.id}/start`, { method:'POST', headers });
+      const url = `${API_URL}/templates/${selected.id}/start`;
+      const r = await apiFetch(url, { method:'POST', headers });
       const data = await r.json().catch(() => ({}));
+
+      if (r.status === 409 && data.seance_id) {
+        Alert.alert(copy.workout, copy.activeWorkoutQuestion, [
+          { text: copy.cancelStart, style: 'cancel' },
+          {
+            text: copy.abandonAndStart,
+            style: 'destructive',
+            onPress: async () => {
+              setBusy(true);
+              try {
+                const cancelResponse = await apiFetch(
+                  `${API_URL}/seances/${data.seance_id}/annuler`,
+                  { method: 'POST', headers }
+                );
+                if (!cancelResponse.ok) {
+                  const cancelData = await cancelResponse.json().catch(() => ({}));
+                  throw new Error(cancelData.error ?? copy.cancelWorkoutError);
+                }
+
+                const startResponse = await apiFetch(url, { method: 'POST', headers });
+                const startData = await startResponse.json().catch(() => ({}));
+                if (!startResponse.ok) {
+                  throw new Error(startData.error ?? copy.startError);
+                }
+                router.push('/(app)/seance');
+              } catch (e:any) {
+                Alert.alert(copy.workout, e?.message ?? copy.startError);
+              } finally {
+                setBusy(false);
+              }
+            },
+          },
+        ]);
+        return;
+      }
+
       if (!r.ok) throw new Error(data.error ?? copy.startError);
       router.push('/(app)/seance');
     } catch (e:any) {
