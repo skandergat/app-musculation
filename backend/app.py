@@ -1620,6 +1620,7 @@ def connexion_est_limitee(conn, email):
 
 def enregistrer_echec_connexion(conn, email):
     maintenant = datetime.now()
+    conn.execute("BEGIN IMMEDIATE")
     for empreinte, _maximum in cles_limite_connexion(email):
         ligne = conn.execute(
             "SELECT window_start, request_count FROM auth_login_limits WHERE key_hash = ?",
