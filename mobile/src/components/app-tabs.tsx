@@ -34,9 +34,9 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Icon sf="clock.arrow.circlepath" md="history" />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="progression">
-        <NativeTabs.Trigger.Label>{t('progression')}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="chart.line.uptrend.xyaxis" md="trending_up" />
+      <NativeTabs.Trigger name="profil">
+        <NativeTabs.Trigger.Label>{t('profile')}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="person.crop.circle.fill" md="account_circle" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="parametres">
