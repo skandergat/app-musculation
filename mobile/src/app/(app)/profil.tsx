@@ -165,6 +165,7 @@ export default function ProfilScreen() {
       }
     };
     setProfileLoaded(false);
+    setProfile(EMPTY_PROFILE);
     void loadProfile();
     return () => { active = false; };
   }, [storageKey]);
