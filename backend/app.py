@@ -1569,25 +1569,81 @@ def envoyer_email_action(destinataire, sujet, message, chemin, token):
         return True
 
     base_url = os.getenv("LIFTELY_PUBLIC_BASE_URL", "").strip().rstrip("/")
-    smtp_host = os.getenv("LIFTELY_SMTP_HOST", "").strip()
     sender = os.getenv("LIFTELY_EMAIL_FROM", "").strip()
-    if (
-        not base_url.startswith("https://")
-        or not smtp_host
-        or not sender
-    ):
+    brevo_api_key = os.getenv("LIFTELY_BREVO_API_KEY", "").strip()
+
+    if not base_url.startswith("https://") or not sender:
         app.logger.error(
-            "Email action unavailable: HTTPS base URL, SMTP host, and sender are required."
+            "Email action unavailable: HTTPS base URL and sender are required."
         )
         return False
 
     url_action = base_url + chemin + "#" + urlencode({"token": token})
+    contenu = message + "\n\n" + url_action
+
+    # Brevo API uses HTTPS, which works on Render Free where outbound SMTP
+    # ports are blocked. Keep SMTP as a fallback for other hosting providers.
+    if brevo_api_key:
+        try:
+            import json
+            from urllib.request import Request, urlopen
+            from urllib.error import HTTPError, URLError
+
+            payload = {
+                "sender": {
+                    "name": os.getenv("LIFTELY_EMAIL_SENDER_NAME", "LIFTELY").strip()
+                    or "LIFTELY",
+                    "email": sender,
+                },
+                "to": [{"email": destinataire}],
+                "subject": sujet,
+                "textContent": contenu,
+            }
+            req = Request(
+                "https://api.brevo.com/v3/smtp/email",
+                data=json.dumps(payload).encode("utf-8"),
+                headers={
+                    "accept": "application/json",
+                    "api-key": brevo_api_key,
+                    "content-type": "application/json",
+                },
+                method="POST",
+            )
+            with urlopen(req, timeout=15) as response:
+                if 200 <= response.status < 300:
+                    return True
+                app.logger.error(
+                    "Brevo email API returned unexpected HTTP status %s.",
+                    response.status,
+                )
+                return False
+        except HTTPError as exc:
+            # Do not log request headers or the API key.
+            app.logger.error(
+                "Brevo email API rejected the request (HTTP %s).",
+                exc.code,
+            )
+            return False
+        except (URLError, OSError, ValueError) as exc:
+            app.logger.error(
+                "Brevo email API delivery failed: %s",
+                type(exc).__name__,
+            )
+            return False
+
+    smtp_host = os.getenv("LIFTELY_SMTP_HOST", "").strip()
+    if not smtp_host:
+        app.logger.error(
+            "Email action unavailable: configure LIFTELY_BREVO_API_KEY or SMTP."
+        )
+        return False
+
     try:
         email = EmailMessage()
         email["Subject"] = sujet
         email["From"] = sender
         email["To"] = destinataire
-        email.set_content(message + "\n\n" + url_action)
+        email.set_content(contenu)
 
         port = int(os.getenv("LIFTELY_SMTP_PORT", "587"))
         username = os.getenv("LIFTELY_SMTP_USERNAME", "").strip()
