@@ -320,7 +320,7 @@ export default function ProfilScreen() {
                 </Text>
               </View>
               <View style={[styles.track, dark && styles.trackDark]}>
-                <View style={[styles.fill, { width: goalProgress + '%', backgroundColor: dark ? '#8BD3A8' : '#23864B' }]} />
+                <View style={[styles.fill, { width: `${goalProgress}%`, backgroundColor: dark ? '#8BD3A8' : '#23864B' }]} />
               </View>
               <Text style={[styles.note, muted, rtl]}>
                 {weightLossGoal
