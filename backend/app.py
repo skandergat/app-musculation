@@ -1574,7 +1574,8 @@ def envoyer_email_action(destinataire, sujet, message, chemin, token):
 
     if not base_url.startswith("https://") or not sender:
         app.logger.error(
-            "Email action unavailable: HTTPS base URL and sender are required."
+            "Email action unavailable for %s: HTTPS base URL and sender are required.",
+            chemin,
         )
         return False
 
@@ -1611,22 +1612,30 @@ def envoyer_email_action(destinataire, sujet, message, chemin, token):
             )
             with urlopen(req, timeout=15) as response:
                 if 200 <= response.status < 300:
+                    app.logger.info(
+                        "Brevo accepted transactional email for %s (HTTP %s).",
+                        chemin,
+                        response.status,
+                    )
                     return True
                 app.logger.error(
-                    "Brevo email API returned unexpected HTTP status %s.",
+                    "Brevo returned unexpected HTTP status %s for email action %s.",
                     response.status,
+                    chemin,
                 )
                 return False
         except HTTPError as exc:
             # Do not log request headers or the API key.
             app.logger.error(
-                "Brevo email API rejected the request (HTTP %s).",
+                "Brevo rejected email action %s (HTTP %s).",
+                chemin,
                 exc.code,
             )
             return False
         except (URLError, OSError, ValueError) as exc:
             app.logger.error(
-                "Brevo email API delivery failed: %s",
+                "Brevo email action %s failed due to %s.",
+                chemin,
                 type(exc).__name__,
             )
             return False
@@ -1634,7 +1643,8 @@ def envoyer_email_action(destinataire, sujet, message, chemin, token):
     smtp_host = os.getenv("LIFTELY_SMTP_HOST", "").strip()
     if not smtp_host:
         app.logger.error(
-            "Email action unavailable: configure LIFTELY_BREVO_API_KEY or SMTP."
+            "Email action unavailable for %s: configure LIFTELY_BREVO_API_KEY or SMTP.",
+            chemin,
         )
         return False
 
@@ -1669,9 +1679,14 @@ def envoyer_email_action(destinataire, sujet, message, chemin, token):
                 if username:
                     serveur.login(username, password)
                 serveur.send_message(email)
+        app.logger.info("SMTP accepted transactional email for %s.", chemin)
         return True
-    except (OSError, smtplib.SMTPException, ValueError):
-        app.logger.exception("Email action delivery failed.")
+    except (OSError, smtplib.SMTPException, ValueError) as exc:
+        app.logger.error(
+            "SMTP email action %s failed due to %s.",
+            chemin,
+            type(exc).__name__,
+        )
         return False
 
 
