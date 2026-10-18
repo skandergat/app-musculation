@@ -140,7 +140,7 @@ export default function ProfilScreen() {
   const isArabic = lang === 'ar';
 
   const [profile, setProfile] = useState<ProfileData>(EMPTY_PROFILE);
-  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [profileLoadedFor, setProfileLoadedFor] = useState<string | null>(null);
   const [items, setItems] = useState<ProgressionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -149,23 +149,29 @@ export default function ProfilScreen() {
 
   const storageKey = 'liftely.profile.v1.' + (user?.id ?? 'local');
 
+  const profileLoaded = profileLoadedFor === storageKey;
+  const displayedProfile = profileLoaded ? profile : EMPTY_PROFILE;
+
   useEffect(() => {
     let active = true;
     const loadProfile = async () => {
+      let nextProfile = EMPTY_PROFILE;
       try {
         const saved = await AsyncStorage.getItem(storageKey);
-        if (active && saved) {
+        if (saved) {
           const parsed = JSON.parse(saved) as Partial<ProfileData>;
-          setProfile({ ...EMPTY_PROFILE, ...parsed });
+          nextProfile = { ...EMPTY_PROFILE, ...parsed };
         }
       } catch {
-        Alert.alert(t.title, 'Impossible de charger les données du profil.');
-      } finally {
-        if (active) setProfileLoaded(true);
+        if (active) {
+          Alert.alert('LIFTELY', 'Impossible de charger les données du profil.');
+        }
+      }
+      if (active) {
+        setProfile(nextProfile);
+        setProfileLoadedFor(storageKey);
       }
     };
-    setProfileLoaded(false);
-    setProfile(EMPTY_PROFILE);
     void loadProfile();
     return () => { active = false; };
   }, [storageKey]);
@@ -173,7 +179,7 @@ export default function ProfilScreen() {
   useEffect(() => {
     if (!profileLoaded) return;
     AsyncStorage.setItem(storageKey, JSON.stringify(profile)).catch(() => {
-      Alert.alert(t.title, 'Impossible de sauvegarder le profil.');
+      Alert.alert('LIFTELY', 'Impossible de sauvegarder le profil.');
     });
   }, [profile, profileLoaded, storageKey]);
 
@@ -224,10 +230,10 @@ export default function ProfilScreen() {
   ) => setProfile((previous) => ({ ...previous, [field]: value }));
 
   const n = (value: string) => Number.parseFloat(value.replace(',', '.'));
-  const start = n(profile.startWeight);
-  const current = n(profile.currentWeight);
-  const target = n(profile.targetWeight);
-  const height = n(profile.height);
+  const start = n(displayedProfile.startWeight);
+  const current = n(displayedProfile.currentWeight);
+  const target = n(displayedProfile.targetWeight);
+  const height = n(displayedProfile.height);
   const validCurrent = Number.isFinite(current) && current > 0;
   const validHeight = Number.isFinite(height) && height > 0;
   const validWeights = [start, current, target].every((value) => Number.isFinite(value) && value > 0);
@@ -252,7 +258,7 @@ export default function ProfilScreen() {
     <View style={styles.field} key={field}>
       <Text style={[styles.label, text, rtl]}>{label}</Text>
       <TextInput
-        value={profile[field]}
+        value={displayedProfile[field]}
         onChangeText={(value) => updateField(field, value)}
         keyboardType="decimal-pad"
         placeholder={placeholder}
@@ -279,8 +285,8 @@ export default function ProfilScreen() {
         <View style={card}>
           <View style={styles.avatarSection}>
             <Pressable onPress={choosePhoto} accessibilityRole="button" accessibilityLabel={t.choosePhoto} style={[styles.avatar, dark && styles.avatarDark]}>
-              {profile.photoUri
-                ? <Image source={{ uri: profile.photoUri }} style={styles.avatarImage} />
+              {displayedProfile.photoUri
+                ? <Image source={{ uri: displayedProfile.photoUri }} style={styles.avatarImage} />
                 : <Text style={styles.avatarPlaceholder}>👤</Text>}
             </Pressable>
             <Pressable onPress={choosePhoto} accessibilityRole="button">
@@ -314,7 +320,7 @@ export default function ProfilScreen() {
                 </Text>
               </View>
               <View style={[styles.track, dark && styles.trackDark]}>
-                <View style={[styles.fill, { width: goalProgress + '%', backgroundColor: dark ? '#8BD3A8' : '#23864B' }]} />
+                <View style={[styles.fill, { width: `${goalProgress}%`, backgroundColor: dark ? '#8BD3A8' : '#23864B' }]} />
               </View>
               <Text style={[styles.note, muted, rtl]}>
                 {weightLossGoal
