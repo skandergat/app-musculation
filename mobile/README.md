@@ -9,7 +9,9 @@ From the repository root:
 ```powershell
 cd mobile
 npm install
-npx expo start --clear
+npx.cmd expo start --clear
+
+If PowerShell blocks `npx.ps1`, use `npx.cmd` as shown above. Add `--tunnel` only if the phone cannot reach the PC over the local network; tunnel mode can be slower.
 ```
 
 For type checking:
@@ -40,13 +42,13 @@ The local development API listens on port 5001.
 
 ## API configuration
 
-Create `mobile/.env.local` when the backend is not using the default LAN address:
+Create `mobile/.env.local` when you need to override the API URL. The sample LAN address below is only an example: use the PC's current local IP address, and keep the phone and PC on the same network when using LAN mode:
 
 ```
 EXPO_PUBLIC_API_URL=http://192.168.100.200:5001
 ```
 
-For a production build, use an HTTPS API URL instead.
+For a production build, use an HTTPS API URL. The currently configured hosted API is `https://liftely-api.onrender.com`; requests made to it use the hosted database, not a local development database.
 
 ## Repository structure
 
