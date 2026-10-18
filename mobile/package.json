@@ -47,7 +47,8 @@
     "uuid": "^11.1.1",
     "shell-quote": "^1.12.0",
     "source-map-js": "^1.2.2",
-    "http-cache-semantics": "^4.3.0"
+    "http-cache-semantics": "^4.3.0",
+    "@expo/code-signing-certificates": "^0.0.7"
   },
   "scripts": {
     "start": "expo start",
