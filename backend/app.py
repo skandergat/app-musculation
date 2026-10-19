@@ -158,50 +158,6 @@ def get_db():
     return conn
 
 
-@app.route("/maintenance/reset-users", methods=["POST"])
-def maintenance_reset_users():
-    cle_attendue = os.getenv("LIFTELY_RESET_SECRET", "")
-    cle_fournie = request.headers.get("X-Liftely-Maintenance-Key", "")
-    if not cle_attendue or not cle_fournie or not secrets.compare_digest(
-        cle_fournie, cle_attendue
-    ):
-        return jsonify({"error": "Not found"}), 404
-
-    conn = get_db()
-    try:
-        conn.execute("BEGIN IMMEDIATE")
-        nombre_utilisateurs = conn.execute(
-            "SELECT COUNT(*) FROM users"
-        ).fetchone()[0]
-
-        conn.execute(
-            "DELETE FROM series WHERE seance_id IN "
-            "(SELECT id FROM seances WHERE user_id IN (SELECT id FROM users))"
-        )
-        conn.execute(
-            "DELETE FROM seance_exercices WHERE seance_id IN "
-            "(SELECT id FROM seances WHERE user_id IN (SELECT id FROM users))"
-        )
-        conn.execute(
-            "DELETE FROM template_exercices WHERE template_id IN "
-            "(SELECT id FROM templates WHERE user_id IN (SELECT id FROM users))"
-        )
-        conn.execute("DELETE FROM sessions")
-        conn.execute("DELETE FROM auth_action_tokens")
-        conn.execute("DELETE FROM templates WHERE user_id IN (SELECT id FROM users)")
-        conn.execute("DELETE FROM seances WHERE user_id IN (SELECT id FROM users)")
-        conn.execute("DELETE FROM users")
-        conn.execute("DELETE FROM auth_mail_limits")
-        conn.commit()
-        return jsonify({"ok": True, "users_deleted": nombre_utilisateurs}), 200
-    except Exception:
-        conn.rollback()
-        app.logger.exception("Échec de la réinitialisation administrative des comptes")
-        return jsonify({"error": "Reset failed"}), 500
-    finally:
-        conn.close()
-
-
 def entier_strict(value):
     """
     Convertit une valeur en entier sans tronquer silencieusement
