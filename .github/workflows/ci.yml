@@ -362,3 +362,29 @@ jobs:
       - name: Expo doctor
         working-directory: mobile
         run: npx expo-doctor
+
+  mobile:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install mobile dependencies
+        working-directory: mobile
+        run: npm ci
+
+      - name: Lint mobile
+        working-directory: mobile
+        run: npm run lint
+
+      - name: TypeScript check
+        working-directory: mobile
+        run: npx tsc --noEmit
