@@ -2063,11 +2063,11 @@ def demander_reinitialisation_mot_de_passe():
             ).fetchone()
 
         if not email_valide(email):
-            app.logger.info("Password reset skipped: invalid email format")
+            app.logger.warning("Password reset skipped: invalid email format")
         elif not user:
-            app.logger.info("Password reset skipped: no verified account matched")
+            app.logger.warning("Password reset skipped: no verified account matched")
         elif not autoriser_envoi_email(conn, email):
-            app.logger.info("Password reset skipped: rate limit reached")
+            app.logger.warning("Password reset skipped: rate limit reached")
             conn.rollback()
         else:
             nom = user["nom"]
@@ -2078,7 +2078,7 @@ def demander_reinitialisation_mot_de_passe():
                 timedelta(hours=PASSWORD_RESET_TTL_HOURS),
             )
             conn.commit()
-            app.logger.info("Password reset token created; attempting transactional email")
+            app.logger.warning("Password reset token created; attempting transactional email; base_url_configured=%s sender_configured=%s brevo_key_configured=%s", bool(os.getenv("LIFTELY_PUBLIC_BASE_URL", "").strip()), bool(os.getenv("LIFTELY_EMAIL_FROM", "").strip()), bool(os.getenv("LIFTELY_BREVO_API_KEY", "").strip()))
     finally:
         conn.close()
 
