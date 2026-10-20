@@ -2062,7 +2062,14 @@ def demander_reinitialisation_mot_de_passe():
                 (email,),
             ).fetchone()
 
-        if user and autoriser_envoi_email(conn, email):
+        if not email_valide(email):
+            app.logger.info("Password reset skipped: invalid email format")
+        elif not user:
+            app.logger.info("Password reset skipped: no verified account matched")
+        elif not autoriser_envoi_email(conn, email):
+            app.logger.info("Password reset skipped: rate limit reached")
+            conn.rollback()
+        else:
             nom = user["nom"]
             token = creer_token_action(
                 conn,
@@ -2071,8 +2078,7 @@ def demander_reinitialisation_mot_de_passe():
                 timedelta(hours=PASSWORD_RESET_TTL_HOURS),
             )
             conn.commit()
-        else:
-            conn.rollback()
+            app.logger.info("Password reset token created; attempting transactional email")
     finally:
         conn.close()
 
