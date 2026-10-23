@@ -22,7 +22,9 @@ const templateText = {
     loadExercises: 'Impossible de charger les exercices.', addExerciseError: 'Impossible d’ajouter cet exercice.',
     removeExerciseError: 'Impossible de retirer cet exercice.', reorderError: 'Impossible de réorganiser les exercices.',
     startError: 'Impossible de démarrer la séance.', deleteError: 'Impossible de supprimer le template.',
-    error: 'Erreur', workout: 'Séance',
+    error: 'Erreur', workout: 'Séance', nameRequired: 'Saisis un nom pour ton template.',
+    setsLabel: 'Séries', weightLabel: 'kg', repsLabel: 'Reps', saveConfigError: 'Impossible d’enregistrer les paramètres de cet exercice.',
+    activeWorkoutQuestion: 'Une séance est déjà en cours. Si tu démarres ce modèle, la séance actuelle sera abandonnée et ses données supprimées. Continuer ?', cancelStart: 'Pas maintenant', abandonAndStart: 'Abandonner et démarrer', cancelWorkoutError: 'Impossible d’abandonner la séance actuelle.',
   },
   en: {
     title: 'My templates', subtitle: 'Create workout plans. Editing a template never changes a workout already in progress.',
@@ -36,7 +38,9 @@ const templateText = {
     loadExercises: 'Unable to load exercises.', addExerciseError: 'Unable to add this exercise.',
     removeExerciseError: 'Unable to remove this exercise.', reorderError: 'Unable to reorder exercises.',
     startError: 'Unable to start the workout.', deleteError: 'Unable to delete the template.',
-    error: 'Error', workout: 'Workout',
+    error: 'Error', workout: 'Workout', nameRequired: 'Enter a name for your template.',
+    setsLabel: 'Sets', weightLabel: 'kg', repsLabel: 'Reps', saveConfigError: 'Unable to save this exercise configuration.',
+    activeWorkoutQuestion: 'A workout is already in progress. Starting this template will abandon the current workout and delete its data. Continue?', cancelStart: 'Not now', abandonAndStart: 'Abandon and start', cancelWorkoutError: 'Unable to abandon the current workout.',
   },
   de: {
     title: 'Meine Vorlagen', subtitle: 'Erstelle Trainingspläne. Änderungen an einer Vorlage wirken sich nicht auf ein bereits begonnenes Training aus.',
@@ -50,7 +54,9 @@ const templateText = {
     loadExercises: 'Übungen konnten nicht geladen werden.', addExerciseError: 'Übung konnte nicht hinzugefügt werden.',
     removeExerciseError: 'Übung konnte nicht entfernt werden.', reorderError: 'Übungen konnten nicht sortiert werden.',
     startError: 'Training konnte nicht gestartet werden.', deleteError: 'Vorlage konnte nicht gelöscht werden.',
-    error: 'Fehler', workout: 'Training',
+    error: 'Fehler', workout: 'Training', nameRequired: 'Gib einen Namen für deine Vorlage ein.',
+    setsLabel: 'Sätze', weightLabel: 'kg', repsLabel: 'Wdh.', saveConfigError: 'Die Übungseinstellungen konnten nicht gespeichert werden.',
+    activeWorkoutQuestion: 'Ein Training läuft bereits. Wenn du diese Vorlage startest, wird das aktuelle Training abgebrochen und seine Daten werden gelöscht. Fortfahren?', cancelStart: 'Jetzt nicht', abandonAndStart: 'Abbrechen und starten', cancelWorkoutError: 'Das aktuelle Training konnte nicht abgebrochen werden.',
   },
   ar: {
     title: 'قوالبي', subtitle: 'أنشئ خططًا للتمرين. تعديل القالب لا يغيّر تمرينًا بدأ بالفعل.',
@@ -64,13 +70,15 @@ const templateText = {
     loadExercises: 'تعذر تحميل التمارين.', addExerciseError: 'تعذر إضافة هذا التمرين.',
     removeExerciseError: 'تعذر إزالة هذا التمرين.', reorderError: 'تعذر إعادة ترتيب التمارين.',
     startError: 'تعذر بدء التمرين.', deleteError: 'تعذر حذف القالب.',
-    error: 'خطأ', workout: 'التمرين',
+    error: 'خطأ', workout: 'التمرين', nameRequired: 'أدخل اسمًا للقالب.',
+    setsLabel: 'مجموعات', weightLabel: 'كغ', repsLabel: 'تكرارات', saveConfigError: 'تعذر حفظ إعدادات هذا التمرين.',
+    activeWorkoutQuestion: 'يوجد تمرين جارٍ بالفعل. بدء هذا القالب سيؤدي إلى إلغاء التمرين الحالي وحذف بياناته. هل تريد المتابعة؟', cancelStart: 'ليس الآن', abandonAndStart: 'إلغاء الحالي والبدء', cancelWorkoutError: 'تعذر إلغاء التمرين الحالي.'
   },
 } as const;
 
 type Template = { id:number; nom:string; nombre_exercices:number };
 type Exercise = { id:number; nom:string; groupe_musculaire?:string|null; categorie?:string };
-type TemplateExercise = Exercise & { exercice_id:number; position:number };
+type TemplateExercise = Exercise & { exercice_id:number; position:number; nombre_series:number; poids_prevu:number; repetitions_prevues:number };
 
 export default function TemplatesScreen() {
   const { token } = useAuth();
@@ -131,7 +139,11 @@ export default function TemplatesScreen() {
 
   const createTemplate = async () => {
     const nom = newName.trim();
-    if (!nom || creating) return;
+    if (creating) return;
+    if (!nom) {
+      Alert.alert(copy.error, copy.nameRequired);
+      return;
+    }
     setCreating(true);
     try {
       const r = await apiFetch(API_URL + '/templates', { method:'POST', headers, body:JSON.stringify({ nom }) });
@@ -179,6 +191,39 @@ export default function TemplatesScreen() {
     }
   };
 
+  const updateExerciseConfig = (exerciseId:number, field:'nombre_series'|'poids_prevu'|'repetitions_prevues', value:string) => {
+    const parsed = value.trim() === '' ? 0 : Number(value.replace(',', '.'));
+    const safeValue = Number.isFinite(parsed) ? parsed : 0;
+    setTemplateExercises(current => current.map(ex => ex.exercice_id !== exerciseId ? ex : {
+      ...ex,
+      [field]: field === 'poids_prevu' ? safeValue : Math.max(0, Math.trunc(safeValue)),
+    }));
+  };
+
+  const saveExerciseConfig = async (exerciseId:number) => {
+    if (!selected) return;
+    const exercise = templateExercises.find(ex => ex.exercice_id === exerciseId);
+    if (!exercise) return;
+    const payload = {
+      nombre_series: Math.max(1, Math.min(20, Number(exercise.nombre_series) || 1)),
+      poids_prevu: Math.max(0, Math.min(1000, Number(exercise.poids_prevu) || 0)),
+      repetitions_prevues: Math.max(1, Math.min(1000, Number(exercise.repetitions_prevues) || 1)),
+    };
+    try {
+      const r = await apiFetch(`${API_URL}/templates/${selected.id}/exercices/${exerciseId}`, {
+        method: 'PUT', headers, body: JSON.stringify(payload),
+      });
+      if (!r.ok) {
+        const data = await r.json().catch(() => ({}));
+        throw new Error(data.error ?? copy.saveConfigError);
+      }
+      setTemplateExercises(current => current.map(ex => ex.exercice_id === exerciseId ? { ...ex, ...payload } : ex));
+    } catch (e:any) {
+      Alert.alert(copy.error, e?.message ?? copy.saveConfigError);
+      void openTemplate(selected);
+    }
+  };
+
   const removeExercise = async (exerciseId:number) => {
     if (!selected || busy) return;
     setBusy(true);
@@ -215,10 +260,58 @@ export default function TemplatesScreen() {
     if (!selected || busy) return;
     setBusy(true);
     try {
-      const r = await apiFetch(`${API_URL}/templates/${selected.id}/start`, { method:'POST', headers });
+      for (const ex of templateExercises) {
+        const configResponse = await apiFetch(`${API_URL}/templates/${selected.id}/exercices/${ex.exercice_id}`, {
+          method: 'PUT', headers,
+          body: JSON.stringify({
+            nombre_series: Math.max(1, Math.min(20, Number(ex.nombre_series) || 1)),
+            poids_prevu: Math.max(0, Math.min(1000, Number(ex.poids_prevu) || 0)),
+            repetitions_prevues: Math.max(1, Math.min(1000, Number(ex.repetitions_prevues) || 1)),
+          }),
+        });
+        if (!configResponse.ok) throw new Error(copy.saveConfigError);
+      }
+      const url = `${API_URL}/templates/${selected.id}/start`;
+      const r = await apiFetch(url, { method:'POST', headers });
       const data = await r.json().catch(() => ({}));
+
+      if (r.status === 409 && data.seance_id) {
+        Alert.alert(copy.workout, copy.activeWorkoutQuestion, [
+          { text: copy.cancelStart, style: 'cancel' },
+          {
+            text: copy.abandonAndStart,
+            style: 'destructive',
+            onPress: async () => {
+              setBusy(true);
+              try {
+                const cancelResponse = await apiFetch(
+                  `${API_URL}/seances/${data.seance_id}/annuler`,
+                  { method: 'POST', headers }
+                );
+                if (!cancelResponse.ok) {
+                  const cancelData = await cancelResponse.json().catch(() => ({}));
+                  throw new Error(cancelData.error ?? copy.cancelWorkoutError);
+                }
+
+                const startResponse = await apiFetch(url, { method: 'POST', headers });
+                const startData = await startResponse.json().catch(() => ({}));
+                if (!startResponse.ok) {
+                  throw new Error(startData.error ?? copy.startError);
+                }
+                router.push({ pathname: '/(app)/seance', params: { ouverture: 'active' } });
+              } catch (e:any) {
+                Alert.alert(copy.workout, e?.message ?? copy.startError);
+              } finally {
+                setBusy(false);
+              }
+            },
+          },
+        ]);
+        return;
+      }
+
       if (!r.ok) throw new Error(data.error ?? copy.startError);
-      router.push('/(app)/seance');
+      router.push({ pathname: '/(app)/seance', params: { ouverture: 'active' } });
     } catch (e:any) {
       Alert.alert(copy.workout, e?.message ?? copy.startError);
     } finally {
@@ -270,6 +363,20 @@ export default function TemplatesScreen() {
                 <View style={{flex:1}}>
                   <Text style={[styles.exerciseName, dark && styles.white]}>{exerciseName(ex.nom)}</Text>
                   {!!ex.groupe_musculaire && <Text style={[styles.muted, dark && styles.muted]}>{muscleGroupName(ex.groupe_musculaire)}</Text>}
+                  <View style={styles.configLine}>
+                    <View style={styles.configField}>
+                      <Text style={[styles.configLabel, dark && styles.muted]}>{copy.setsLabel}</Text>
+                      <TextInput value={String(ex.nombre_series ?? 3)} onChangeText={value => updateExerciseConfig(ex.exercice_id, 'nombre_series', value)} onBlur={() => { void saveExerciseConfig(ex.exercice_id); }} keyboardType="number-pad" style={[styles.configInput, dark && styles.inputDark]} maxLength={2} />
+                    </View>
+                    <View style={styles.configField}>
+                      <Text style={[styles.configLabel, dark && styles.muted]}>{copy.weightLabel}</Text>
+                      <TextInput value={String(ex.poids_prevu ?? 0)} onChangeText={value => updateExerciseConfig(ex.exercice_id, 'poids_prevu', value)} onBlur={() => { void saveExerciseConfig(ex.exercice_id); }} keyboardType="decimal-pad" style={[styles.configInput, dark && styles.inputDark]} maxLength={6} />
+                    </View>
+                    <View style={styles.configField}>
+                      <Text style={[styles.configLabel, dark && styles.muted]}>{copy.repsLabel}</Text>
+                      <TextInput value={String(ex.repetitions_prevues ?? 10)} onChangeText={value => updateExerciseConfig(ex.exercice_id, 'repetitions_prevues', value)} onBlur={() => { void saveExerciseConfig(ex.exercice_id); }} keyboardType="number-pad" style={[styles.configInput, dark && styles.inputDark]} maxLength={4} />
+                    </View>
+                  </View>
                 </View>
                 <Pressable onPress={() => moveExercise(index,-1)} disabled={index===0 || busy}><Text style={styles.action}>↑</Text></Pressable>
                 <Pressable onPress={() => moveExercise(index,1)} disabled={index===templateExercises.length-1 || busy}><Text style={styles.action}>↓</Text></Pressable>
@@ -323,7 +430,7 @@ export default function TemplatesScreen() {
             maxLength={100}
             onSubmitEditing={createTemplate}
           />
-          <Pressable onPress={createTemplate} disabled={!newName.trim() || creating} style={styles.createButton}>
+          <Pressable onPress={createTemplate} disabled={creating} style={styles.createButton}>
             <Text style={styles.createText}>{creating ? '...' : copy.create}</Text>
           </Pressable>
         </View>
@@ -370,6 +477,10 @@ const styles = StyleSheet.create({
   templateIconText:{color:'#FFF',fontSize:20,fontWeight:'900'},
   templateName:{fontSize:18,fontWeight:'700',color:'#111'},
   chevron:{fontSize:32,color:'#8A8A8E'},
+  configLine:{flexDirection:'row',gap:8,marginTop:8,alignItems:'flex-end'},
+  configField:{flex:1,minWidth:42},
+  configLabel:{fontSize:11,color:'#777',marginBottom:3},
+  configInput:{borderWidth:1,borderColor:'#D1D1D6',borderRadius:7,paddingHorizontal:7,paddingVertical:5,fontSize:13,color:'#111',minHeight:32},
   exerciseRow:{flexDirection:'row',alignItems:'center',paddingVertical:12,borderBottomWidth:1,borderBottomColor:'#E5E5EA',gap:8},
   number:{width:32,height:32,borderRadius:9,backgroundColor:'#F2F2F7',alignItems:'center',justifyContent:'center'},
   numberText:{fontSize:12,fontWeight:'700',color:'#8A8A8E'},
