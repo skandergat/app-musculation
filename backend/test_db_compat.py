@@ -1,6 +1,9 @@
 import unittest
 
-from db_compat import _replace_qmark_placeholders, _translate_sql
+try:
+    from .db_compat import _replace_qmark_placeholders, _translate_sql
+except ImportError:
+    from db_compat import _replace_qmark_placeholders, _translate_sql
 
 
 class PostgresTranslationTests(unittest.TestCase):
