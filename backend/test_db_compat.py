@@ -31,7 +31,7 @@ class PostgresTranslationTests(unittest.TestCase):
 
     def test_begin_immediate_becomes_postgres_begin(self):
         sql, params = _translate_sql("BEGIN IMMEDIATE", ())
-        self.assertEqual(sql, "SELECT 1")
+        self.assertEqual(sql, "SELECT pg_advisory_xact_lock(7210642401)")
         self.assertEqual(params, ())
 
 
