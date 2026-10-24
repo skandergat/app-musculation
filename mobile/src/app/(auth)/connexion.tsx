@@ -22,6 +22,7 @@ export default function ConnexionScreen() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [messageSuccess, setMessageSuccess] = useState(false);
@@ -102,21 +103,36 @@ export default function ConnexionScreen() {
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="email-address"
+          autoComplete="email"
         />
 
-        <TextInput
-          style={[styles.input, dark && styles.inputDark]}
-          placeholder={t("password")}
-          placeholderTextColor={dark ? '#8E8E93' : '#8A8A8E'}
-          value={password}
-          onChangeText={(value) => {
-            setPassword(value);
-            setMessage('');
-            clearAuthNotice();
-          }}
-          secureTextEntry
-          autoCapitalize="none"
-        />
+        <View style={[styles.passwordContainer, dark && styles.passwordContainerDark]}>
+          <TextInput
+            style={[styles.passwordInput, dark && styles.passwordInputDark]}
+            placeholder={t("password")}
+            placeholderTextColor={dark ? '#8E8E93' : '#8A8A8E'}
+            value={password}
+            onChangeText={(value) => {
+              setPassword(value);
+              setMessage('');
+              clearAuthNotice();
+            }}
+            secureTextEntry={!showPassword}
+            autoCapitalize="none"
+            autoComplete="current-password"
+            accessibilityLabel={t("password")}
+          />
+          <Pressable
+            style={styles.passwordVisibilityButton}
+            onPress={() => setShowPassword((visible) => !visible)}
+            accessibilityRole="button"
+            accessibilityLabel={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+            accessibilityHint="Appuyez pour afficher ou masquer le mot de passe"
+            hitSlop={8}
+          >
+            <Text style={[styles.passwordEye, dark && styles.passwordEyeDark]}>👁</Text>
+          </Pressable>
+        </View>
 
         <Pressable
           style={styles.lienMotDePasseOublie}
@@ -216,6 +232,44 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#111111',
     marginBottom: 12,
+  },
+  passwordContainer: {
+    height: 52,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingLeft: 16,
+    paddingRight: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  passwordContainerDark: {
+    backgroundColor: '#1C1C1E',
+  },
+  passwordInput: {
+    flex: 1,
+    height: 52,
+    paddingVertical: 0,
+    paddingRight: 8,
+    fontSize: 16,
+    color: '#111111',
+    outlineStyle: 'none',
+  } as any,
+  passwordInputDark: {
+    color: '#FFFFFF',
+  },
+  passwordVisibilityButton: {
+    minWidth: 40,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  passwordEye: {
+    fontSize: 19,
+    color: '#6B7280',
+  },
+  passwordEyeDark: {
+    color: '#D1D5DB',
   },
   lienMotDePasseOublie: {
     alignSelf: 'flex-end',
