@@ -1,6 +1,10 @@
 ﻿from flask import Flask, jsonify, render_template, request
 import sqlite3
-from db_compat import DBIntegrityError, get_connection
+
+try:
+    from .db_compat import DBIntegrityError, get_connection
+except ImportError:  # Exécution directe par Gunicorn depuis backend/
+    from db_compat import DBIntegrityError, get_connection
 from datetime import datetime, timedelta
 import hashlib
 import secrets
