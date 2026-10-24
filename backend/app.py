@@ -1,5 +1,10 @@
 ﻿from flask import Flask, jsonify, render_template, request
 import sqlite3
+
+try:
+    from .db_compat import DBIntegrityError, get_connection
+except ImportError:  # Exécution directe par Gunicorn depuis backend/
+    from db_compat import DBIntegrityError, get_connection
 from datetime import datetime, timedelta
 import hashlib
 import secrets
@@ -151,11 +156,7 @@ def email_valide(email):
 
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH, timeout=10)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    conn.execute("PRAGMA busy_timeout = 5000")
-    return conn
+    return get_connection(DB_PATH)
 
 
 def entier_strict(value):
@@ -241,7 +242,7 @@ def utilisateur_non_connecte():
 # ============================================================
 
 def assurer_base():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db()
     cursor = conn.cursor()
 
     # --------------------------------------------------------
@@ -1855,7 +1856,7 @@ def register():
             timedelta(hours=EMAIL_VERIFICATION_TTL_HOURS),
         )
         conn.commit()
-    except sqlite3.IntegrityError:
+    except DBIntegrityError:
         conn.rollback()
         return jsonify({
             "error": "Cette adresse email est déjà utilisée"
@@ -2657,7 +2658,7 @@ def demarrer_seance():
             ),
         )
         conn.commit()
-    except sqlite3.IntegrityError:
+    except DBIntegrityError:
         active = conn.execute(
             """
             SELECT id, date_debut
