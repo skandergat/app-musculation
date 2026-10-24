@@ -29,7 +29,10 @@ jobs:
         run: echo "LIFTELY CI sanity check"
 
       - name: Validate Python syntax
-        run: python -m py_compile backend/app.py init_db.py
+        run: python -m py_compile backend/app.py backend/db_compat.py backend/test_db_compat.py init_db.py
+
+      - name: PostgreSQL SQL compatibility unit tests
+        run: python -m unittest backend.test_db_compat
 
       - name: Account lifecycle smoke test
         run: python -m backend.account_lifecycle_smoke
