@@ -22,6 +22,8 @@ Two different local SQLite files were inspected:
 
 The two files are not interchangeable copies. The rows with matching IDs include conflicting user/account fields and conflicting workout-history references/values. In particular, matching session and series IDs do not establish that the records refer to the same real workout.
 
+A read-only check of the Supabase project's `public` schema previously returned no application tables or columns. Therefore the production project has not yet been shown to contain the LIFTELY application schema. Do not create that schema in production just to satisfy this preflight; validate schema initialization against the disposable PostgreSQL CI service and a dedicated Supabase test project first.
+
 ## Required decision before migration
 
 1. Preserve both source files as immutable backups.
