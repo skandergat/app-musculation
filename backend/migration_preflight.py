@@ -288,6 +288,16 @@ def main() -> int:
                 target_ids: dict[str, dict[Any, str]] = {}
 
                 for table in TABLES:
+                    if table not in source_tables:
+                        # Do not present a target-only table as CONTENT_MATCH:
+                        # an absent source table is a schema blocker, not an empty table.
+                        report["tables"][table] = {
+                            "source_count": None,
+                            "target_count": None,
+                            "status": "SOURCE_TABLE_MISSING",
+                        }
+                        continue
+
                     columns = postgres_table_columns(dst, args.schema, table)
                     if not columns:
                         report["tables"][table] = {
