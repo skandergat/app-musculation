@@ -393,7 +393,7 @@ def main() -> int:
                         "status": status,
                     }
 
-                    if table in ID_TABLES and "id" in source_columns.get(table, []) and "id" in columns:
+                    if (table in ID_TABLES and "id" in source_columns.get(table, [])\n                            and "id" in columns and not missing_columns):
                         source_id_index = source_columns[table].index("id")
                         source_id_map = {
                             row[source_id_index]: row_signature(row)
