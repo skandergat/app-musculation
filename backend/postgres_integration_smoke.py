@@ -1,5 +1,6 @@
 """Smoke test against a real PostgreSQL server for the optional adapter."""
 from datetime import datetime
+import secrets
 
 from backend import app as backend
 
@@ -13,6 +14,53 @@ try:
     ).fetchone()
     assert exercise is not None, "Exercise seed did not run"
     exercise_id = exercise["id"]
+
+    # Verify the PostgreSQL schema has the partial unique index and that it
+    # preserves inactive historical duplicates while rejecting active ones.
+    index = conn.execute(
+        """
+        SELECT indexdef FROM pg_indexes
+        WHERE schemaname = current_schema()
+          AND indexname = 'idx_exercices_actifs_nom_categorie'
+        """
+    ).fetchone()
+    assert index is not None and "UNIQUE INDEX" in index[0].upper(), index
+
+    unique_test_name = "__postgres_unique_smoke_" + secrets.token_hex(8) + "__"
+    conn.execute(
+        "INSERT INTO exercices (nom, groupe_musculaire, categorie, actif) "
+        "VALUES (?, ?, 'gym', 1)",
+        (unique_test_name, "Smoke test"),
+    )
+    conn.commit()
+    try:
+        conn.execute(
+            "INSERT INTO exercices (nom, groupe_musculaire, categorie, actif) "
+            "VALUES (?, ?, 'gym', 1)",
+            (unique_test_name, "Smoke test duplicate"),
+        )
+    except backend.DBIntegrityError:
+        conn.rollback()
+    else:
+        raise AssertionError("PostgreSQL accepted duplicate active exercise names")
+
+    conn.execute(
+        "INSERT INTO exercices (nom, groupe_musculaire, categorie, actif) "
+        "VALUES (?, ?, 'gym', 0)",
+        (unique_test_name, "Historical inactive duplicate"),
+    )
+    conn.commit()
+    counts = conn.execute(
+        "SELECT COUNT(*), SUM(CASE WHEN actif = 1 THEN 1 ELSE 0 END) "
+        "FROM exercices WHERE nom = ? AND categorie = 'gym'",
+        (unique_test_name,),
+    ).fetchone()
+    assert counts[0] == 2 and counts[1] == 1, counts
+    conn.execute(
+        "DELETE FROM exercices WHERE nom = ? AND categorie = 'gym'",
+        (unique_test_name,),
+    )
+    conn.commit()
 
     cursor = conn.execute(
         """
