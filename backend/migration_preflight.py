@@ -212,7 +212,6 @@ def main() -> int:
     source_rows_by_table: dict[str, list[tuple[Any, ...]]] = {}
     source_columns: dict[str, list[str]] = {}
     source_counts: dict[str, int] = {}
-    source_ids: dict[str, dict[Any, str]] = {}
     source_fks: set[tuple[str, str, str, str, str]] = set()
 
     # SQLite URI mode=ro and query_only guard against source changes.
@@ -267,13 +266,6 @@ def main() -> int:
             rows = [tuple(row[column] for column in columns) for row in source_rows]
             source_rows_by_table[table] = rows
             source_counts[table] = len(rows)
-            if table in ID_TABLES and "id" in columns:
-                id_index = columns.index("id")
-                source_ids[table] = {
-                    row[id_index]: row_signature(row)
-                    for row in rows
-                    if row[id_index] is not None
-                }
     finally:
         src.close()
 
@@ -294,7 +286,6 @@ def main() -> int:
                 target_columns: dict[str, set[str]] = {}
                 target_counts: dict[str, int] = {}
                 target_ids: dict[str, dict[Any, str]] = {}
-                target_rows_by_table: dict[str, list[tuple[Any, ...]]] = {}
 
                 for table in TABLES:
                     columns = postgres_table_columns(dst, args.schema, table)
@@ -348,7 +339,6 @@ def main() -> int:
                         ]
                     else:
                         target_rows = []
-                    target_rows_by_table[table] = target_rows
 
                     source_rows = source_rows_by_table.get(table, [])
                     comparison = compare_row_multisets(source_rows, target_rows)
@@ -393,8 +383,12 @@ def main() -> int:
                         "status": status,
                     }
 
-                    if (table in ID_TABLES and "id" in source_columns.get(table, [])
-                            and "id" in columns and not missing_columns):
+                    if (
+                        table in ID_TABLES
+                        and "id" in source_columns.get(table, [])
+                        and "id" in columns
+                        and not missing_columns
+                    ):
                         source_id_index = source_columns[table].index("id")
                         source_id_map = {
                             row[source_id_index]: row_signature(row)
