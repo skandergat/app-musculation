@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator, FlatList, Pressable, RefreshControl, SafeAreaView,
   StatusBar, StyleSheet, Text, View, TextInput,
@@ -6,7 +6,7 @@ import {
 import { useI18n } from '@/context/I18nContext';
 import { useAppColorScheme } from '@/context/ColorSchemeContext';
 import { useAuth } from '@/context/AuthContext';
-import { router } from 'expo-router';
+import { router, useNavigation } from 'expo-router';
 import { API_URL, apiFetch } from '@/config/api';
 
 type Category = 'gym' | 'calisthenics';
@@ -17,6 +17,7 @@ export default function HomeScreen() {
   const { token } = useAuth();
   const scheme = useAppColorScheme();
   const dark = scheme === 'dark';
+  const navigation = useNavigation<any>();
   const [categorieOuverte, setCategorieOuverte] = useState<Category|null>(null);
   const [exercices, setExercices] = useState<Exercice[]>([]);
   const [loading, setLoading] = useState(false);
@@ -52,6 +53,23 @@ export default function HomeScreen() {
     setRecherche('');
     setErreur(null);
   };
+
+  // Reset the inline exercise catalogue whenever the Home tab is tapped,
+  // including when Home is already selected and the catalogue is still open.
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('tabPress', () => {
+      setCategorieOuverte(null);
+      setExercices([]);
+      setRecherche('');
+      setErreur(null);
+      setExerciceInfo(null);
+      setDemarrageId(null);
+      setLoading(false);
+      setRefreshing(false);
+    });
+
+    return unsubscribe;
+  }, [navigation]);
 
   const demarrerAvecExercice = async (exercice: Exercice) => {
     if (!token || demarrageId !== null) return;
@@ -91,8 +109,11 @@ export default function HomeScreen() {
       // choisi doit être ajouté à cette séance avant d'ouvrir l'écran.
       router.push('/seance');
     } catch (error: any) {
-      setDemarrageId(null);
       setErreur(error?.message || t('cannotStartExercise'));
+    } finally {
+      // Never leave the catalogue's + buttons permanently disabled after
+      // a successful navigation or a failed request.
+      setDemarrageId(null);
     }
   };
 
