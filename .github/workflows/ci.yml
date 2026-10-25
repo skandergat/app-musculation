@@ -31,6 +31,9 @@ jobs:
       - name: Validate Python syntax
         run: python -m py_compile backend/app.py backend/migration_preflight.py backend/test_migration_preflight.py init_db.py
 
+      - name: Migration preflight comparison unit tests
+        run: python -m unittest backend.test_migration_preflight
+
       - name: Account lifecycle smoke test
         run: python -m backend.account_lifecycle_smoke
 
