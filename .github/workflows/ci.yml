@@ -43,10 +43,10 @@ jobs:
         run: echo "LIFTELY CI sanity check"
 
       - name: Validate Python syntax
-        run: python -m py_compile backend/app.py backend/db_compat.py backend/test_db_compat.py init_db.py
+        run: python -m py_compile backend/app.py backend/db_compat.py backend/test_db_compat.py backend/test_exercise_catalog_uniqueness.py init_db.py
 
       - name: PostgreSQL SQL compatibility unit tests
-        run: python -m unittest backend.test_db_compat
+        run: python -m unittest backend.test_db_compat backend.test_exercise_catalog_uniqueness
 
       - name: PostgreSQL adapter integration smoke test
         env:
