@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator, FlatList, Pressable, RefreshControl, SafeAreaView,
   StatusBar, StyleSheet, Text, View, TextInput,
@@ -6,20 +6,29 @@ import {
 import { useI18n } from '@/context/I18nContext';
 import { useAppColorScheme } from '@/context/ColorSchemeContext';
 import { useAuth } from '@/context/AuthContext';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { API_URL, apiFetch } from '@/config/api';
 
 type Category = 'gym' | 'calisthenics';
 type Exercice = { id:number; nom?:string; name?:string; groupe_musculaire?:string; categorie?:Category };
 
-export default function HomeScreen() {
+export default function ExerciseListScreen() {
   const { t, exerciseName, muscleGroupName } = useI18n();
+  const params = useLocalSearchParams<{ categorie?: string | string[] }>();
+  const categorieParam = Array.isArray(params.categorie)
+    ? params.categorie[0]
+    : params.categorie;
+  const categorieInitiale: Category | null =
+    categorieParam === 'gym' || categorieParam === 'calisthenics'
+      ? categorieParam
+      : null;
   const { token } = useAuth();
   const scheme = useAppColorScheme();
   const dark = scheme === 'dark';
-  const [categorieOuverte, setCategorieOuverte] = useState<Category|null>(null);
+  const categorieOuverte = categorieInitiale;
+  const ouvertureRef = useRef(0);
   const [exercices, setExercices] = useState<Exercice[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(categorieInitiale !== null);
   const [refreshing, setRefreshing] = useState(false);
   const [erreur, setErreur] = useState<string|null>(null);
   const [recherche, setRecherche] = useState('');
@@ -40,17 +49,21 @@ export default function HomeScreen() {
     }
   };
 
-  const ouvrirCategorie = (categorie: Category) => {
-    setCategorieOuverte(categorie);
-    setLoading(true);
-    chargerExercices(categorie);
-  };
+  useEffect(() => {
+    if (!categorieInitiale) {
+      router.replace('/(app)/(home)');
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      void chargerExercices(categorieInitiale);
+    }, 0);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categorieInitiale]);
 
   const fermerCategorie = () => {
-    setCategorieOuverte(null);
-    setExercices([]);
-    setRecherche('');
-    setErreur(null);
+    router.back();
   };
 
   const demarrerAvecExercice = async (exercice: Exercice) => {
@@ -89,7 +102,9 @@ export default function HomeScreen() {
 
       // Même lorsqu'une séance existante est réutilisée, l'exercice
       // choisi doit être ajouté à cette séance avant d'ouvrir l'écran.
-      router.push('/seance');
+      router.push({ pathname: '/(app)/seance', params: { reprendre: '1', ouverture: String(++ouvertureRef.current) } });
+      // Réactiver les boutons si l'utilisateur revient au catalogue après la séance.
+      setDemarrageId(null);
     } catch (error: any) {
       setDemarrageId(null);
       setErreur(error?.message || t('cannotStartExercise'));
@@ -224,41 +239,7 @@ export default function HomeScreen() {
     );
   }
 
-  return (
-    <SafeAreaView style={[styles.container, dark && styles.containerDark]}>
-      <StatusBar barStyle={dark ? 'light-content' : 'dark-content'} />
-      <View style={styles.contenu}>
-        <Text style={[styles.titreHome, dark && styles.textDark]}>LIFTELY</Text>
-        <Text style={[styles.sousTitreHome, dark && styles.mutedDark]}>{t('chooseWorkout')}</Text>
-
-        <Pressable style={({pressed}) => [styles.carte, pressed && styles.presse]} onPress={() => ouvrirCategorie('gym')}>
-          <View style={styles.icone}>
-            <View style={styles.halteres}>
-              <View style={styles.plateGauche}/><View style={styles.barreHalteres}/><View style={styles.plateDroite}/>
-            </View>
-          </View>
-          <View style={styles.texteCarte}>
-            <Text style={styles.titreCarte}>{t('gym')}</Text>
-            <Text style={styles.descriptionCarte}>{t('gymDescription')}</Text>
-          </View>
-          <Text style={styles.chevron}>›</Text>
-        </Pressable>
-
-        <Pressable style={({pressed}) => [styles.carte, styles.carteCalisthenics, pressed && styles.presse]} onPress={() => ouvrirCategorie('calisthenics')}>
-          <View style={styles.icone}>
-            <View style={styles.barreCalisthenics}/>
-            <View style={styles.corpsCalisthenics}/>
-            <View style={styles.brasCalisthenics}/>
-          </View>
-          <View style={styles.texteCarte}>
-            <Text style={styles.titreCarte}>{t('calisthenics')}</Text>
-            <Text style={styles.descriptionCarte}>{t('calisthenicsDescription')}</Text>
-          </View>
-          <Text style={styles.chevron}>›</Text>
-        </Pressable>
-      </View>
-    </SafeAreaView>
-  );
+  return null;
 }
 
 const styles = StyleSheet.create({

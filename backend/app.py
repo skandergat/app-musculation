@@ -497,6 +497,29 @@ def assurer_base():
         )
     """)
 
+    # Colonnes de configuration copiées depuis un template au démarrage.
+    colonnes_seance_exercices = {
+        colonne[1] for colonne in cursor.execute("PRAGMA table_info(seance_exercices)").fetchall()
+    }
+    for nom_colonne, definition in (
+        ("nombre_series_prevu", "INTEGER NOT NULL DEFAULT 1"),
+        ("poids_prevu", "REAL NOT NULL DEFAULT 0"),
+        ("repetitions_prevues", "INTEGER NOT NULL DEFAULT 10"),
+    ):
+        if nom_colonne not in colonnes_seance_exercices:
+            cursor.execute(f"ALTER TABLE seance_exercices ADD COLUMN {nom_colonne} {definition}")
+
+    colonnes_template_exercices = {
+        colonne[1] for colonne in cursor.execute("PRAGMA table_info(template_exercices)").fetchall()
+    }
+    for nom_colonne, definition in (
+        ("nombre_series", "INTEGER NOT NULL DEFAULT 3"),
+        ("poids_prevu", "REAL NOT NULL DEFAULT 0"),
+        ("repetitions_prevues", "INTEGER NOT NULL DEFAULT 10"),
+    ):
+        if nom_colonne not in colonnes_template_exercices:
+            cursor.execute(f"ALTER TABLE template_exercices ADD COLUMN {nom_colonne} {definition}")
+
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_seance_exercices_seance
         ON seance_exercices(seance_id, position)
@@ -2414,7 +2437,8 @@ def obtenir_template(template_id):
 
     exercices = conn.execute(
         """
-        SELECT te.exercice_id, te.position, e.nom, e.groupe_musculaire, e.categorie
+        SELECT te.exercice_id, te.position, te.nombre_series, te.poids_prevu,
+               te.repetitions_prevues, e.nom, e.groupe_musculaire, e.categorie
         FROM template_exercices te
         JOIN exercices e ON e.id = te.exercice_id
         WHERE te.template_id = ?
@@ -2497,11 +2521,67 @@ def ajouter_exercice_template(template_id):
         return jsonify({"error": "Cet exercice est déjà dans le template"}), 409
 
     position = conn.execute("SELECT COALESCE(MAX(position), -1) + 1 FROM template_exercices WHERE template_id = ?", (template_id,)).fetchone()[0]
-    conn.execute("INSERT INTO template_exercices (template_id, exercice_id, position) VALUES (?, ?, ?)", (template_id, exercice_id, position))
+    conn.execute(
+        """INSERT INTO template_exercices
+           (template_id, exercice_id, position, nombre_series, poids_prevu, repetitions_prevues)
+           VALUES (?, ?, ?, 3, 0, 10)""",
+        (template_id, exercice_id, position),
+    )
     conn.execute("UPDATE templates SET date_modification = ? WHERE id = ?", (datetime.now().isoformat(), template_id))
     conn.commit()
     conn.close()
     return jsonify({"status": "ok", "position": position}), 201
+
+
+@app.route("/templates/<int:template_id>/exercices/<int:exercice_id>", methods=["PUT"])
+def modifier_configuration_exercice_template(template_id, exercice_id):
+    user = get_user_from_request()
+    if not user:
+        return utilisateur_non_connecte()
+
+    data = request.get_json(silent=True) or {}
+    try:
+        nombre_series = entier_strict(data.get("nombre_series", 3))
+        repetitions_prevues = entier_strict(data.get("repetitions_prevues", 10))
+        poids_prevu = float(data.get("poids_prevu", 0))
+    except (TypeError, ValueError, OverflowError):
+        return jsonify({"error": "Configuration des séries invalide"}), 400
+
+    if not 1 <= nombre_series <= 20:
+        return jsonify({"error": "Le nombre de séries doit être compris entre 1 et 20"}), 400
+    if not 1 <= repetitions_prevues <= 1000:
+        return jsonify({"error": "Les répétitions doivent être comprises entre 1 et 1000"}), 400
+    if not math.isfinite(poids_prevu) or not 0 <= poids_prevu <= 1000:
+        return jsonify({"error": "Le poids doit être compris entre 0 et 1000"}), 400
+
+    conn = get_db()
+    template = _template_appartient_a_user(conn, template_id, user["id"])
+    if not template:
+        conn.close()
+        return jsonify({"error": "Template introuvable"}), 404
+
+    cursor = conn.execute(
+        """UPDATE template_exercices
+           SET nombre_series = ?, poids_prevu = ?, repetitions_prevues = ?
+           WHERE template_id = ? AND exercice_id = ?""",
+        (nombre_series, poids_prevu, repetitions_prevues, template_id, exercice_id),
+    )
+    if cursor.rowcount == 0:
+        conn.close()
+        return jsonify({"error": "Exercice introuvable dans ce template"}), 404
+
+    conn.execute(
+        "UPDATE templates SET date_modification = ? WHERE id = ?",
+        (datetime.now().isoformat(), template_id),
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({
+        "status": "ok",
+        "nombre_series": nombre_series,
+        "poids_prevu": poids_prevu,
+        "repetitions_prevues": repetitions_prevues,
+    })
 
 
 @app.route("/templates/<int:template_id>/exercices/<int:exercice_id>", methods=["DELETE"])
@@ -2582,9 +2662,21 @@ def demarrer_template(template_id):
     maintenant = datetime.now().isoformat()
     cursor = conn.execute("INSERT INTO seances (date_debut, user_id) VALUES (?, ?)", (maintenant, user["id"]))
     seance_id = cursor.lastrowid
-    exercices = conn.execute("SELECT exercice_id, position FROM template_exercices WHERE template_id = ? ORDER BY position, id", (template_id,)).fetchall()
+    exercices = conn.execute(
+        """SELECT exercice_id, position, nombre_series, poids_prevu, repetitions_prevues
+           FROM template_exercices WHERE template_id = ? ORDER BY position, id""",
+        (template_id,),
+    ).fetchall()
     for exercice in exercices:
-        conn.execute("INSERT INTO seance_exercices (seance_id, exercice_id, position, date_ajout) VALUES (?, ?, ?, ?)", (seance_id, exercice["exercice_id"], exercice["position"], maintenant))
+        conn.execute(
+            """INSERT INTO seance_exercices
+               (seance_id, exercice_id, position, date_ajout, nombre_series_prevu, poids_prevu, repetitions_prevues)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (
+                seance_id, exercice["exercice_id"], exercice["position"], maintenant,
+                exercice["nombre_series"], exercice["poids_prevu"], exercice["repetitions_prevues"],
+            ),
+        )
     conn.commit()
     conn.close()
     return jsonify({"seance_id": seance_id, "template_id": template_id, "nom": template["nom"], "nombre_exercices": len(exercices)}), 201
@@ -2797,6 +2889,9 @@ def seance_active():
         SELECT
             seance_exercices.exercice_id,
             seance_exercices.position,
+            seance_exercices.nombre_series_prevu,
+            seance_exercices.poids_prevu,
+            seance_exercices.repetitions_prevues,
             exercices.nom,
             exercices.groupe_musculaire,
             exercices.categorie

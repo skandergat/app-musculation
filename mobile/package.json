@@ -59,5 +59,18 @@
     "lint": "expo lint",
     "postinstall": "patch-package"
   },
+  "expo": {
+    "install": {
+      "exclude": [
+        "@expo/ui",
+        "expo",
+        "expo-asset",
+        "expo-constants",
+        "expo-linking",
+        "expo-router",
+        "expo-splash-screen"
+      ]
+    }
+  },
   "private": true
 }

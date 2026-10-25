@@ -8,7 +8,6 @@
     "scheme": "liftely",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
       "config": {
         "usesNonExemptEncryption": false
       }
