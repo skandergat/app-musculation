@@ -7,25 +7,27 @@ from urllib.parse import parse_qs, urlsplit
 
 TEMP_DIR = tempfile.TemporaryDirectory()
 DATABASE = os.path.join(TEMP_DIR.name, "legacy-and-lifecycle.db")
-os.environ["LIFTELY_DB_PATH"] = DATABASE
+USE_POSTGRES = bool(os.getenv("LIFTELY_DATABASE_URL", "").strip())
+if not USE_POSTGRES:
+    os.environ["LIFTELY_DB_PATH"] = DATABASE
 
-legacy = sqlite3.connect(DATABASE)
-legacy.execute("""
-    CREATE TABLE users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nom TEXT NOT NULL,
-        email TEXT NOT NULL UNIQUE,
-        password_hash TEXT NOT NULL,
-        date_creation TEXT NOT NULL
+    legacy = sqlite3.connect(DATABASE)
+    legacy.execute("""
+        CREATE TABLE users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nom TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            date_creation TEXT NOT NULL
+        )
+    """)
+    legacy.execute(
+        "INSERT INTO users (nom, email, password_hash, date_creation) "
+        "VALUES (?, ?, ?, ?)",
+        ("Legacy user", "legacy@example.test", "legacy-hash", "2020-01-01T00:00:00"),
     )
-""")
-legacy.execute(
-    "INSERT INTO users (nom, email, password_hash, date_creation) "
-    "VALUES (?, ?, ?, ?)",
-    ("Legacy user", "legacy@example.test", "legacy-hash", "2020-01-01T00:00:00"),
-)
-legacy.commit()
-legacy.close()
+    legacy.commit()
+    legacy.close()
 
 from backend import app as backend  # noqa: E402
 
@@ -46,7 +48,7 @@ def token_for(subject: str, email: str) -> str:
 
 
 def assert_account_rows_removed(email: str) -> None:
-    conn = sqlite3.connect(DATABASE)
+    conn = backend.get_db()
     user_id = conn.execute(
         "SELECT id FROM users WHERE email = ?", (email,)
     ).fetchone()
@@ -70,13 +72,14 @@ def assert_account_rows_removed(email: str) -> None:
     conn.close()
 
 
-# Existing users are migrated as verified so deployment does not lock them out.
-conn = backend.get_db()
-legacy_user = conn.execute(
-    "SELECT email_verified_at FROM users WHERE email = 'legacy@example.test'"
-).fetchone()
-assert legacy_user and legacy_user["email_verified_at"] == "2020-01-01T00:00:00"
-conn.close()
+# Existing SQLite users are migrated as verified so deployment does not lock them out.
+if not USE_POSTGRES:
+    conn = backend.get_db()
+    legacy_user = conn.execute(
+        "SELECT email_verified_at FROM users WHERE email = 'legacy@example.test'"
+    ).fetchone()
+    assert legacy_user and legacy_user["email_verified_at"] == "2020-01-01T00:00:00"
+    conn.close()
 
 # Public legal and account-deletion pages must load without authentication.
 privacy = client.get("/privacy")

@@ -1,5 +1,10 @@
 ﻿from flask import Flask, jsonify, render_template, request
 import sqlite3
+
+try:
+    from .db_compat import DBIntegrityError, get_connection
+except ImportError:  # Exécution directe par Gunicorn depuis backend/
+    from db_compat import DBIntegrityError, get_connection
 from datetime import datetime, timedelta
 import hashlib
 import secrets
@@ -151,11 +156,7 @@ def email_valide(email):
 
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH, timeout=10)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    conn.execute("PRAGMA busy_timeout = 5000")
-    return conn
+    return get_connection(DB_PATH)
 
 
 def entier_strict(value):
@@ -241,7 +242,11 @@ def utilisateur_non_connecte():
 # ============================================================
 
 def assurer_base():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db()
+    # Serialise l'initialisation du schéma et du catalogue entre workers.
+    # SQLite prend un verrou d'écriture; l'adaptateur PostgreSQL utilise un
+    # verrou advisory transactionnel. La transaction est validée plus bas.
+    conn.execute("BEGIN IMMEDIATE")
     cursor = conn.cursor()
 
     # --------------------------------------------------------
@@ -1416,6 +1421,15 @@ def assurer_base():
     # pour l'historique, mais seules les lignes du catalogue canonique sont actives.
     cursor.execute("UPDATE exercices SET actif = 0")
 
+    # Unicité du catalogue actif, sans supprimer les anciennes lignes référencées
+    # par les historiques. Les doublons inactifs restent conservés; la boucle
+    # ci-dessous ne réactive qu'une ligne par nom/catégorie.
+    cursor.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_exercices_actifs_nom_categorie
+        ON exercices(nom, categorie)
+        WHERE actif = 1
+    """)
+
     for nom, groupe in exercices_gym:
         existe = cursor.execute(
             "SELECT id FROM exercices WHERE nom = ? AND categorie = 'gym'",
@@ -1855,7 +1869,7 @@ def register():
             timedelta(hours=EMAIL_VERIFICATION_TTL_HOURS),
         )
         conn.commit()
-    except sqlite3.IntegrityError:
+    except DBIntegrityError:
         conn.rollback()
         return jsonify({
             "error": "Cette adresse email est déjà utilisée"
@@ -2657,7 +2671,7 @@ def demarrer_seance():
             ),
         )
         conn.commit()
-    except sqlite3.IntegrityError:
+    except DBIntegrityError:
         active = conn.execute(
             """
             SELECT id, date_debut
