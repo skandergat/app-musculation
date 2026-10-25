@@ -53,7 +53,12 @@ jobs:
           LIFTELY_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/liftely_test
         run: python -m backend.postgres_integration_smoke
 
-      - name: Account lifecycle smoke test
+      - name: Account lifecycle smoke test (PostgreSQL)
+        env:
+          LIFTELY_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/liftely_test
+        run: python -m backend.account_lifecycle_smoke
+
+      - name: Account lifecycle smoke test (SQLite compatibility)
         run: python -m backend.account_lifecycle_smoke
 
       - name: Backend smoke test
