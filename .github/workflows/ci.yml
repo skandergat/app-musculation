@@ -29,7 +29,7 @@ jobs:
         run: echo "LIFTELY CI sanity check"
 
       - name: Validate Python syntax
-        run: python -m py_compile backend/app.py init_db.py
+        run: python -m py_compile backend/app.py backend/migration_preflight.py init_db.py
 
       - name: Account lifecycle smoke test
         run: python -m backend.account_lifecycle_smoke
