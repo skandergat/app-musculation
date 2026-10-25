@@ -227,7 +227,7 @@ const translations: Record<Language, Dictionary> = {
     sessionDetails: 'تفاصيل التمرين', noCompletedWorkouts: 'لا توجد تمارين مكتملة حتى الآن.',
     durationMinutes: 'د', exercisesLabel: 'تمارين', setsLabel: 'مجموعات',
     endOfWorkout: 'نهاية التمرين', seeDetails: 'عرض التفاصيل', other: 'آخر', others: 'أخرى',
-    otherExercises: 'تمارين أخرى', exerciseCount: 'تمارين', setCount: 'مجموعة', setsCount: 'مجموعات',
+    otherExercises: 'تمارين أخرى', exerciseCount: 'تمرين', exercisesCount: 'تمارين', setCount: 'مجموعة', setsCount: 'مجموعات',
   },
 
   de: {
