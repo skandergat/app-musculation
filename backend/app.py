@@ -243,6 +243,10 @@ def utilisateur_non_connecte():
 
 def assurer_base():
     conn = get_db()
+    # Serialise l'initialisation du schéma et du catalogue entre workers.
+    # SQLite prend un verrou d'écriture; l'adaptateur PostgreSQL utilise un
+    # verrou advisory transactionnel. La transaction est validée plus bas.
+    conn.execute("BEGIN IMMEDIATE")
     cursor = conn.cursor()
 
     # --------------------------------------------------------
@@ -1416,6 +1420,15 @@ def assurer_base():
     # Synchronisation du catalogue : les lignes historiques restent disponibles
     # pour l'historique, mais seules les lignes du catalogue canonique sont actives.
     cursor.execute("UPDATE exercices SET actif = 0")
+
+    # Unicité du catalogue actif, sans supprimer les anciennes lignes référencées
+    # par les historiques. Les doublons inactifs restent conservés; la boucle
+    # ci-dessous ne réactive qu'une ligne par nom/catégorie.
+    cursor.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_exercices_actifs_nom_categorie
+        ON exercices(nom, categorie)
+        WHERE actif = 1
+    """)
 
     for nom, groupe in exercices_gym:
         existe = cursor.execute(
