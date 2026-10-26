@@ -11,7 +11,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import shutil
 import sqlite3
 import sys
 from pathlib import Path
@@ -121,19 +120,30 @@ def validate_database(connection: sqlite3.Connection) -> None:
 
 
 def reset_copy(source_path: Path, output_path: Path) -> None:
-    if output_path.exists():
+    # Exclusive creation closes the exists-check race: a pre-existing output
+    # can never be overwritten, even if another process creates it concurrently.
+    try:
+        with output_path.open("xb"):
+            pass
+    except FileExistsError as exc:
         raise RuntimeError(
             f"Le fichier de sortie existe déjà : {output_path}. "
             "Aucun écrasement n'est autorisé."
-        )
+        ) from exc
 
-    shutil.copy2(source_path, output_path)
-    connection = sqlite3.connect(output_path)
-    connection.row_factory = sqlite3.Row
-    connection.execute("PRAGMA foreign_keys = ON")
-    connection.execute("PRAGMA busy_timeout = 5000")
-
+    source_connection = None
+    connection = None
+    succeeded = False
     try:
+        # SQLite's backup API makes a consistent snapshot, including committed
+        # changes that may still reside in a WAL file. A raw file copy would not.
+        source_connection = connect_read_only(source_path)
+        connection = sqlite3.connect(output_path)
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA foreign_keys = ON")
+        connection.execute("PRAGMA busy_timeout = 5000")
+        source_connection.backup(connection)
+
         validate_schema(connection)
         validate_database(connection)
         schema_before = schema_snapshot(connection)
@@ -177,11 +187,21 @@ def reset_copy(source_path: Path, output_path: Path) -> None:
             print(f"  {table}: {before[table]} -> {remaining[table]}")
         print("Schéma et index : inchangés.")
         print("Intégrité SQLite : ok ; erreurs de clés étrangères : 0.")
-    except Exception:
-        connection.rollback()
-        raise
+        succeeded = True
     finally:
-        connection.close()
+        if connection is not None:
+            if not succeeded:
+                connection.rollback()
+            connection.close()
+        if source_connection is not None:
+            source_connection.close()
+        # The output was exclusively created by this run, so it is safe to
+        # remove it if the backup or validation failed.
+        if not succeeded:
+            try:
+                output_path.unlink(missing_ok=True)
+            except OSError:
+                pass
 
 
 def main() -> int:
