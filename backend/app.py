@@ -1,6 +1,9 @@
 ﻿from flask import Flask, jsonify, render_template, request
 import sqlite3
-from db_compat import POSTGRES_ENABLED, INTEGRITY_ERRORS, connect_database
+try:
+    from .db_compat import POSTGRES_ENABLED, INTEGRITY_ERRORS, connect_database
+except ImportError:  # lancement direct: python backend/app.py / gunicorn app:app
+    from db_compat import POSTGRES_ENABLED, INTEGRITY_ERRORS, connect_database
 from datetime import datetime, timedelta
 import hashlib
 import secrets
