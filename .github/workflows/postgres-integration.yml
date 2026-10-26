@@ -43,3 +43,5 @@ jobs:
         run: python -m unittest backend.test_migration_preflight
       - name: Test PostgreSQL adapter against real PostgreSQL
         run: python -m backend.postgres_integration_smoke
+      - name: Test full account and workout lifecycle against PostgreSQL
+        run: python -m backend.account_lifecycle_smoke
