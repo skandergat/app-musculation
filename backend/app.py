@@ -158,6 +158,21 @@ def get_db():
     return conn
 
 
+@app.route("/health", methods=["GET"])
+def health_check():
+    """Health endpoint for the hosting platform; do not expose internal details."""
+    conn = get_db()
+    try:
+        conn.execute("SELECT 1").fetchone()
+    except sqlite3.Error:
+        app.logger.exception("Health check database probe failed")
+        return jsonify({"status": "unhealthy"}), 503
+    finally:
+        conn.close()
+
+    return jsonify({"status": "ok"}), 200
+
+
 def entier_strict(value):
     """
     Convertit une valeur en entier sans tronquer silencieusement
