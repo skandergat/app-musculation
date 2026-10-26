@@ -4,6 +4,7 @@ from __future__ import annotations
 import sqlite3
 import tempfile
 import unittest
+from contextlib import closing
 from pathlib import Path
 
 from scripts import reset_liftely_user_data_copy as reset
@@ -147,7 +148,7 @@ class ResetUserDataCopyTests(unittest.TestCase):
 
         reset.reset_copy(self.source, self.output)
 
-        with reset.connect_read_only(self.output) as copied:
+        with closing(reset.connect_read_only(self.output)) as copied:
             self.assertEqual(reset.schema_snapshot(copied), source_schema)
             self.assertEqual(reset.exercises_fingerprint(copied), source_fingerprint)
             self.assertEqual(copied.execute("SELECT COUNT(*) FROM exercices").fetchone()[0], 1)
@@ -166,8 +167,9 @@ class ResetUserDataCopyTests(unittest.TestCase):
 
     def test_failed_validation_removes_incomplete_output(self) -> None:
         invalid_source = self.root / "invalid.db"
-        with sqlite3.connect(invalid_source) as connection:
+        with closing(sqlite3.connect(invalid_source)) as connection:
             connection.execute("CREATE TABLE unrelated (id INTEGER PRIMARY KEY)")
+            connection.commit()
 
         invalid_output = self.root / "invalid-output.db"
         with self.assertRaisesRegex(RuntimeError, "Tables requises absentes"):
@@ -187,7 +189,7 @@ class ResetUserDataCopyTests(unittest.TestCase):
         self.assertTrue(wal_path.exists())
         reset.reset_copy(self.source, self.output)
 
-        with reset.connect_read_only(self.output) as copied:
+        with closing(reset.connect_read_only(self.output)) as copied:
             names = [
                 row[0] for row in copied.execute(
                     "SELECT nom FROM exercices ORDER BY id"
