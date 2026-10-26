@@ -1,5 +1,6 @@
 ﻿from flask import Flask, jsonify, render_template, request
 import sqlite3
+from db_compat import POSTGRES_ENABLED, INTEGRITY_ERRORS, connect_database
 from datetime import datetime, timedelta
 import hashlib
 import secrets
@@ -53,7 +54,8 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = os.getenv("LIFTELY_DB_PATH", str(BASE_DIR / "musculation.db"))
-Path(DB_PATH).expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)
+if not POSTGRES_ENABLED:
+    Path(DB_PATH).expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)
 SESSION_DURATION_DAYS = 30
 EMAIL_VERIFICATION_TTL_HOURS = 48
 PASSWORD_RESET_TTL_HOURS = 1
@@ -151,11 +153,7 @@ def email_valide(email):
 
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH, timeout=10)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    conn.execute("PRAGMA busy_timeout = 5000")
-    return conn
+    return connect_database(DB_PATH, timeout=10)
 
 
 def entier_strict(value):
@@ -241,6 +239,31 @@ def utilisateur_non_connecte():
 # ============================================================
 
 def assurer_base():
+    if POSTGRES_ENABLED:
+        # PostgreSQL schema is provisioned explicitly by postgres_schema.sql.
+        # Never run SQLite DDL/migrations or seed the catalogue on production.
+        conn = get_db()
+        required = {
+            "users", "exercices", "sessions", "auth_action_tokens",
+            "auth_mail_limits", "templates", "template_exercices",
+            "seances", "series", "seance_exercices",
+        }
+        found = {
+            row["table_name"]
+            for row in conn.execute(
+                "SELECT table_name FROM information_schema.tables "
+                "WHERE table_schema = current_schema()"
+            ).fetchall()
+        }
+        missing = sorted(required - found)
+        conn.close()
+        if missing:
+            raise RuntimeError(
+                "Schéma PostgreSQL incomplet. Exécuter la migration documentée; "
+                "tables manquantes: " + ", ".join(missing)
+            )
+        return
+
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
@@ -1855,7 +1878,7 @@ def register():
             timedelta(hours=EMAIL_VERIFICATION_TTL_HOURS),
         )
         conn.commit()
-    except sqlite3.IntegrityError:
+    except INTEGRITY_ERRORS:
         conn.rollback()
         return jsonify({
             "error": "Cette adresse email est déjà utilisée"
@@ -2657,7 +2680,7 @@ def demarrer_seance():
             ),
         )
         conn.commit()
-    except sqlite3.IntegrityError:
+    except INTEGRITY_ERRORS:
         active = conn.execute(
             """
             SELECT id, date_debut
