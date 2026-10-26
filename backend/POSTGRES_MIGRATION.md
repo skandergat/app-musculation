@@ -2,13 +2,14 @@
 
 ## État
 
-Cette branche prépare le schéma PostgreSQL et un importeur contrôlé. **Elle ne bascule pas encore l'application Flask vers PostgreSQL** : `backend/app.py` utilise toujours l'API SQLite (placeholders `?`, `lastrowid`, `PRAGMA`, initialisation SQLite). Ne configure pas encore Render pour pointer vers Supabase et ne fusionne pas cette branche en production avant l'adaptation et les tests du backend.
+Cette branche prépare le schéma PostgreSQL et un importeur contrôlé. L'adaptateur utilise `LIFTELY_DATABASE_URL` comme variable canonique (les alias `SUPABASE_DB_URL` et `DATABASE_URL` restent temporairement compatibles). **Elle ne bascule pas encore l'application Flask vers PostgreSQL** : `backend/app.py` utilise toujours l'API SQLite (placeholders `?`, `lastrowid`, `PRAGMA`, initialisation SQLite). Ne configure pas encore Render pour pointer vers Supabase et ne fusionne pas cette branche en production avant l'adaptation et les tests du backend.
 
 ## Fichiers
 
 - `postgres_schema.sql` : tables, clés étrangères et index PostgreSQL.
 - `migrate_sqlite_to_postgres.py` : import transactionnel de la base de staging vers une cible PostgreSQL vide.
 - `requirements.txt` : ajoute Psycopg 3.
+- `postgres_integration_smoke.py` et `.github/workflows/postgres-integration.yml` : tests contre un service PostgreSQL isolé en CI.
 
 ## Conditions de sécurité
 
@@ -24,7 +25,7 @@ Cette branche prépare le schéma PostgreSQL et un importeur contrôlé. **Elle 
 Dans PowerShell, depuis le dossier du projet, avec Python et les dépendances backend installées :
 
 ```powershell
-$env:SUPABASE_DB_URL = Read-Host "URI PostgreSQL Supabase (saisie masquée recommandée via un gestionnaire de secrets)"
+$env:LIFTELY_DATABASE_URL = Read-Host "URI PostgreSQL Supabase (saisie masquée recommandée via un gestionnaire de secrets)"
 python -m pip install -r .\backend\requirements.txt
 python .\backend\migrate_sqlite_to_postgres.py --source .\migration_staging.db --create-schema
 ```
@@ -36,5 +37,6 @@ La saisie via `Read-Host` n'est pas masquée dans PowerShell ; privilégie un ge
 - Adapter l'accès DB de `backend/app.py` à Psycopg, notamment paramètres SQL, récupération des identifiants, gestion des transactions et exceptions d'intégrité.
 - Séparer l'initialisation PostgreSQL de l'initialisation SQLite.
 - Ajouter des tests d'intégration sur une base PostgreSQL isolée : inscription/connexion, vérification et réinitialisation d'e-mail, séances, séries, templates, suppression de compte et erreurs de contraintes.
-- Vérifier les comptages et les séquences après import.
+- Vérifier le contenu complet de chaque table, les comptages et les séquences après import.
+- Confirmer l'absence de doublons actifs `(nom, categorie)` dans le catalogue avant l'application de l'index unique.
 - Configurer Render uniquement après réussite de ces tests, puis tester les routes et l'application.
