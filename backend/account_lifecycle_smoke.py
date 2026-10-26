@@ -32,6 +32,11 @@ from backend import app as backend  # noqa: E402
 backend.app.config["TESTING"] = True
 client = backend.app.test_client()
 
+# The hosting-platform health endpoint must prove the database is reachable.
+health = client.get("/health")
+assert health.status_code == 200, health.get_data(as_text=True)
+assert health.get_json() == {"status": "ok"}
+
 
 def token_for(subject: str, email: str) -> str:
     matches = [
