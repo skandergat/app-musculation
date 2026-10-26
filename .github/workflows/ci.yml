@@ -29,7 +29,10 @@ jobs:
         run: echo "LIFTELY CI sanity check"
 
       - name: Validate Python syntax
-        run: python -m py_compile backend/app.py init_db.py
+        run: python -m py_compile backend/app.py init_db.py scripts/reset_liftely_user_data_copy.py scripts/test_reset_liftely_user_data_copy.py
+
+      - name: SQLite reset-copy regression tests
+        run: python -m unittest scripts.test_reset_liftely_user_data_copy
 
       - name: Account lifecycle smoke test
         run: python -m backend.account_lifecycle_smoke
