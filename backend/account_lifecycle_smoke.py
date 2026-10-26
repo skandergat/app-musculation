@@ -8,24 +8,47 @@ from urllib.parse import parse_qs, urlsplit
 TEMP_DIR = tempfile.TemporaryDirectory()
 DATABASE = os.path.join(TEMP_DIR.name, "legacy-and-lifecycle.db")
 os.environ["LIFTELY_DB_PATH"] = DATABASE
-
-legacy = sqlite3.connect(DATABASE)
-legacy.execute("""
-    CREATE TABLE users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nom TEXT NOT NULL,
-        email TEXT NOT NULL UNIQUE,
-        password_hash TEXT NOT NULL,
-        date_creation TEXT NOT NULL
-    )
-""")
-legacy.execute(
-    "INSERT INTO users (nom, email, password_hash, date_creation) "
-    "VALUES (?, ?, ?, ?)",
-    ("Legacy user", "legacy@example.test", "legacy-hash", "2020-01-01T00:00:00"),
+POSTGRES_DSN = (
+    os.getenv("LIFTELY_DATABASE_URL", "").strip()
+    or os.getenv("SUPABASE_DB_URL", "").strip()
+    or os.getenv("DATABASE_URL", "").strip()
 )
-legacy.commit()
-legacy.close()
+USE_POSTGRES = bool(POSTGRES_DSN)
+
+if not USE_POSTGRES:
+    legacy = sqlite3.connect(DATABASE)
+    legacy.execute("""
+        CREATE TABLE users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nom TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            date_creation TEXT NOT NULL
+        )
+    """)
+    legacy.execute(
+        "INSERT INTO users (nom, email, password_hash, date_creation) "
+        "VALUES (?, ?, ?, ?)",
+        ("Legacy user", "legacy@example.test", "legacy-hash", "2020-01-01T00:00:00"),
+    )
+    legacy.commit()
+    legacy.close()
+else:
+    # CI only: seed a legacy account and one catalogue exercise in the isolated
+    # PostgreSQL service before importing the Flask module.
+    import psycopg
+    with psycopg.connect(POSTGRES_DSN, connect_timeout=10) as legacy:
+        legacy.execute(
+            "INSERT INTO users (nom, email, password_hash, date_creation, email_verified_at) "
+            "VALUES (%s, %s, %s, %s, %s)",
+            ("Legacy user", "legacy@example.test", "legacy-hash",
+             "2020-01-01T00:00:00", "2020-01-01T00:00:00"),
+        )
+        legacy.execute(
+            "INSERT INTO exercices (nom, groupe_musculaire, categorie, actif) "
+            "VALUES (%s, %s, %s, %s)",
+            ("CI Integration Exercise", "Test", "gym", 1),
+        )
 
 from backend import app as backend  # noqa: E402
 
@@ -46,7 +69,7 @@ def token_for(subject: str, email: str) -> str:
 
 
 def assert_account_rows_removed(email: str) -> None:
-    conn = sqlite3.connect(DATABASE)
+    conn = backend.get_db()
     user_id = conn.execute(
         "SELECT id FROM users WHERE email = ?", (email,)
     ).fetchone()
