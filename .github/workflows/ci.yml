@@ -345,6 +345,10 @@ jobs:
           npm audit --json > audit-report.json || true
           node scripts/audit-summary.cjs
 
+      - name: Translation key parity
+        working-directory: mobile
+        run: npm run check:translations
+
       - name: ESLint
         working-directory: mobile
         run: npm run lint
