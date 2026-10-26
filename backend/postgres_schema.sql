@@ -19,6 +19,10 @@ CREATE TABLE IF NOT EXISTS exercices (
     actif INTEGER NOT NULL DEFAULT 1
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_exercices_actifs_nom_categorie
+    ON exercices(nom, categorie)
+    WHERE actif = 1;
+
 CREATE TABLE IF NOT EXISTS sessions (
     token_hash TEXT PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id),
