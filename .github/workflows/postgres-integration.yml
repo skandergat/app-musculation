@@ -39,5 +39,7 @@ jobs:
         run: psql "$LIFTELY_DATABASE_URL" -v ON_ERROR_STOP=1 -f backend/postgres_schema.sql
       - name: Compile backend and migration scripts
         run: python -m py_compile backend/app.py backend/db_compat.py backend/migrate_sqlite_to_postgres.py
+      - name: Unit-test read-only migration preflight
+        run: python -m unittest backend.test_migration_preflight
       - name: Test PostgreSQL adapter against real PostgreSQL
         run: python -m backend.postgres_integration_smoke
