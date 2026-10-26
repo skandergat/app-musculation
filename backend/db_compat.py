@@ -1,84 +1,231 @@
-"""Small SQLite/PostgreSQL compatibility layer for LIFTELY."""
+"""Compatibilité SQLite/PostgreSQL pour LIFTELY.
+
+SQLite reste le moteur par défaut. PostgreSQL est activé uniquement lorsqu'une
+variable de connexion est définie. LIFTELY_DATABASE_URL est la variable
+canonique ; les deux anciens noms restent acceptés pendant la migration.
+"""
 from __future__ import annotations
-import os, re, sqlite3
+
+import os
+import re
+import sqlite3
 from collections.abc import Mapping
+
 import psycopg
 from psycopg.rows import dict_row
 from psycopg.pq import TransactionStatus
 
-POSTGRES_DSN = os.environ.get("SUPABASE_DB_URL", "").strip() or os.environ.get("DATABASE_URL", "").strip()
+POSTGRES_DSN = (
+    os.environ.get("LIFTELY_DATABASE_URL", "").strip()
+    or os.environ.get("SUPABASE_DB_URL", "").strip()
+    or os.environ.get("DATABASE_URL", "").strip()
+)
 POSTGRES_ENABLED = bool(POSTGRES_DSN)
-INTEGRITY_ERRORS = (psycopg.IntegrityError,) if POSTGRES_ENABLED else (sqlite3.IntegrityError,)
-_ID_TABLES = {"users", "exercices", "templates", "template_exercices", "seances", "series", "seance_exercices"}
+INTEGRITY_ERRORS = (
+    (psycopg.IntegrityError,) if POSTGRES_ENABLED else (sqlite3.IntegrityError,)
+)
+_ID_TABLES = {
+    "users", "exercices", "templates", "template_exercices",
+    "seances", "series", "seance_exercices",
+}
+
 
 class HybridRow(dict):
+    """Ligne compatible avec row['id'] et row[0]."""
     def __init__(self, value):
         super().__init__(value)
         self._keys = tuple(value.keys())
+        self._values = tuple(value.values())
+
     def __getitem__(self, key):
         if isinstance(key, int):
-            key = self._keys[key]
+            return self._values[key]
         return super().__getitem__(key)
 
-def _row(value):
-    if value is None or isinstance(value, HybridRow):
-        return value
-    return HybridRow(value) if isinstance(value, Mapping) else value
+
+def _replace_qmark_placeholders(statement: str) -> str:
+    """Remplace les ? SQL hors chaînes/commentaires par %s."""
+    out = []
+    i = 0
+    quote = None
+    while i < len(statement):
+        ch = statement[i]
+        nxt = statement[i + 1] if i + 1 < len(statement) else ""
+        if quote:
+            out.append(ch)
+            if ch == quote:
+                if nxt == quote:
+                    out.append(nxt)
+                    i += 1
+                else:
+                    quote = None
+            elif ch == "\\" and quote == "'":
+                if nxt:
+                    out.append(nxt)
+                    i += 1
+        elif ch == "-" and nxt == "-":
+            end = statement.find("\n", i)
+            if end == -1:
+                out.append(statement[i:])
+                break
+            out.append(statement[i:end + 1])
+            i = end
+        elif ch == "/" and nxt == "*":
+            end = statement.find("*/", i + 2)
+            if end == -1:
+                out.append(statement[i:])
+                break
+            out.append(statement[i:end + 2])
+            i = end + 1
+        elif ch in ("'", '"'):
+            quote = ch
+            out.append(ch)
+        elif ch == "?":
+            out.append("%s")
+        else:
+            out.append(ch)
+        i += 1
+    return "".join(out)
+
+
+def _translate_sql(statement: str, params):
+    pragma = re.fullmatch(
+        r"\s*PRAGMA\s+table_info\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)\s*;?\s*",
+        statement, re.IGNORECASE,
+    )
+    if pragma:
+        table = pragma.group(1).lower()
+        translated = """
+            SELECT (ordinal_position - 1) AS cid,
+                   column_name AS name,
+                   data_type AS type,
+                   CASE WHEN is_nullable = 'NO' THEN 1 ELSE 0 END AS notnull,
+                   column_default AS dflt_value,
+                   CASE WHEN column_name = (
+                       SELECT kcu.column_name
+                       FROM information_schema.table_constraints tc
+                       JOIN information_schema.key_column_usage kcu
+                         ON tc.constraint_name = kcu.constraint_name
+                        AND tc.table_schema = kcu.table_schema
+                       WHERE tc.table_schema = current_schema()
+                         AND tc.table_name = %s
+                         AND tc.constraint_type = 'PRIMARY KEY'
+                       ORDER BY kcu.ordinal_position LIMIT 1
+                   ) THEN 1 ELSE 0 END AS pk
+            FROM information_schema.columns
+            WHERE table_schema = current_schema() AND table_name = %s
+            ORDER BY ordinal_position
+        """
+        return translated, (table, table)
+
+    if re.fullmatch(r"\s*BEGIN\s+IMMEDIATE\s*;?\s*", statement, re.I):
+        # L'acquisition du verrou ouvre la transaction PostgreSQL et conserve
+        # la sémantique de sérialisation attendue par le code SQLite.
+        return "SELECT pg_advisory_xact_lock(7210642401)", ()
+
+    statement = re.sub(
+        r"\bINTEGER\s+PRIMARY\s+KEY\s+AUTOINCREMENT\b",
+        "BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY",
+        statement, flags=re.IGNORECASE,
+    )
+    return _replace_qmark_placeholders(statement), params
+
 
 class CursorAdapter:
     def __init__(self, cursor):
         self._cursor = cursor
         self._lastrowid = None
+
     @property
     def lastrowid(self):
         return self._lastrowid
+
+    @property
+    def rowcount(self):
+        return self._cursor.rowcount
+
     @property
     def description(self):
         return self._cursor.description
-    def execute(self, sql, params=()):
-        sql = sql.replace("BEGIN IMMEDIATE", "BEGIN").replace("?", "%s")
-        match = re.match(r"\s*INSERT\s+INTO\s+([a-zA-Z_][a-zA-Z0-9_]*)", sql, re.I)
-        table = match.group(1).lower() if match else None
-        add_returning = table in _ID_TABLES and not re.search(r"\bRETURNING\b", sql, re.I)
-        if add_returning:
-            sql = sql.rstrip().rstrip(";") + " RETURNING id"
-        self._cursor.execute(sql, params)
+
+    def execute(self, statement, params=()):
         self._lastrowid = None
-        if add_returning:
+        statement = statement.strip()
+        match = re.match(
+            r"INSERT\s+INTO\s+([A-Za-z_][A-Za-z0-9_]*)",
+            statement, re.IGNORECASE,
+        )
+        table = match.group(1).lower() if match else None
+        has_returning = bool(re.search(r"\bRETURNING\b", statement, re.I))
+        if table in _ID_TABLES and not has_returning:
+            statement = statement.rstrip().rstrip(";") + " RETURNING id"
+
+        translated, translated_params = _translate_sql(statement, params)
+        self._cursor.execute(translated, translated_params)
+
+        if table in _ID_TABLES and not has_returning:
             row = self._cursor.fetchone()
             if row is not None:
                 self._lastrowid = row["id"] if isinstance(row, Mapping) else row[0]
         return self
+
     def fetchone(self):
-        return _row(self._cursor.fetchone())
+        row = self._cursor.fetchone()
+        return _row(row)
+
     def fetchall(self):
         return [_row(row) for row in self._cursor.fetchall()]
+
     def fetchmany(self, size=None):
         rows = self._cursor.fetchmany() if size is None else self._cursor.fetchmany(size)
         return [_row(row) for row in rows]
+
     def __iter__(self):
         return iter(self.fetchall())
+
+    def close(self):
+        self._cursor.close()
+
+
+def _row(value):
+    if value is None or isinstance(value, HybridRow):
+        return value
+    if isinstance(value, Mapping):
+        return HybridRow(value)
+    return value
+
 
 class ConnectionAdapter:
     def __init__(self, connection):
         self._connection = connection
+
     @property
     def in_transaction(self):
         return self._connection.info.transaction_status != TransactionStatus.IDLE
-    def execute(self, sql, params=()):
-        return CursorAdapter(self._connection.cursor()).execute(sql, params)
+
+    def execute(self, statement, params=()):
+        return CursorAdapter(self._connection.cursor()).execute(statement, params)
+
     def cursor(self):
         return CursorAdapter(self._connection.cursor())
+
     def commit(self):
         return self._connection.commit()
+
     def rollback(self):
         return self._connection.rollback()
+
     def close(self):
         return self._connection.close()
 
+
 def connect_database(sqlite_path, timeout=10):
     if POSTGRES_ENABLED:
-        return ConnectionAdapter(psycopg.connect(POSTGRES_DSN, connect_timeout=timeout, row_factory=dict_row))
+        return ConnectionAdapter(
+            psycopg.connect(
+                POSTGRES_DSN, connect_timeout=timeout, row_factory=dict_row
+            )
+        )
     conn = sqlite3.connect(sqlite_path, timeout=timeout)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
