@@ -178,6 +178,9 @@ class ResetUserDataCopyTests(unittest.TestCase):
 
     def test_backup_includes_committed_wal_data(self) -> None:
         self.source_connection.close()
+        self.source.unlink(missing_ok=True)
+        Path(str(self.source) + "-wal").unlink(missing_ok=True)
+        Path(str(self.source) + "-shm").unlink(missing_ok=True)
         self.source_connection = create_database(self.source, wal=True)
         self.source_connection.execute(
             "INSERT INTO exercices (nom, groupe_musculaire, categorie, actif) "
