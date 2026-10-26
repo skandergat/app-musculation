@@ -52,7 +52,7 @@ def main() -> int:
     args = parse_args()
     source_path = Path(args.source).expanduser().resolve()
     schema_path = Path(args.schema).expanduser().resolve()
-    dsn = os.getenv("SUPABASE_DB_URL") or os.getenv("DATABASE_URL")
+    dsn = os.getenv("LIFTELY_DATABASE_URL") or os.getenv("SUPABASE_DB_URL") or os.getenv("DATABASE_URL")
 
     if not source_path.is_file():
         print(f"ERREUR : fichier source introuvable : {source_path}", file=sys.stderr)
@@ -155,6 +155,27 @@ def main() -> int:
                             [tuple(row[column] for column in source_columns) for row in rows],
                         )
                     expected_counts[table] = len(rows)
+
+                    # Compare full row contents, not just counts. Fetch target
+                    # columns in source order to avoid false mismatches caused
+                    # only by a different column declaration order.
+                    quoted_columns = sql.SQL(", ").join(
+                        sql.Identifier(column) for column in source_columns
+                    )
+                    cur.execute(
+                        sql.SQL("SELECT {} FROM {}").format(
+                            quoted_columns, sql.Identifier(table)
+                        )
+                    )
+                    actual_rows = [tuple(row) for row in cur.fetchall()]
+                    expected_rows = [
+                        tuple(row[column] for column in source_columns)
+                        for row in rows
+                    ]
+                    if sorted(map(repr, actual_rows)) != sorted(map(repr, expected_rows)):
+                        raise RuntimeError(
+                            f"Écart de contenu détecté après import dans {table}"
+                        )
 
                 # Reset generated ID counters so new records do not collide with imported IDs.
                 for table in ("users", "exercices", "templates", "template_exercices",
