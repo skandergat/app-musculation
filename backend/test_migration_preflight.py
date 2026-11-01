@@ -60,12 +60,13 @@ class MigrationPreflightComparisonTests(unittest.TestCase):
                     amount REAL,
                     enabled INTEGER DEFAULT 1
                 );
-                CREATE UNIQUE INDEX idx_sample_name ON sample(name);
+                CREATE UNIQUE INDEX idx_sample_name ON sample(name);\n                CREATE INDEX idx_sample_partial ON sample(amount) WHERE amount > 0;
                 """
             )
             signature = sqlite_schema_signature(conn, "sample")
             self.assertEqual(signature["primary_key"], ["id"])
             self.assertIn((True, ("name",), None), signature["indexes"])
+            self.assertIn((False, ("amount",), "amount>0"), signature["indexes"])
             name = next(c for c in signature["columns"] if c["name"] == "name")
             self.assertEqual(name["type"], "text")
             self.assertTrue(name["not_null"])
