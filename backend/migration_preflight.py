@@ -15,6 +15,7 @@ from decimal import Decimal, InvalidOperation
 import hashlib
 import json
 import os
+import re
 import sqlite3
 import sys
 from pathlib import Path
@@ -95,7 +96,7 @@ def sqlite_schema_signature(conn: sqlite3.Connection, table: str) -> dict[str, A
             (index_name,),
         ).fetchone()
         predicate_match = re.search(
-            r"\\bWHERE\\b(.*)$", definition[0], re.IGNORECASE
+            r"\bWHERE\b(.*)$", definition[0], re.IGNORECASE
         ) if definition and definition[0] else None
         predicate = normalize_predicate(predicate_match.group(1)) if predicate_match else None
         indexes.append((bool(index[2]), tuple(index_columns), predicate))
@@ -157,7 +158,7 @@ def normalize_default(value: Any) -> str | None:
 
 
 def normalize_predicate(value: str) -> str:
-    return re.sub(r"[\\s\\\"()]", "", value).lower()
+    return re.sub(r"[\s\"()]", "", value).lower()
 
 
 def postgres_schema_signature(conn, schema: str, table: str) -> dict[str, Any]:
@@ -398,6 +399,7 @@ def main() -> int:
     source_rows_by_table: dict[str, list[tuple[Any, ...]]] = {}
     source_columns: dict[str, list[str]] = {}
     source_counts: dict[str, int] = {}
+    source_schema_signatures: dict[str, dict[str, Any]] = {}
     source_fks: set[tuple[str, str, str, str, str]] = set()
 
     # SQLite URI mode=ro and query_only guard against source changes.
@@ -445,6 +447,7 @@ def main() -> int:
                 ).fetchall()
             ]
             source_columns[table] = columns
+            source_schema_signatures[table] = sqlite_schema_signature(src, table)
             source_rows = src.execute(
                 f"SELECT {', '.join(quote_identifier(c) for c in columns)} "
                 f"FROM {quote_identifier(table)}"
@@ -453,11 +456,8 @@ def main() -> int:
             source_rows_by_table[table] = rows
             source_counts[table] = len(rows)
     finally:
-        # Keep the read-only source connection open for schema metadata checks
-        # performed alongside the PostgreSQL target inspection.
-        pass
+        src.close()
 
-    src_conn_placeholder = src
     try:
         import psycopg
     except ImportError:
@@ -500,7 +500,7 @@ def main() -> int:
                         continue
 
                     target_columns[table] = columns
-                    source_signature = sqlite_schema_signature(src_conn_placeholder, table)
+                    source_signature = source_schema_signatures[table]
                     target_signature = postgres_schema_signature(dst, args.schema, table)
                     schema_issues = compare_schema_signatures(
                         source_signature, target_signature
@@ -721,7 +721,6 @@ def main() -> int:
             }
         )
 
-    src_conn_placeholder.close()
     report["result"] = "BLOCKED" if report["blockers"] else "REVIEW_REQUIRED"
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 2 if report["blockers"] else 0
