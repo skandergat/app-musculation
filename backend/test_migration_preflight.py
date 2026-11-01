@@ -93,7 +93,7 @@ class MigrationPreflightComparisonTests(unittest.TestCase):
         issues = compare_schema_signatures(source, target)
         self.assertTrue(any(issue.startswith("default_mismatch:name") for issue in issues))
         self.assertTrue(any(issue.startswith("primary_key_mismatch") for issue in issues))
-        self.assertIn("index_or_unique_constraint_mismatch", issues)
+        self.assertTrue(any(issue.startswith("index_or_unique_constraint_mismatch") for issue in issues))
 
     def test_row_signature_does_not_expose_raw_row_values(self):
         signature = row_signature(("private@example.test", "secret-value"))
