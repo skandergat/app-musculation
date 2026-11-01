@@ -115,11 +115,6 @@ def build_sqlite_fixture(path: Path, duplicate_exercise: bool = False) -> None:
             ON auth_action_tokens(user_id, purpose, date_expiration);
         CREATE INDEX idx_template_exercices_template
             ON template_exercices(template_id, position);
-        if not duplicate_exercise:
-            conn.execute(
-                "CREATE UNIQUE INDEX idx_template_exercices_unique "
-                "ON template_exercices(template_id, exercice_id)"
-            )
         CREATE UNIQUE INDEX idx_seances_active_user
             ON seances(user_id)
             WHERE date_fin IS NULL AND user_id IS NOT NULL;
@@ -129,8 +124,8 @@ def build_sqlite_fixture(path: Path, duplicate_exercise: bool = False) -> None:
     )
     if not duplicate_exercise:
         conn.execute(
-            """
-        """
+            "CREATE UNIQUE INDEX idx_template_exercices_unique "
+            "ON template_exercices(template_id, exercice_id)"
         )
     conn.execute(
         "INSERT INTO users VALUES (?, ?, ?, ?, ?, ?)",
