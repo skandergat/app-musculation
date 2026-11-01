@@ -8,6 +8,7 @@ that DSN; CI uses its isolated PostgreSQL service.
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 from pathlib import Path
 import sqlite3
@@ -178,6 +179,26 @@ def create_target_schema(base_dsn: str, schema_name: str) -> str:
     return target_dsn
 
 
+def run_preflight(source: Path, target_dsn: str, schema_name: str) -> subprocess.CompletedProcess:
+    env = os.environ.copy()
+    env["LIFTELY_DATABASE_URL"] = target_dsn
+    env.pop("SUPABASE_DB_URL", None)
+    env.pop("DATABASE_URL", None)
+    return subprocess.run(
+        [
+            sys.executable, str(ROOT / "backend" / "migration_preflight.py"),
+            "--sqlite", str(source),
+            "--schema", schema_name,
+        ],
+        cwd=ROOT,
+        env=env,
+        text=True,
+        capture_output=True,
+        timeout=60,
+        check=False,
+    )
+
+
 def run_import(source: Path, target_dsn: str) -> subprocess.CompletedProcess:
     env = os.environ.copy()
     env["LIFTELY_DATABASE_URL"] = target_dsn
@@ -228,6 +249,11 @@ def main() -> None:
         success_schema = f"liftely_import_ok_{uuid.uuid4().hex[:12]}"
         schemas.append(success_schema)
         success_dsn = create_target_schema(base_dsn, success_schema)
+        preflight = run_preflight(valid_source, success_dsn, success_schema)
+        assert preflight.returncode == 0, (preflight.stdout, preflight.stderr)
+        preflight_report = json.loads(preflight.stdout)
+        assert preflight_report["blockers"] == [], preflight_report["blockers"]
+        assert preflight_report["result"] == "REVIEW_REQUIRED"
         result = run_import(valid_source, success_dsn)
         assert result.returncode == 0, (result.stdout, result.stderr)
         with psycopg.connect(success_dsn, connect_timeout=10) as conn:
