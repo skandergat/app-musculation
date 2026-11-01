@@ -253,7 +253,10 @@ def compare_schema_signatures(source: dict[str, Any], target: dict[str, Any]) ->
             f"target={target['primary_key']})"
         )
     if source["indexes"] != target["indexes"]:
-        issues.append("index_or_unique_constraint_mismatch")
+        issues.append(
+            "index_or_unique_constraint_mismatch:"
+            f"(source={source['indexes']!r}, target={target['indexes']!r})"
+        )
     return issues
 
 
