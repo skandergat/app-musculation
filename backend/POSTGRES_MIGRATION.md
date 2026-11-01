@@ -65,3 +65,17 @@ Pour une première initialisation sur une cible vide, appliquer le schéma sépa
 - Ne pas utiliser la fixture assainie pour remplacer une base qui contiendrait des comptes ou de l'historique à conserver.
 - Ne pas supposer que le bouton « Save » du SQL Editor exécute une requête : l'exécution est une action distincte.
 - Ne jamais considérer le déploiement Render réussi comme preuve que la base Supabase est initialisée ou que l'application utilise PostgreSQL.
+
+
+## Import Supabase depuis GitHub Actions
+
+Un workflow manuel et protégé est disponible dans `.github/workflows/supabase-import.yml`.
+
+1. Dans GitHub, ouvrir **Settings → Secrets and variables → Actions → New repository secret**.
+2. Créer le secret `LIFTELY_DATABASE_URL` avec l'URI PostgreSQL de Supabase (privilégier la chaîne **Session pooler**, sans jamais la publier dans le dépôt ou une conversation).
+3. Ouvrir **Actions → LIFTELY — import contrôlé des 349 exercices vers Supabase → Run workflow**.
+4. Saisir exactement `IMPORTER_349_EXERCICES` dans le champ de confirmation et lancer le workflow.
+
+Le workflow reconstitue la fixture assainie depuis le dépôt, vérifie son intégrité, exige que les dix tables `public` soient vides et que le schéma soit compatible, puis lance l'import transactionnel. Il bloque si la cible n'est pas vide, si la source diffère, si le schéma ne correspond pas ou si le secret est absent. Le postflight exige une correspondance exacte du contenu des dix tables et des clés étrangères. Les rapports sont conservés comme artefact GitHub Actions pendant 14 jours.
+
+**Ce workflow n'effectue aucun basculement Render.** Après l'import, il faudra encore valider les routes API avec PostgreSQL avant de configurer le service Render.
