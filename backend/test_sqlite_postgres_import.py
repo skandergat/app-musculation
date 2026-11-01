@@ -117,6 +117,14 @@ def build_sqlite_fixture(path: Path, duplicate_exercise: bool = False) -> None:
             ON seance_exercices(seance_id, position);
         """
     )
+    if not duplicate_exercise:
+        conn.execute(
+            """
+            CREATE UNIQUE INDEX idx_exercices_actifs_nom_categorie
+            ON exercices(nom, categorie)
+            WHERE actif = 1
+            """
+        )
     conn.execute(
         "INSERT INTO users VALUES (?, ?, ?, ?, ?, ?)",
         (10, "Import Test", "import@example.test", "hash", "2026-01-01", "2026-01-01"),
