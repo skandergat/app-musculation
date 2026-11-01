@@ -3,9 +3,15 @@ import unittest
 from decimal import Decimal
 
 try:
-    from .migration_preflight import (\n        canonical_value, compare_row_multisets, row_signature,\n        sqlite_schema_signature, compare_schema_signatures,\n    )
+    from .migration_preflight import (
+        canonical_value, compare_row_multisets, row_signature,
+        sqlite_schema_signature, compare_schema_signatures,
+    )
 except ImportError:
-    from migration_preflight import (\n        canonical_value, compare_row_multisets, row_signature,\n        sqlite_schema_signature, compare_schema_signatures,\n    )
+    from migration_preflight import (
+        canonical_value, compare_row_multisets, row_signature,
+        sqlite_schema_signature, compare_schema_signatures,
+    )
 
 
 class MigrationPreflightComparisonTests(unittest.TestCase):
