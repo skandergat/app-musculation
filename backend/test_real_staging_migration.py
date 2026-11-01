@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import base64
 import gzip
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -97,6 +98,8 @@ def main() -> None:
                     "counts": counts,
                 })
 
+        source_digest_before = hashlib.sha256(source.read_bytes()).hexdigest()
+
         with psycopg.connect(base_dsn, connect_timeout=10) as conn:
             conn.execute(sql.SQL("CREATE SCHEMA {}").format(sql.Identifier(schema_name)))
         target_dsn = make_conninfo(base_dsn, options=f"-c search_path={schema_name}")
@@ -117,6 +120,10 @@ def main() -> None:
         imported = run_import(source, target_dsn)
         if imported.returncode != 0:
             raise AssertionError({"stdout": imported.stdout, "stderr": imported.stderr})
+
+        source_digest_after = hashlib.sha256(source.read_bytes()).hexdigest()
+        if source_digest_after != source_digest_before:
+            raise AssertionError("SQLite staging source changed during import")
 
         after = run_readonly_preflight(source, target_dsn, schema_name)
         if after["blockers"]:
@@ -144,6 +151,7 @@ def main() -> None:
             "import": "10 tables imported in one transaction",
             "postflight": "all 10 tables CONTENT_MATCH; no missing or extra foreign keys",
             "identity_sequence": f"next exercices.id = {next_id}",
+            "source_unchanged": source_digest_before == source_digest_after,
             "target_schema": schema_name,
             "target_disposable": True,
         }, ensure_ascii=False, indent=2))
