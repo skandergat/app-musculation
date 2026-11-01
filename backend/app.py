@@ -2303,6 +2303,12 @@ def supprimer_compte_connecte():
         return jsonify({"error": "Saisis ton mot de passe pour confirmer."}), 400
 
     conn = get_db()
+    # Acquire the PostgreSQL transaction-scoped advisory write lock before
+    # reading account state. A SELECT already opens a transaction in Psycopg,
+    # so acquiring the lock only inside supprimer_donnees_compte() is too late
+    # to serialize this route with concurrent account mutations.
+    if POSTGRES_ENABLED:
+        conn.execute("BEGIN IMMEDIATE")
     row = conn.execute(
         "SELECT password_hash FROM users WHERE id = ?",
         (user["id"],),

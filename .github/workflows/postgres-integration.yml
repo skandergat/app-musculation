@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - fix/postgres-consolidation
+      - fix/postgres-migration-hardening
 
 permissions:
   contents: read
@@ -38,10 +39,14 @@ jobs:
       - name: Provision isolated PostgreSQL schema
         run: psql "$LIFTELY_DATABASE_URL" -v ON_ERROR_STOP=1 -f backend/postgres_schema.sql
       - name: Compile backend and migration scripts
-        run: python -m py_compile backend/app.py backend/db_compat.py backend/migrate_sqlite_to_postgres.py
+        run: python -m py_compile backend/app.py backend/db_compat.py backend/migrate_sqlite_to_postgres.py backend/migration_preflight.py backend/test_migration_preflight.py backend/test_sqlite_postgres_import.py backend/test_real_staging_migration.py
       - name: Unit-test read-only migration preflight
         run: python -m unittest backend.test_migration_preflight
       - name: Test PostgreSQL adapter against real PostgreSQL
         run: python -m backend.postgres_integration_smoke
+      - name: Test SQLite to PostgreSQL import, identity sequences, and rollback
+        run: python -m backend.test_sqlite_postgres_import
+      - name: Test actual sanitized staging database through preflight, import, and postflight
+        run: python -m backend.test_real_staging_migration
       - name: Test full account and workout lifecycle against PostgreSQL
         run: python -m backend.account_lifecycle_smoke
