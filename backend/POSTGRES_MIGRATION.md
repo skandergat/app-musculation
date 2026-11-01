@@ -1,42 +1,67 @@
 # Migration PostgreSQL / Supabase — LIFTELY
 
-## État
+## État au 1er novembre 2026
 
-Cette branche prépare le schéma PostgreSQL et un importeur contrôlé. L'adaptateur utilise `LIFTELY_DATABASE_URL` comme variable canonique (les alias `SUPABASE_DB_URL` et `DATABASE_URL` restent temporairement compatibles). **Elle ne bascule pas encore l'application Flask vers PostgreSQL** : `backend/app.py` utilise toujours l'API SQLite (placeholders `?`, `lastrowid`, `PRAGMA`, initialisation SQLite). Ne configure pas encore Render pour pointer vers Supabase et ne fusionne pas cette branche en production avant l'adaptation et les tests du backend.
+- Le dépôt `main` contient l'adaptateur PostgreSQL (`backend/db_compat.py`) et son intégration dans `backend/app.py`.
+- Les tests d'intégration PostgreSQL ont réussi sur une instance PostgreSQL isolée en CI, avec la base de staging assainie : 349 exercices, neuf tables applicatives vides, comparaison exacte des dix tables et vérification des clés étrangères et séquences.
+- Le projet Supabase de production a été inspecté en lecture seule : le schéma `public` ne contient actuellement aucune table applicative LIFTELY. Les schémas internes Supabase (`auth`, `storage`, etc.) sont présents et ne doivent pas être modifiés.
+- Le service Render `liftely-api` déploie le commit de migration, mais aucune instance PostgreSQL Render n'est attachée. La présence et la valeur de la variable de connexion Supabase dans Render n'ont pas été vérifiées.
+- **Aucune migration de production n'a été exécutée et aucun changement de configuration Render n'a été effectué.** Tant que le schéma et les données ne sont pas importés puis vérifiés dans Supabase, le backend doit rester sur sa base actuelle.
 
 ## Fichiers
 
-- `postgres_schema.sql` : tables, clés étrangères et index PostgreSQL.
-- `migrate_sqlite_to_postgres.py` : import transactionnel de la base de staging vers une cible PostgreSQL vide.
-- `requirements.txt` : ajoute Psycopg 3.
-- `postgres_integration_smoke.py` et `.github/workflows/postgres-integration.yml` : tests contre un service PostgreSQL isolé en CI.
+- `postgres_schema.sql` : définition des dix tables applicatives, contraintes et index.
+- `migrate_sqlite_to_postgres.py` : import transactionnel depuis une base SQLite vers un schéma PostgreSQL vide. Refuse toute table cible contenant déjà des lignes et vérifie les contenus importés.
+- `migration_preflight.py` : comparaison en lecture seule du schéma, des index, des clés étrangères, des nombres de lignes et du contenu.
+- `test_real_staging_migration.py` : test reproductible de la vraie fixture assainie sur un schéma PostgreSQL temporaire isolé.
+- `fixtures/reset_staging_source.sql.gz.b64` : fixture de staging assainie, sans comptes ni historique.
 
-## Conditions de sécurité
+## Base de référence validée
 
-1. Garde les deux bases SQLite originales et `migration_staging.db` en sauvegarde.
-2. Utilise un projet / une base Supabase de test ou une base cible vide.
-3. Ne mets jamais l'URI ou le mot de passe PostgreSQL dans le code, GitHub ou le chat. Utilise une variable d'environnement.
-4. L'importeur refuse de continuer si une des tables cibles contient déjà des lignes. Il n'efface aucune table et ne modifie pas le fichier SQLite source.
-5. L'import est transactionnel : une erreur annule toute la transaction.
-6. Après import, compare les comptes et les relations avant toute bascule.
+La fixture de staging contient exactement :
 
-## Préparation de la base cible
+| Table | Lignes |
+|---|---:|
+| exercices | 349 |
+| users | 0 |
+| sessions | 0 |
+| auth_action_tokens | 0 |
+| auth_mail_limits | 0 |
+| templates | 0 |
+| template_exercices | 0 |
+| seances | 0 |
+| series | 0 |
+| seance_exercices | 0 |
 
-Dans PowerShell, depuis le dossier du projet, avec Python et les dépendances backend installées :
+Cette fixture ne doit être utilisée que si elle correspond toujours à la source de données que le propriétaire souhaite conserver. Elle ne contient aucun ancien compte ni historique.
+
+## Procédure contrôlée
+
+1. Vérifier qu'une sauvegarde de la base source actuelle existe et confirmer que la fixture assainie est bien la source retenue.
+2. Appliquer `postgres_schema.sql` uniquement au schéma `public` vide du projet Supabase cible. Ne jamais exécuter de `DROP`, `TRUNCATE` ou de commande visant les schémas Supabase internes.
+3. Depuis un environnement sécurisé disposant de la fixture SQLite et de la chaîne de connexion PostgreSQL, exécuter le préflight en lecture seule.
+4. Si et seulement si le préflight ne signale aucun bloqueur, exécuter l'importeur avec `--source <base_staging.sqlite>`. L'importeur n'écrase aucune ligne existante et annule la transaction en cas d'erreur.
+5. Relancer le préflight et exiger une correspondance exacte des dix tables, des clés étrangères et des séquences.
+6. Vérifier les routes de l'API sur une configuration de test avant tout basculement de Render.
+7. Configurer Render pour utiliser Supabase uniquement après validation explicite des contrôles précédents et conservation d'une possibilité de retour arrière.
+
+## Exécution de l'importeur
+
+Ne jamais placer une URI PostgreSQL, un mot de passe ou une clé Supabase dans Git, un fichier versionné ou une conversation. Utiliser une variable d'environnement protégée :
 
 ```powershell
-$env:LIFTELY_DATABASE_URL = Read-Host "URI PostgreSQL Supabase (saisie masquée recommandée via un gestionnaire de secrets)"
+$env:LIFTELY_DATABASE_URL = "<URI PostgreSQL saisie localement et protégée>"
 python -m pip install -r .\backend\requirements.txt
-python .\backend\migrate_sqlite_to_postgres.py --source .\migration_staging.db --create-schema
+python .\backend\migration_preflight.py --sqlite .\migration_staging.db --schema public
+python .\backend\migrate_sqlite_to_postgres.py --source .\migration_staging.db
+python .\backend\migration_preflight.py --sqlite .\migration_staging.db --schema public
 ```
 
-La saisie via `Read-Host` n'est pas masquée dans PowerShell ; privilégie un gestionnaire de secrets ou définis la variable hors historique de commande. Ne copie pas l'URI dans un terminal partagé ou dans une conversation. Si le mot de passe de la base a déjà été exposé, renouvelle-le dans Supabase avant utilisation.
+Pour une première initialisation sur une cible vide, appliquer le schéma séparément avant l'import (ou utiliser `--create-schema` si l'environnement et la cible ont été explicitement vérifiés comme dédiés et vides).
 
-## À faire avant la production
+## Garde-fous
 
-- Adapter l'accès DB de `backend/app.py` à Psycopg, notamment paramètres SQL, récupération des identifiants, gestion des transactions et exceptions d'intégrité.
-- Séparer l'initialisation PostgreSQL de l'initialisation SQLite.
-- Ajouter des tests d'intégration sur une base PostgreSQL isolée : inscription/connexion, vérification et réinitialisation d'e-mail, séances, séries, templates, suppression de compte et erreurs de contraintes.
-- Vérifier le contenu complet de chaque table, les comptages et les séquences après import.
-- Confirmer l'absence de doublons actifs `(nom, categorie)` dans le catalogue avant l'application de l'index unique.
-- Configurer Render uniquement après réussite de ces tests, puis tester les routes et l'application.
+- Ne pas définir `LIFTELY_DATABASE_URL` sur Render avant la fin du contrôle post-import.
+- Ne pas utiliser la fixture assainie pour remplacer une base qui contiendrait des comptes ou de l'historique à conserver.
+- Ne pas supposer que le bouton « Save » du SQL Editor exécute une requête : l'exécution est une action distincte.
+- Ne jamais considérer le déploiement Render réussi comme preuve que la base Supabase est initialisée ou que l'application utilise PostgreSQL.
