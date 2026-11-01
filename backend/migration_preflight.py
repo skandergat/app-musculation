@@ -95,10 +95,13 @@ def sqlite_schema_signature(conn: sqlite3.Connection, table: str) -> dict[str, A
             "SELECT sql FROM sqlite_master WHERE type='index' AND name=?",
             (index_name,),
         ).fetchone()
-        predicate_match = re.search(
-            r"\bWHERE\b(.*)$", definition[0], re.IGNORECASE
-        ) if definition and definition[0] else None
-        predicate = normalize_predicate(predicate_match.group(1)) if predicate_match else None
+        predicate = None
+        if bool(index[4]) and definition and definition[0]:
+            where_position = definition[0].upper().find(" WHERE ")
+            if where_position >= 0:
+                predicate = normalize_predicate(
+                    definition[0][where_position + len(" WHERE "):]
+                )
         indexes.append((bool(index[2]), tuple(index_columns), predicate))
     return {
         "columns": [
