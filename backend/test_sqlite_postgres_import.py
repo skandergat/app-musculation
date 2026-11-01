@@ -54,7 +54,7 @@ def build_sqlite_fixture(path: Path, duplicate_exercise: bool = False) -> None:
             token_hash TEXT PRIMARY KEY,
             user_id INTEGER NOT NULL REFERENCES users(id),
             date_creation TEXT NOT NULL,
-            date_expiration TEXT NOT NULL
+            date_expiration TEXT
         );
         CREATE TABLE auth_action_tokens (
             token_hash TEXT PRIMARY KEY,
@@ -83,13 +83,15 @@ def build_sqlite_fixture(path: Path, duplicate_exercise: bool = False) -> None:
             template_id INTEGER NOT NULL REFERENCES templates(id) ON DELETE CASCADE,
             exercice_id INTEGER NOT NULL REFERENCES exercices(id),
             position INTEGER NOT NULL DEFAULT 0,
-            UNIQUE(template_id, exercice_id)
+            nombre_series INTEGER NOT NULL DEFAULT 3,
+            poids_prevu REAL NOT NULL DEFAULT 0,
+            repetitions_prevues INTEGER NOT NULL DEFAULT 10
         );
         CREATE TABLE seances (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             date_debut TEXT NOT NULL,
             date_fin TEXT,
-            user_id INTEGER REFERENCES users(id) ON DELETE SET NULL
+            user_id INTEGER
         );
         CREATE TABLE series (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -104,12 +106,20 @@ def build_sqlite_fixture(path: Path, duplicate_exercise: bool = False) -> None:
             exercice_id INTEGER NOT NULL REFERENCES exercices(id),
             position INTEGER NOT NULL DEFAULT 0,
             date_ajout TEXT NOT NULL,
+            nombre_series_prevu INTEGER NOT NULL DEFAULT 1,
+            poids_prevu REAL NOT NULL DEFAULT 0,
+            repetitions_prevues INTEGER NOT NULL DEFAULT 10,
             UNIQUE(seance_id, exercice_id)
         );
         CREATE INDEX idx_auth_action_user_purpose
             ON auth_action_tokens(user_id, purpose, date_expiration);
         CREATE INDEX idx_template_exercices_template
             ON template_exercices(template_id, position);
+        if not duplicate_exercise:
+            conn.execute(
+                "CREATE UNIQUE INDEX idx_template_exercices_unique "
+                "ON template_exercices(template_id, exercice_id)"
+            )
         CREATE UNIQUE INDEX idx_seances_active_user
             ON seances(user_id)
             WHERE date_fin IS NULL AND user_id IS NOT NULL;
@@ -120,10 +130,7 @@ def build_sqlite_fixture(path: Path, duplicate_exercise: bool = False) -> None:
     if not duplicate_exercise:
         conn.execute(
             """
-            CREATE UNIQUE INDEX idx_exercices_actifs_nom_categorie
-            ON exercices(nom, categorie)
-            WHERE actif = 1
-            """
+        """
         )
     conn.execute(
         "INSERT INTO users VALUES (?, ?, ?, ?, ?, ?)",
@@ -133,11 +140,6 @@ def build_sqlite_fixture(path: Path, duplicate_exercise: bool = False) -> None:
         "INSERT INTO exercices VALUES (?, ?, ?, ?, ?)",
         (20, "Push-up", "Chest", "calisthenics", 1),
     )
-    if duplicate_exercise:
-        conn.execute(
-            "INSERT INTO exercices VALUES (?, ?, ?, ?, ?)",
-            (21, "Push-up", "Chest", "calisthenics", 1),
-        )
     conn.execute(
         "INSERT INTO sessions VALUES (?, ?, ?, ?)",
         ("session-hash", 10, "2026-01-01", "2026-02-01"),
@@ -159,16 +161,34 @@ def build_sqlite_fixture(path: Path, duplicate_exercise: bool = False) -> None:
         (40, "2026-01-01", "2026-01-01T01:00:00", 10),
     )
     conn.execute(
-        "INSERT INTO template_exercices VALUES (?, ?, ?, ?)",
-        (50, 30, 20, 0),
+        """
+        INSERT INTO template_exercices
+            (id, template_id, exercice_id, position, nombre_series, poids_prevu, repetitions_prevues)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (50, 30, 20, 0, 3, 0, 10),
     )
+    if duplicate_exercise:
+        conn.execute(
+            """
+            INSERT INTO template_exercices
+                (id, template_id, exercice_id, position, nombre_series, poids_prevu, repetitions_prevues)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (51, 30, 20, 1, 3, 0, 10),
+        )
     conn.execute(
         "INSERT INTO series VALUES (?, ?, ?, ?, ?)",
         (60, 40, 20, 20.5, 10),
     )
     conn.execute(
-        "INSERT INTO seance_exercices VALUES (?, ?, ?, ?, ?)",
-        (70, 40, 20, 0, "2026-01-01"),
+        """
+        INSERT INTO seance_exercices
+            (id, seance_id, exercice_id, position, date_ajout,
+             nombre_series_prevu, poids_prevu, repetitions_prevues)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (70, 40, 20, 0, "2026-01-01", 1, 0, 10),
     )
     conn.commit()
     conn.close()
