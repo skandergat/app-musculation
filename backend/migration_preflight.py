@@ -191,18 +191,19 @@ def postgres_schema_signature(conn, schema: str, table: str) -> dict[str, Any]:
     indexes = conn.execute(
         """
         SELECT i.indisunique,
-               array_agg(a.attname ORDER BY key_column.ordinality),
+               (
+                   SELECT array_agg(a.attname ORDER BY key_column.ordinality)
+                   FROM unnest(i.indkey) WITH ORDINALITY
+                        AS key_column(attnum, ordinality)
+                   JOIN pg_attribute a
+                     ON a.attrelid = t.oid AND a.attnum = key_column.attnum
+                   WHERE key_column.ordinality <= i.indnkeyatts
+               ),
                pg_get_expr(i.indpred, i.indrelid)
         FROM pg_index i
         JOIN pg_class t ON t.oid = i.indrelid
         JOIN pg_namespace n ON n.oid = t.relnamespace
-        JOIN LATERAL unnest(i.indkey) WITH ORDINALITY
-             AS key_column(attnum, ordinality)
-          ON key_column.ordinality <= i.indnkeyatts
-        JOIN pg_attribute a
-          ON a.attrelid = t.oid AND a.attnum = key_column.attnum
         WHERE n.nspname = %s AND t.relname = %s AND NOT i.indisprimary
-        GROUP BY i.indexrelid, i.indisunique, i.indpred, i.indrelid
         """,
         (schema, table),
     ).fetchall()
