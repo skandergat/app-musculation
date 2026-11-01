@@ -86,13 +86,14 @@ class MigrationPreflightComparisonTests(unittest.TestCase):
         }
         target = {
             "columns": [
-                {"name": "id", "type": "integer", "not_null": True, "default": None},
+                {"name": "id", "type": "text", "not_null": True, "default": None},
                 {"name": "name", "type": "text", "not_null": True, "default": "'y'"},
             ],
             "primary_key": ["name"],
             "indexes": [],
         }
         issues = compare_schema_signatures(source, target)
+        self.assertTrue(any(issue.startswith("type_mismatch:id") for issue in issues))
         self.assertTrue(any(issue.startswith("default_mismatch:name") for issue in issues))
         self.assertTrue(any(issue.startswith("primary_key_mismatch") for issue in issues))
         self.assertTrue(any(issue.startswith("index_or_unique_constraint_mismatch") for issue in issues))
