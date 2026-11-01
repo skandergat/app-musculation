@@ -78,7 +78,7 @@ def main() -> None:
     schema_name = f"liftely_real_{uuid.uuid4().hex[:12]}"
     try:
         source = work / "actual-reset-staging.sqlite"
-        compressed = base64.b64decode(FIXTURE.read_text(encoding="ascii").strip(), validate=True)
+        compressed = base64.b64decode("".join(FIXTURE.read_text(encoding="ascii").split()), validate=True)
         source_sql = gzip.decompress(compressed).decode("utf-8")
         with sqlite3.connect(source) as conn:
             conn.executescript(source_sql)
