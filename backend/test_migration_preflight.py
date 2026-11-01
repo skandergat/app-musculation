@@ -60,7 +60,8 @@ class MigrationPreflightComparisonTests(unittest.TestCase):
                     amount REAL,
                     enabled INTEGER DEFAULT 1
                 );
-                CREATE UNIQUE INDEX idx_sample_name ON sample(name);\n                CREATE INDEX idx_sample_partial ON sample(amount) WHERE amount > 0;
+                CREATE UNIQUE INDEX idx_sample_name ON sample(name);
+                CREATE INDEX idx_sample_partial ON sample(amount) WHERE amount > 0;
                 """
             )
             signature = sqlite_schema_signature(conn, "sample")
