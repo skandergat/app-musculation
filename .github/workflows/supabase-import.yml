@@ -1,0 +1,125 @@
+name: LIFTELY — import contrôlé des 349 exercices vers Supabase
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Saisir exactement IMPORTER_349_EXERCICES pour autoriser l'import"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  import:
+    if: ${{ inputs.confirmation == 'IMPORTER_349_EXERCICES' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      LIFTELY_DATABASE_URL: ${{ secrets.LIFTELY_DATABASE_URL }}
+    steps:
+      - name: Refuser si le secret n'est pas configuré
+        shell: bash
+        run: |
+          if [ -z "${LIFTELY_DATABASE_URL}" ]; then
+            echo "::error::Le secret GitHub LIFTELY_DATABASE_URL n'est pas configuré."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Reconstituer la fixture SQLite assainie
+        shell: bash
+        run: |
+          base64 --decode backend/fixtures/reset_staging_source.sql.gz.b64 | gzip --decompress > migration_staging.db
+          python - <<'PY'
+          import sqlite3
+          db = sqlite3.connect("file:migration_staging.db?mode=ro", uri=True)
+          assert db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+          counts = dict(db.execute(
+              "SELECT name, (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=m.name) FROM sqlite_master m WHERE type='table'"
+          ))
+          expected = {
+              "users": 0, "exercices": 349, "sessions": 0,
+              "auth_action_tokens": 0, "auth_mail_limits": 0,
+              "templates": 0, "template_exercices": 0,
+              "seances": 0, "series": 0, "seance_exercices": 0,
+          }
+          actual = {table: db.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0] for table in expected}
+          assert actual == expected, f"Fixture inattendue: {actual}"
+          assert not db.execute("PRAGMA foreign_key_check").fetchall()
+          print("Fixture validée : 349 exercices, aucun compte ni historique.")
+          db.close()
+          PY
+
+      - name: Installer les dépendances PostgreSQL
+        run: python -m pip install "psycopg[binary]>=3.2,<4.0"
+
+      - name: Préflight strict en lecture seule — la cible doit être vide
+        shell: bash
+        run: |
+          python backend/migration_preflight.py --sqlite migration_staging.db --schema public > preflight-before.json
+          cat preflight-before.json
+          python - <<'PY'
+          import json
+          report = json.load(open("preflight-before.json", encoding="utf-8"))
+          assert report["blockers"] == [], report["blockers"]
+          assert set(report["tables"]) == {
+              "exercices", "users", "sessions", "auth_action_tokens",
+              "auth_mail_limits", "templates", "template_exercices",
+              "seances", "series", "seance_exercices",
+          }
+          for table, item in report["tables"].items():
+              assert item["target_count"] == 0, f"{table} n'est pas vide"
+          assert report["tables"]["exercices"]["source_count"] == 349
+          for table, item in report["tables"].items():
+              if table != "exercices":
+                  assert item["source_count"] == 0, f"Source inattendue dans {table}"
+          assert report["foreign_keys"]["missing_on_target"] == []
+          print("Préflight validé : schéma compatible et dix tables cibles vides.")
+          PY
+
+      - name: Importer dans une transaction PostgreSQL
+        run: python backend/migrate_sqlite_to_postgres.py --source migration_staging.db
+
+      - name: Postflight — exiger une correspondance exacte des dix tables
+        shell: bash
+        run: |
+          python backend/migration_preflight.py --sqlite migration_staging.db --schema public > preflight-after.json
+          cat preflight-after.json
+          python - <<'PY'
+          import json
+          report = json.load(open("preflight-after.json", encoding="utf-8"))
+          assert report["blockers"] == [], report["blockers"]
+          expected = {
+              "exercices": 349, "users": 0, "sessions": 0,
+              "auth_action_tokens": 0, "auth_mail_limits": 0,
+              "templates": 0, "template_exercices": 0,
+              "seances": 0, "series": 0, "seance_exercices": 0,
+          }
+          for table, count in expected.items():
+              item = report["tables"][table]
+              assert item["source_count"] == count, (table, item)
+              assert item["target_count"] == count, (table, item)
+              assert item["status"] == "CONTENT_MATCH", (table, item)
+              assert item["row_content_matches"] is True, (table, item)
+          assert report["foreign_keys"]["missing_on_target"] == []
+          assert report["foreign_keys"]["extra_on_target"] == []
+          print("POSTFLIGHT VALIDÉ : 349 exercices, neuf tables vides, contenu identique.")
+          PY
+
+      - name: Publier les rapports de contrôle
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: liftely-supabase-migration-reports
+          path: |
+            preflight-before.json
+            preflight-after.json
+          if-no-files-found: ignore
+          retention-days: 14
