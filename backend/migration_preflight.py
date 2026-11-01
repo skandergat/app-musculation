@@ -69,6 +69,192 @@ def postgres_table_columns(conn, schema: str, table: str) -> set[str]:
     return {row[0] for row in rows}
 
 
+def sqlite_schema_signature(conn: sqlite3.Connection, table: str) -> dict[str, Any]:
+    columns = conn.execute(
+        f"PRAGMA table_info({quote_identifier(table)})"
+    ).fetchall()
+    primary_key = [
+        row[1] for row in sorted(columns, key=lambda item: item[5]) if row[5]
+    ]
+    indexes = []
+    for index in conn.execute(
+        f"PRAGMA index_list({quote_identifier(table)})"
+    ).fetchall():
+        # The primary key is compared separately; retain UNIQUE constraints
+        # and explicit indexes, including partial indexes.
+        if index[3] == "pk":
+            continue
+        index_name = str(index[1])
+        index_columns = [
+            row[2] for row in conn.execute(
+                f"PRAGMA index_info({quote_identifier(index_name)})"
+            ).fetchall()
+        ]
+        definition = conn.execute(
+            "SELECT sql FROM sqlite_master WHERE type='index' AND name=?",
+            (index_name,),
+        ).fetchone()
+        predicate_match = re.search(
+            r"\\bWHERE\\b(.*)$", definition[0], re.IGNORECASE
+        ) if definition and definition[0] else None
+        predicate = normalize_predicate(predicate_match.group(1)) if predicate_match else None
+        indexes.append((bool(index[2]), tuple(index_columns), predicate))
+    return {
+        "columns": [
+            {
+                "name": row[1],
+                "type": sqlite_affinity(row[2]),
+                "not_null": bool(row[3] or row[5]),
+                "default": normalize_default(row[4]),
+                "primary_key_position": int(row[5]),
+            }
+            for row in columns
+        ],
+        "primary_key": primary_key,
+        "indexes": sorted(indexes),
+    }
+
+
+def sqlite_affinity(declared_type: str | None) -> str:
+    value = (declared_type or "").upper()
+    if "INT" in value:
+        return "integer"
+    if any(token in value for token in ("CHAR", "CLOB", "TEXT")):
+        return "text"
+    if any(token in value for token in ("REAL", "FLOA", "DOUB")):
+        return "real"
+    if not value or "BLOB" in value:
+        return "blob"
+    return "numeric"
+
+
+def postgres_affinity(data_type: str, udt_name: str) -> str:
+    value = (data_type + " " + udt_name).lower()
+    if any(token in value for token in ("smallint", "integer", "bigint")):
+        return "integer"
+    if any(token in value for token in ("character", "text")):
+        return "text"
+    if "bytea" in value:
+        return "blob"
+    if any(token in value for token in ("real", "double precision")):
+        return "real"
+    return "numeric"
+
+
+def normalize_default(value: Any) -> str | None:
+    if value is None:
+        return None
+    result = str(value).strip()
+    result = re.sub(
+        r"::(?:text|character varying|character|smallint|integer|bigint|numeric|double precision)",
+        "",
+        result,
+        flags=re.IGNORECASE,
+    )
+    while result.startswith("(") and result.endswith(")"):
+        result = result[1:-1].strip()
+    return result
+
+
+def normalize_predicate(value: str) -> str:
+    return re.sub(r"[\\s\\\"()]", "", value).lower()
+
+
+def postgres_schema_signature(conn, schema: str, table: str) -> dict[str, Any]:
+    rows = conn.execute(
+        """
+        SELECT column_name, data_type, udt_name, is_nullable,
+               column_default, is_identity
+        FROM information_schema.columns
+        WHERE table_schema = %s AND table_name = %s
+        ORDER BY ordinal_position
+        """,
+        (schema, table),
+    ).fetchall()
+    primary_key = [
+        row[0] for row in conn.execute(
+            """
+            SELECT kcu.column_name
+            FROM information_schema.table_constraints tc
+            JOIN information_schema.key_column_usage kcu
+              ON tc.constraint_schema = kcu.constraint_schema
+             AND tc.constraint_name = kcu.constraint_name
+             AND tc.table_name = kcu.table_name
+            WHERE tc.constraint_type = 'PRIMARY KEY'
+              AND tc.table_schema = %s AND tc.table_name = %s
+            ORDER BY kcu.ordinal_position
+            """,
+            (schema, table),
+        ).fetchall()
+    ]
+    indexes = conn.execute(
+        """
+        SELECT i.indisunique,
+               array_agg(a.attname ORDER BY key_column.ordinality),
+               pg_get_expr(i.indpred, i.indrelid)
+        FROM pg_index i
+        JOIN pg_class t ON t.oid = i.indrelid
+        JOIN pg_namespace n ON n.oid = t.relnamespace
+        JOIN LATERAL unnest(i.indkey) WITH ORDINALITY
+             AS key_column(attnum, ordinality)
+          ON key_column.ordinality <= i.indnkeyatts
+        JOIN pg_attribute a
+          ON a.attrelid = t.oid AND a.attnum = key_column.attnum
+        WHERE n.nspname = %s AND t.relname = %s AND NOT i.indisprimary
+        GROUP BY i.indexrelid, i.indisunique, i.indpred, i.indrelid
+        """,
+        (schema, table),
+    ).fetchall()
+    return {
+        "columns": [
+            {
+                "name": row[0],
+                "type": postgres_affinity(row[1], row[2]),
+                "not_null": row[3] == "NO",
+                "default": None if row[5] == "YES" else normalize_default(row[4]),
+                "primary_key_position": 0,
+            }
+            for row in rows
+        ],
+        "primary_key": primary_key,
+        "indexes": sorted(
+            (
+                bool(row[0]),
+                tuple(row[1]),
+                normalize_predicate(row[2]) if row[2] else None,
+            )
+            for row in indexes
+        ),
+    }
+
+
+def compare_schema_signatures(source: dict[str, Any], target: dict[str, Any]) -> list[str]:
+    issues = []
+    target_by_name = {column["name"]: column for column in target["columns"]}
+    for expected in source["columns"]:
+        actual = target_by_name.get(expected["name"])
+        if actual is None:
+            issues.append(f"missing_column:{expected['name']}")
+            continue
+        for field in ("type", "not_null", "default"):
+            if expected[field] != actual[field]:
+                issues.append(
+                    f"{field}_mismatch:{expected['name']} "
+                    f"(source={expected[field]!r}, target={actual[field]!r})"
+                )
+    source_names = {column["name"] for column in source["columns"]}
+    extra = sorted(set(target_by_name) - source_names)
+    issues.extend(f"extra_column:{name}" for name in extra)
+    if source["primary_key"] != target["primary_key"]:
+        issues.append(
+            f"primary_key_mismatch:(source={source['primary_key']}, "
+            f"target={target['primary_key']})"
+        )
+    if source["indexes"] != target["indexes"]:
+        issues.append("index_or_unique_constraint_mismatch")
+    return issues
+
+
 def canonical_value(value: Any) -> Any:
     """Normalize common SQLite/PostgreSQL type differences without exposing values."""
     if value is None:
@@ -267,8 +453,11 @@ def main() -> int:
             source_rows_by_table[table] = rows
             source_counts[table] = len(rows)
     finally:
-        src.close()
+        # Keep the read-only source connection open for schema metadata checks
+        # performed alongside the PostgreSQL target inspection.
+        pass
 
+    src_conn_placeholder = src
     try:
         import psycopg
     except ImportError:
@@ -311,15 +500,20 @@ def main() -> int:
                         continue
 
                     target_columns[table] = columns
+                    source_signature = sqlite_schema_signature(src_conn_placeholder, table)
+                    target_signature = postgres_schema_signature(dst, args.schema, table)
+                    schema_issues = compare_schema_signatures(
+                        source_signature, target_signature
+                    )
                     missing_columns = sorted(
                         set(source_columns.get(table, [])) - columns
                     )
-                    if missing_columns:
+                    if schema_issues:
                         report["blockers"].append(
                             {
-                                "type": "target_missing_columns",
+                                "type": "target_schema_mismatch",
                                 "table": table,
-                                "columns": missing_columns,
+                                "issues": schema_issues,
                             }
                         )
 
@@ -527,6 +721,7 @@ def main() -> int:
             }
         )
 
+    src_conn_placeholder.close()
     report["result"] = "BLOCKED" if report["blockers"] else "REVIEW_REQUIRED"
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 2 if report["blockers"] else 0
