@@ -45,6 +45,14 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Create missing tables/indexes before import (safe for an empty target).",
     )
+    parser.add_argument(
+        "--allow-identical-existing",
+        action="store_true",
+        help=(
+            "Allow a non-empty target table only when its complete row content "
+            "already matches the SQLite source exactly; matching rows are skipped."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -100,18 +108,6 @@ def main() -> int:
                         + ". Applique postgres_schema.sql ou utilise --create-schema."
                     )
 
-                for table in TABLE_ORDER:
-                    cur.execute(
-                        sql.SQL("SELECT EXISTS (SELECT 1 FROM {} LIMIT 1)").format(
-                            sql.Identifier(table)
-                        )
-                    )
-                    if cur.fetchone()[0]:
-                        raise RuntimeError(
-                            f"La table cible {table} n'est pas vide. "
-                            "Import annulé sans écraser de données."
-                        )
-
                 expected_counts: dict[str, int] = {}
                 for table in TABLE_ORDER:
                     source_tables = {
@@ -144,21 +140,15 @@ def main() -> int:
                         )
 
                     rows = source.execute(f'SELECT * FROM "{table}"').fetchall()
-                    if rows:
-                        insert = sql.SQL("INSERT INTO {} ({}) VALUES ({})").format(
-                            sql.Identifier(table),
-                            sql.SQL(", ").join(sql.Identifier(c) for c in source_columns),
-                            sql.SQL(", ").join(sql.Placeholder() for _ in source_columns),
-                        )
-                        cur.executemany(
-                            insert,
-                            [tuple(row[column] for column in source_columns) for row in rows],
-                        )
-                    expected_counts[table] = len(rows)
+                    expected_rows = [
+                        tuple(row[column] for column in source_columns)
+                        for row in rows
+                    ]
 
-                    # Compare full row contents, not just counts. Fetch target
-                    # columns in source order to avoid false mismatches caused
-                    # only by a different column declaration order.
+                    # A pre-seeded target table is accepted only when every
+                    # existing row matches the source exactly. This supports
+                    # Supabase where the 349 exercises may already be loaded,
+                    # without duplicating or overwriting any row.
                     quoted_columns = sql.SQL(", ").join(
                         sql.Identifier(column) for column in source_columns
                     )
@@ -167,11 +157,36 @@ def main() -> int:
                             quoted_columns, sql.Identifier(table)
                         )
                     )
+                    existing_rows = [tuple(row) for row in cur.fetchall()]
+                    if existing_rows:
+                        if not args.allow_identical_existing:
+                            raise RuntimeError(
+                                f"La table cible {table} n'est pas vide. "
+                                "Import annulé sans écraser de données."
+                            )
+                        if sorted(map(repr, existing_rows)) != sorted(map(repr, expected_rows)):
+                            raise RuntimeError(
+                                f"La table cible {table} contient déjà des données "
+                                "différentes de la source. Import annulé."
+                            )
+                    elif rows:
+                        insert = sql.SQL("INSERT INTO {} ({}) VALUES ({})").format(
+                            sql.Identifier(table),
+                            sql.SQL(", ").join(sql.Identifier(c) for c in source_columns),
+                            sql.SQL(", ").join(sql.Placeholder() for _ in source_columns),
+                        )
+                        cur.executemany(insert, expected_rows)
+
+                    expected_counts[table] = len(rows)
+
+                    # Verify the complete contents after inserting or safely
+                    # skipping an already-identical table.
+                    cur.execute(
+                        sql.SQL("SELECT {} FROM {}").format(
+                            quoted_columns, sql.Identifier(table)
+                        )
+                    )
                     actual_rows = [tuple(row) for row in cur.fetchall()]
-                    expected_rows = [
-                        tuple(row[column] for column in source_columns)
-                        for row in rows
-                    ]
                     if sorted(map(repr, actual_rows)) != sorted(map(repr, expected_rows)):
                         raise RuntimeError(
                             f"Écart de contenu détecté après import dans {table}"
