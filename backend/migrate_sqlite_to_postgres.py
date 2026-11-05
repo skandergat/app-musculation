@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Import the validated SQLite staging database into an EMPTY PostgreSQL database.
+"""Import a validated SQLite staging database into PostgreSQL.
 
 Safety:
-- Requires SUPABASE_DB_URL (or DATABASE_URL); never prints the connection string.
-- Refuses to import if any target application table already contains rows.
+- Requires a PostgreSQL DSN; never prints the connection string.
+- Refuses existing target rows unless --allow-identical-existing is set and
+  the complete target table content exactly matches the SQLite source.
 - Runs the entire import in one PostgreSQL transaction.
 - Does not modify the SQLite source file.
 """
