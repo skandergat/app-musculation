@@ -75,17 +75,27 @@ jobs:
               "seances", "series", "seance_exercices",
           }
           for table, item in report["tables"].items():
-              assert item["target_count"] == 0, f"{table} n'est pas vide"
-          assert report["tables"]["exercices"]["source_count"] == 349
-          for table, item in report["tables"].items():
-              if table != "exercices":
+              if table == "exercices":
+                  assert item["source_count"] == 349, item
+                  assert item["target_count"] in (0, 349), (
+                      "La table exercices doit être vide ou contenir exactement "
+                      "les 349 lignes déjà importées."
+                  )
+                  if item["target_count"] == 349:
+                      assert item["status"] == "CONTENT_MATCH", item
+                      assert item["row_content_matches"] is True, item
+              else:
+                  assert item["target_count"] == 0, f"{table} n'est pas vide"
                   assert item["source_count"] == 0, f"Source inattendue dans {table}"
           assert report["foreign_keys"]["missing_on_target"] == []
-          print("Préflight validé : schéma compatible et dix tables cibles vides.")
+          print("Préflight validé : catalogue vide ou identique, autres tables vides.")
           PY
 
       - name: Importer dans une transaction PostgreSQL
-        run: python backend/migrate_sqlite_to_postgres.py --source migration_staging.db
+        run: >-
+          python backend/migrate_sqlite_to_postgres.py
+          --source migration_staging.db
+          --allow-identical-existing
 
       - name: Postflight — exiger une correspondance exacte des dix tables
         shell: bash
