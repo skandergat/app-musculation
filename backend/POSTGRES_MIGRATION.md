@@ -4,14 +4,15 @@
 
 - Le dépôt `main` contient l'adaptateur PostgreSQL (`backend/db_compat.py`) et son intégration dans `backend/app.py`.
 - Les tests d'intégration PostgreSQL ont réussi sur une instance PostgreSQL isolée en CI, avec la base de staging assainie : 349 exercices, neuf tables applicatives vides, comparaison exacte des dix tables et vérification des clés étrangères et séquences.
-- Le projet Supabase de production a été inspecté en lecture seule : le schéma `public` ne contient actuellement aucune table applicative LIFTELY. Les schémas internes Supabase (`auth`, `storage`, etc.) sont présents et ne doivent pas être modifiés.
-- Le service Render `liftely-api` déploie le commit de migration, mais aucune instance PostgreSQL Render n'est attachée. La présence et la valeur de la variable de connexion Supabase dans Render n'ont pas été vérifiées.
-- **Aucune migration de production n'a été exécutée et aucun changement de configuration Render n'a été effectué.** Tant que le schéma et les données ne sont pas importés puis vérifiés dans Supabase, le backend doit rester sur sa base actuelle.
+- Vérification en lecture seule du projet Supabase le 5 novembre 2026 : les dix tables applicatives LIFTELY existent dans le schéma `public`. La table `exercices` contient 349 lignes et ses identifiants vont de 1 à 349. Les compteurs des neuf autres tables doivent encore être vérifiés ensemble avant l'import.
+- Les colonnes, clés primaires, contraintes uniques, relations et séquences ont été inspectées. Les identifiants sont générés automatiquement. `seances.user_id` n'a volontairement pas de clé étrangère dans le schéma SQLite actuel.
+- Le service Render `liftely-api` est sur le plan Free, branche `main`, avec déploiement automatique. L'API des variables d'environnement consultée ne permet pas de lire leur présence ou leur valeur ; ne pas supposer que `LIFTELY_DATABASE_URL` est configurée.
+- **Aucune migration de production ni modification de configuration Render n'a été effectuée.** Le backend doit rester sur SQLite tant que le préflight réel et les tests API PostgreSQL ne sont pas validés.
 
 ## Fichiers
 
 - `postgres_schema.sql` : définition des dix tables applicatives, contraintes et index.
-- `migrate_sqlite_to_postgres.py` : import transactionnel depuis une base SQLite vers un schéma PostgreSQL vide. Refuse toute table cible contenant déjà des lignes et vérifie les contenus importés.
+- `migrate_sqlite_to_postgres.py` : import transactionnel depuis SQLite. Par défaut, refuse les tables cibles non vides ; avec `--allow-identical-existing`, accepte uniquement les tables dont le contenu complet correspond exactement à la source, sans réinsérer les lignes.
 - `migration_preflight.py` : comparaison en lecture seule du schéma, des index, des clés étrangères, des nombres de lignes et du contenu.
 - `test_real_staging_migration.py` : test reproductible de la vraie fixture assainie sur un schéma PostgreSQL temporaire isolé.
 - `fixtures/reset_staging_source.sql.gz.b64` : fixture de staging assainie, sans comptes ni historique.
@@ -38,7 +39,7 @@ Cette fixture ne doit être utilisée que si elle correspond toujours à la sour
 ## Procédure contrôlée
 
 1. Vérifier qu'une sauvegarde de la base source actuelle existe et confirmer que la fixture assainie est bien la source retenue.
-2. Appliquer `postgres_schema.sql` uniquement au schéma `public` vide du projet Supabase cible. Ne jamais exécuter de `DROP`, `TRUNCATE` ou de commande visant les schémas Supabase internes.
+2. Vérifier que les dix tables applicatives et leurs contraintes existent dans `public`. Si le schéma existe déjà, ne pas le recréer ni le supprimer. Pour une cible réellement vide, appliquer `postgres_schema.sql` uniquement dans `public`. Ne jamais exécuter de `DROP`, `TRUNCATE` ou de commande visant les schémas Supabase internes.
 3. Depuis un environnement sécurisé disposant de la fixture SQLite et de la chaîne de connexion PostgreSQL, exécuter le préflight en lecture seule.
 4. Si et seulement si le préflight ne signale aucun bloqueur, exécuter l'importeur avec `--source <base_staging.sqlite>`. L'importeur n'écrase aucune ligne existante et annule la transaction en cas d'erreur.
 5. Relancer le préflight et exiger une correspondance exacte des dix tables, des clés étrangères et des séquences.
@@ -73,9 +74,9 @@ Un workflow manuel et protégé est disponible dans `.github/workflows/supabase-
 
 1. Dans GitHub, ouvrir **Settings → Secrets and variables → Actions → New repository secret**.
 2. Créer le secret `LIFTELY_DATABASE_URL` avec l'URI PostgreSQL de Supabase (privilégier la chaîne **Session pooler**, sans jamais la publier dans le dépôt ou une conversation).
-3. Ouvrir **Actions → LIFTELY — import contrôlé des 349 exercices vers Supabase → Run workflow**.
-4. Saisir exactement `IMPORTER_349_EXERCICES` dans le champ de confirmation et lancer le workflow.
+3. Ouvrir **Actions → LIFTELY — initialisation contrôlée du schéma Supabase → Run workflow**.
+4. Saisir exactement `INITIALISER_LIFTELY_SUPABASE` dans le champ de confirmation et lancer le workflow.
 
-Le workflow reconstitue la fixture assainie depuis le dépôt, vérifie son intégrité, exige que les dix tables `public` soient vides et que le schéma soit compatible, puis lance l'import transactionnel. Il bloque si la cible n'est pas vide, si la source diffère, si le schéma ne correspond pas ou si le secret est absent. Le postflight exige une correspondance exacte du contenu des dix tables et des clés étrangères. Les rapports sont conservés comme artefact GitHub Actions pendant 14 jours.
+Le workflow reconstitue la fixture assainie depuis le dépôt et vérifie son intégrité. Il exige que les neuf tables autres que `exercices` soient vides. La table `exercices` peut être vide ou contenir exactement les 349 lignes de la fixture ; dans ce dernier cas, le contenu complet doit correspondre et les lignes sont conservées sans réinsertion. Il bloque si le catalogue est partiel ou différent, si le schéma ne correspond pas ou si le secret est absent. Le postflight exige une correspondance exacte du contenu des dix tables et des clés étrangères. Les rapports sont conservés comme artefact GitHub Actions pendant 14 jours.
 
 **Ce workflow n'effectue aucun basculement Render.** Après l'import, il faudra encore valider les routes API avec PostgreSQL avant de configurer le service Render.

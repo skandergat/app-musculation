@@ -222,17 +222,22 @@ def run_preflight(source: Path, target_dsn: str, schema_name: str) -> subprocess
     )
 
 
-def run_import(source: Path, target_dsn: str) -> subprocess.CompletedProcess:
+def run_import(
+    source: Path, target_dsn: str, allow_identical_existing: bool = False
+) -> subprocess.CompletedProcess:
     env = os.environ.copy()
     env["LIFTELY_DATABASE_URL"] = target_dsn
     env.pop("SUPABASE_DB_URL", None)
     env.pop("DATABASE_URL", None)
+    command = [
+        sys.executable, str(IMPORTER),
+        "--source", str(source),
+        "--schema", str(SCHEMA_FILE),
+    ]
+    if allow_identical_existing:
+        command.append("--allow-identical-existing")
     return subprocess.run(
-        [
-            sys.executable, str(IMPORTER),
-            "--source", str(source),
-            "--schema", str(SCHEMA_FILE),
-        ],
+        command,
         cwd=ROOT,
         env=env,
         text=True,
@@ -272,12 +277,24 @@ def main() -> None:
         success_schema = f"liftely_import_ok_{uuid.uuid4().hex[:12]}"
         schemas.append(success_schema)
         success_dsn = create_target_schema(base_dsn, success_schema)
+
+        # Simulate Supabase where the exact 349-exercise catalogue has already
+        # been seeded. The importer must verify it and skip duplicate inserts.
+        with psycopg.connect(success_dsn, connect_timeout=10) as conn:
+            conn.execute(
+                """
+                INSERT INTO exercices (id, nom, groupe_musculaire, categorie, actif)
+                VALUES (%s, %s, %s, %s, %s)
+                """,
+                (20, "Push-up", "Chest", "calisthenics", 1),
+            )
+
         preflight = run_preflight(valid_source, success_dsn, success_schema)
         assert preflight.returncode == 0, (preflight.stdout, preflight.stderr)
         preflight_report = json.loads(preflight.stdout)
         assert preflight_report["blockers"] == [], preflight_report["blockers"]
         assert preflight_report["result"] == "REVIEW_REQUIRED"
-        result = run_import(valid_source, success_dsn)
+        result = run_import(valid_source, success_dsn, allow_identical_existing=True)
         assert result.returncode == 0, (result.stdout, result.stderr)
         with psycopg.connect(success_dsn, connect_timeout=10) as conn:
             expected_counts = {
