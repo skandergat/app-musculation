@@ -1,10 +1,10 @@
-name: LIFTELY — import contrôlé des 349 exercices vers Supabase
+name: LIFTELY — initialisation contrôlée du schéma Supabase
 
 on:
   workflow_dispatch:
     inputs:
       confirmation:
-        description: "Saisir exactement IMPORTER_349_EXERCICES pour autoriser l'import"
+        description: "Saisir exactement INITIALISER_LIFTELY_SUPABASE pour autoriser l'import"
         required: true
         type: string
 
@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   import:
-    if: ${{ inputs.confirmation == 'IMPORTER_349_EXERCICES' }}
+    if: ${{ inputs.confirmation == 'INITIALISER_LIFTELY_SUPABASE' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -60,7 +60,7 @@ jobs:
       - name: Installer les dépendances PostgreSQL
         run: python -m pip install "psycopg[binary]>=3.2,<4.0"
 
-      - name: Préflight strict en lecture seule — la cible doit être vide
+      - name: Préflight strict en lecture seule — catalogue vide ou identique, autres tables vides
         shell: bash
         run: |
           python backend/migration_preflight.py --sqlite migration_staging.db --schema public > preflight-before.json
