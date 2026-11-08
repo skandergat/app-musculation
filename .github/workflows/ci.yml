@@ -34,6 +34,9 @@ jobs:
       - name: Account lifecycle smoke test
         run: python -m backend.account_lifecycle_smoke
 
+      - name: Account isolation smoke test
+        run: python -m backend.account_isolation_smoke
+
       - name: Security smoke test
         run: python -m backend.security_smoke
 
