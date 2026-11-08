@@ -18,6 +18,10 @@ from email.message import EmailMessage
 from urllib.parse import urlencode
 
 app = Flask(__name__)
+app.logger.info(
+    "LIFTELY database backend selected: %s",
+    "PostgreSQL" if POSTGRES_ENABLED else "SQLite",
+)
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024
 # Render ajoute un seul proxy de confiance devant le service. On utilise le
 # dernier X-Forwarded-For fourni par ce proxy, jamais le premier élément client.
@@ -183,6 +187,23 @@ def email_valide(email):
 
 def get_db():
     return connect_database(DB_PATH, timeout=10)
+
+
+@app.route("/health", methods=["GET"])
+def health_check():
+    """Probe database availability without exposing internal details."""
+    conn = None
+    try:
+        conn = get_db()
+        conn.execute("SELECT 1").fetchone()
+    except Exception:
+        app.logger.exception("Health check database probe failed")
+        return jsonify({"status": "unhealthy"}), 503
+    finally:
+        if conn is not None:
+            conn.close()
+
+    return jsonify({"status": "ok"}), 200
 
 
 def entier_strict(value):

@@ -342,6 +342,10 @@ jobs:
         working-directory: mobile
         run: npm ci
 
+      - name: Translation key parity
+        working-directory: mobile
+        run: npm run check:translations
+
       - name: Dependency audit summary
         working-directory: mobile
         run: |

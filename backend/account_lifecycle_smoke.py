@@ -55,6 +55,24 @@ from backend import app as backend  # noqa: E402
 backend.app.config["TESTING"] = True
 client = backend.app.test_client()
 
+# Hosting-platform health check must verify database reachability.
+health = client.get("/health")
+assert health.status_code == 200, health.get_data(as_text=True)
+assert health.get_json() == {"status": "ok"}
+
+original_get_db = backend.get_db
+try:
+    def unavailable_database():
+        raise RuntimeError("simulated database connection failure")
+
+    backend.get_db = unavailable_database
+    unhealthy = client.get("/health")
+    assert unhealthy.status_code == 503, unhealthy.get_data(as_text=True)
+    assert unhealthy.get_json() == {"status": "unhealthy"}
+finally:
+    backend.get_db = original_get_db
+
+
 
 def token_for(subject: str, email: str) -> str:
     matches = [

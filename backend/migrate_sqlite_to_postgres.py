@@ -2,7 +2,7 @@
 """Import the validated SQLite staging database into an EMPTY PostgreSQL database.
 
 Safety:
-- Requires SUPABASE_DB_URL (or DATABASE_URL); never prints the connection string.
+- Requires LIFTELY_DATABASE_URL (legacy aliases SUPABASE_DB_URL and DATABASE_URL are accepted); never prints the connection string.
 - Refuses to import if any target application table already contains rows.
 - Runs the entire import in one PostgreSQL transaction.
 - Does not modify the SQLite source file.
@@ -63,7 +63,7 @@ def main() -> int:
         return 2
     if not dsn:
         print(
-            "ERREUR : définis SUPABASE_DB_URL dans l'environnement "
+            "ERREUR : définis LIFTELY_DATABASE_URL dans l'environnement "
             "(ne colle pas le secret dans le code ni dans le chat).",
             file=sys.stderr,
         )

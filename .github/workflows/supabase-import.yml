@@ -47,7 +47,7 @@ jobs:
           expected = {
               "users": 0, "exercices": 349, "sessions": 0,
               "auth_action_tokens": 0, "auth_mail_limits": 0,
-              "templates": 0, "template_exercices": 0,
+              "auth_login_limits": 0, "templates": 0, "template_exercices": 0,
               "seances": 0, "series": 0, "seance_exercices": 0,
           }
           actual = {table: db.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0] for table in expected}
@@ -71,7 +71,7 @@ jobs:
           assert report["blockers"] == [], report["blockers"]
           assert set(report["tables"]) == {
               "exercices", "users", "sessions", "auth_action_tokens",
-              "auth_mail_limits", "templates", "template_exercices",
+              "auth_mail_limits", "auth_login_limits", "templates", "template_exercices",
               "seances", "series", "seance_exercices",
           }
           for table, item in report["tables"].items():
@@ -99,7 +99,7 @@ jobs:
           expected = {
               "exercices": 349, "users": 0, "sessions": 0,
               "auth_action_tokens": 0, "auth_mail_limits": 0,
-              "templates": 0, "template_exercices": 0,
+              "auth_login_limits": 0, "templates": 0, "template_exercices": 0,
               "seances": 0, "series": 0, "seance_exercices": 0,
           }
           for table, count in expected.items():
