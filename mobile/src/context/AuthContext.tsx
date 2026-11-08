@@ -204,6 +204,9 @@ export function AuthProvider({
       if (response.status === 403 && data.code === 'email_not_verified') {
         throw new Error(t('emailNotVerified'));
       }
+      if (response.status === 429 && data.code === 'login_rate_limited') {
+        throw new Error(t('loginRateLimited'));
+      }
       throw new Error(data.error || t('connectionImpossible'));
     }
 

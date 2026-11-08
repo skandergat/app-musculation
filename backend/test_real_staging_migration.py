@@ -26,13 +26,13 @@ IMPORTER = BACKEND / "migrate_sqlite_to_postgres.py"
 PREFLIGHT = BACKEND / "migration_preflight.py"
 TABLES = (
     "exercices", "users", "sessions", "auth_action_tokens",
-    "auth_mail_limits", "templates", "template_exercices",
+    "auth_mail_limits", "auth_login_limits", "templates", "template_exercices",
     "seances", "series", "seance_exercices",
 )
 EXPECTED_COUNTS = {
     "exercices": 349, "users": 0, "sessions": 0,
     "auth_action_tokens": 0, "auth_mail_limits": 0,
-    "templates": 0, "template_exercices": 0,
+    "auth_login_limits": 0, "templates": 0, "template_exercices": 0,
     "seances": 0, "series": 0, "seance_exercices": 0,
 }
 
@@ -83,6 +83,11 @@ def main() -> None:
         source_sql = gzip.decompress(compressed).decode("utf-8")
         with sqlite3.connect(source) as conn:
             conn.executescript(source_sql)
+            conn.execute(
+                "CREATE TABLE auth_login_limits ("
+                "key_hash TEXT PRIMARY KEY, window_start TEXT NOT NULL, "
+                "request_count INTEGER NOT NULL)"
+            )
             conn.commit()
 
         with sqlite3.connect(f"file:{source.as_posix()}?mode=ro", uri=True) as conn:
@@ -148,8 +153,8 @@ def main() -> None:
             "source": "sanitized reconstruction of uploaded reset staging database",
             "expected_counts": EXPECTED_COUNTS,
             "preflight": "no blockers; exact schema and foreign-key compatibility",
-            "import": "10 tables imported in one transaction",
-            "postflight": "all 10 tables CONTENT_MATCH; no missing or extra foreign keys",
+            "import": "11 tables imported in one transaction",
+            "postflight": "all 11 tables CONTENT_MATCH; no missing or extra foreign keys",
             "identity_sequence": f"next exercices.id = {next_id}",
             "source_unchanged": source_digest_before == source_digest_after,
             "target_schema": schema_name,

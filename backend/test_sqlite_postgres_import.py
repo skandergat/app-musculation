@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_FILE = ROOT / "backend" / "postgres_schema.sql"
 IMPORTER = ROOT / "backend" / "migrate_sqlite_to_postgres.py"
 TABLES = (
-    "users", "exercices", "auth_mail_limits", "sessions",
+    "users", "exercices", "auth_mail_limits", "auth_login_limits", "sessions",
     "auth_action_tokens", "templates", "seances",
     "template_exercices", "series", "seance_exercices",
 )
@@ -67,6 +67,11 @@ def build_sqlite_fixture(path: Path, duplicate_exercise: bool = False) -> None:
             date_utilisation TEXT
         );
         CREATE TABLE auth_mail_limits (
+            key_hash TEXT PRIMARY KEY,
+            window_start TEXT NOT NULL,
+            request_count INTEGER NOT NULL
+        );
+        CREATE TABLE auth_login_limits (
             key_hash TEXT PRIMARY KEY,
             window_start TEXT NOT NULL,
             request_count INTEGER NOT NULL
@@ -282,6 +287,7 @@ def main() -> None:
         with psycopg.connect(success_dsn, connect_timeout=10) as conn:
             expected_counts = {
                 "users": 1, "exercices": 1, "auth_mail_limits": 1,
+                "auth_login_limits": 0,
                 "sessions": 1, "auth_action_tokens": 1, "templates": 1,
                 "seances": 1, "template_exercices": 1, "series": 1,
                 "seance_exercices": 1,
