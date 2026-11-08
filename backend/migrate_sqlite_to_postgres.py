@@ -22,6 +22,7 @@ TABLE_ORDER = (
     "users",
     "exercices",
     "auth_mail_limits",
+    "auth_login_limits",
     "sessions",
     "auth_action_tokens",
     "templates",
