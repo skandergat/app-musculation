@@ -37,6 +37,20 @@ health = client.get("/health")
 assert health.status_code == 200, health.get_data(as_text=True)
 assert health.get_json() == {"status": "ok"}
 
+# A failed connection attempt must be reported as unhealthy for either DB
+# driver, including failures raised before a connection object is returned.
+original_get_db = backend.get_db
+try:
+    def unavailable_database():
+        raise RuntimeError("simulated database connection failure")
+
+    backend.get_db = unavailable_database
+    unhealthy = client.get("/health")
+    assert unhealthy.status_code == 503, unhealthy.get_data(as_text=True)
+    assert unhealthy.get_json() == {"status": "unhealthy"}
+finally:
+    backend.get_db = original_get_db
+
 
 def token_for(subject: str, email: str) -> str:
     matches = [
