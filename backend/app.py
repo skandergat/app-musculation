@@ -1,4 +1,5 @@
 ﻿from flask import Flask, jsonify, render_template, request
+from werkzeug.middleware.proxy_fix import ProxyFix
 import sqlite3
 try:
     from .db_compat import POSTGRES_ENABLED, INTEGRITY_ERRORS, connect_database
@@ -17,6 +18,10 @@ from email.message import EmailMessage
 from urllib.parse import urlencode
 
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024
+# Render ajoute un seul proxy de confiance devant le service. On utilise le
+# dernier X-Forwarded-For fourni par ce proxy, jamais le premier élément client.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 
 # Configure les origines Web explicitement dans LIFTELY_CORS_ORIGINS
 # (liste séparée par des virgules). Par défaut, aucune origine navigateur
@@ -43,13 +48,30 @@ def ajouter_entetes_cors(response):
         )
         response.headers["Access-Control-Max-Age"] = "600"
 
+    # En-têtes appliqués à toutes les réponses (API, erreurs et pages HTML).
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = (
+        "camera=(), microphone=(), geolocation=()"
+    )
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; object-src 'none'; base-uri 'self'; "
+        "form-action 'self'; frame-ancestors 'none'; "
+        "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; font-src 'self' data:; connect-src 'self'"
+    )
+
+    # HSTS uniquement lorsque la requête est reconnue comme HTTPS derrière
+    # le proxy Render (ProxyFix traite le X-Forwarded-Proto de ce proxy).
+    if request.is_secure:
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=31536000; includeSubDomains"
+        )
+
     if request.path.startswith("/email/"):
         response.headers["Cache-Control"] = "no-store"
         response.headers["Referrer-Policy"] = "no-referrer"
-        response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; form-action 'self'; connect-src 'self'; "
-            "base-uri 'none'; frame-ancestors 'none'"
-        )
 
     return response
 
@@ -85,6 +107,10 @@ def purger_auth_temporaire_periodiquement():
         )
         conn.execute(
             "DELETE FROM auth_mail_limits WHERE window_start <= ?",
+            ((maintenant - timedelta(days=1)).isoformat(),),
+        )
+        conn.execute(
+            "DELETE FROM auth_login_limits WHERE window_start <= ?",
             ((maintenant - timedelta(days=1)).isoformat(),),
         )
         conn.execute(
@@ -383,6 +409,13 @@ def assurer_base():
             request_count INTEGER NOT NULL
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS auth_login_limits (
+            key_hash TEXT PRIMARY KEY,
+            window_start TEXT NOT NULL,
+            request_count INTEGER NOT NULL
+        )
+    """)
 
     # Nettoyer les tokens temporaires et les comptes jamais vérifiés.
     now_cleanup = datetime.now()
@@ -392,6 +425,10 @@ def assurer_base():
     )
     cursor.execute(
         "DELETE FROM auth_mail_limits WHERE window_start <= ?",
+        ((now_cleanup - timedelta(days=1)).isoformat(),),
+    )
+    cursor.execute(
+        "DELETE FROM auth_login_limits WHERE window_start <= ?",
         ((now_cleanup - timedelta(days=1)).isoformat(),),
     )
     date_limite_compte_en_attente = (
@@ -1577,6 +1614,73 @@ def autoriser_envoi_email(conn, email):
     return True
 
 
+def autoriser_tentative_connexion(email):
+    """Limite les échecs à 10 par couple e-mail/IP et 60 par IP sur 15 min."""
+    maintenant = datetime.now()
+    ip_client = request.remote_addr or "inconnue"
+    clefs = (
+        (hash_token("login:email_ip:" + email + ":" + ip_client), 10),
+        (hash_token("login:ip:" + ip_client), 60),
+    )
+    conn = get_db()
+    try:
+        # Verrou transactionnel commun SQLite/PostgreSQL : les compteurs ne
+        # peuvent pas être dépassés par deux requêtes concurrentes.
+        conn.execute("BEGIN IMMEDIATE")
+        compteurs = []
+        for empreinte, maximum in clefs:
+            ligne = conn.execute(
+                "SELECT window_start, request_count FROM auth_login_limits "
+                "WHERE key_hash = ?",
+                (empreinte,),
+            ).fetchone()
+            fenetre_active = (
+                ligne is not None
+                and datetime.fromisoformat(ligne["window_start"])
+                > maintenant - timedelta(minutes=15)
+            )
+            nombre = ligne["request_count"] if fenetre_active else 0
+            if nombre >= maximum:
+                conn.rollback()
+                return False
+            compteurs.append((
+                empreinte,
+                ligne["window_start"] if fenetre_active else maintenant.isoformat(),
+                nombre + 1,
+            ))
+
+        for empreinte, debut, nombre in compteurs:
+            conn.execute(
+                """
+                INSERT INTO auth_login_limits (key_hash, window_start, request_count)
+                VALUES (?, ?, ?)
+                ON CONFLICT(key_hash) DO UPDATE SET
+                    window_start = excluded.window_start,
+                    request_count = excluded.request_count
+                """,
+                (empreinte, debut, nombre),
+            )
+        conn.commit()
+        return True
+    finally:
+        conn.close()
+
+
+def effacer_limite_connexion_reussie(email):
+    """Réinitialise le compteur propre à ce compte/IP après authentification."""
+    ip_client = request.remote_addr or "inconnue"
+    empreinte = hash_token("login:email_ip:" + email + ":" + ip_client)
+    conn = get_db()
+    try:
+        conn.execute(
+            "DELETE FROM auth_login_limits WHERE key_hash = ?",
+            (empreinte,),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def envoyer_email_action(destinataire, sujet, message, chemin, token):
     if app.config.get("TESTING"):
         base_url = os.getenv(
@@ -2016,6 +2120,17 @@ def login():
 
     if not email or not password:
         return jsonify({"error": "Email et mot de passe obligatoires"}), 400
+    if len(email) > 254 or len(password) > 256:
+        return jsonify({"error": "Identifiants trop longs"}), 400
+
+    if not autoriser_tentative_connexion(email):
+        response = jsonify({
+            "error": "Trop de tentatives de connexion. Réessayez dans 15 minutes.",
+            "code": "login_rate_limited",
+        })
+        response.status_code = 429
+        response.headers["Retry-After"] = "900"
+        return response
 
     conn = get_db()
     user = conn.execute(
@@ -2040,6 +2155,8 @@ def login():
             "code": "email_not_verified",
         }), 403
 
+    conn.close()
+    effacer_limite_connexion_reussie(email)
     token = secrets.token_urlsafe(32)
     token_hash = hash_token(token)
     date_creation = datetime.now().isoformat()
