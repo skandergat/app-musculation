@@ -161,14 +161,18 @@ def get_db():
 @app.route("/health", methods=["GET"])
 def health_check():
     """Health endpoint for the hosting platform; do not expose internal details."""
-    conn = get_db()
+    conn = None
     try:
+        conn = get_db()
         conn.execute("SELECT 1").fetchone()
-    except sqlite3.Error:
+    except Exception:
+        # Cover connection-establishment and query failures for both SQLite
+        # and PostgreSQL without leaking driver details in the HTTP response.
         app.logger.exception("Health check database probe failed")
         return jsonify({"status": "unhealthy"}), 503
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
 
     return jsonify({"status": "ok"}), 200
 
