@@ -27,6 +27,7 @@ TABLES = (
     "sessions",
     "auth_action_tokens",
     "auth_mail_limits",
+    "auth_login_limits",
     "templates",
     "template_exercices",
     "seances",
