@@ -18,6 +18,10 @@ from email.message import EmailMessage
 from urllib.parse import urlencode
 
 app = Flask(__name__)
+app.logger.info(
+    "LIFTELY database backend selected: %s",
+    "PostgreSQL" if POSTGRES_ENABLED else "SQLite",
+)
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024
 # Render ajoute un seul proxy de confiance devant le service. On utilise le
 # dernier X-Forwarded-For fourni par ce proxy, jamais le premier élément client.
