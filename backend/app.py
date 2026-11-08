@@ -2155,7 +2155,7 @@ def login():
             "code": "email_not_verified",
         }), 403
 
-    conn.close()
+    conn.commit()
     effacer_limite_connexion_reussie(email)
     token = secrets.token_urlsafe(32)
     token_hash = hash_token(token)
