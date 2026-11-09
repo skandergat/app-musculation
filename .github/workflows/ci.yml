@@ -34,6 +34,12 @@ jobs:
       - name: Account lifecycle smoke test
         run: python -m backend.account_lifecycle_smoke
 
+      - name: Account isolation smoke test
+        run: python -m backend.account_isolation_smoke
+
+      - name: Security smoke test
+        run: python -m backend.security_smoke
+
       - name: Backend smoke test
         env:
           LIFTELY_DB_PATH: ${{ runner.temp }}/liftely-smoke.db
@@ -338,6 +344,10 @@ jobs:
       - name: Install mobile dependencies
         working-directory: mobile
         run: npm ci
+
+      - name: Translation key parity
+        working-directory: mobile
+        run: npm run check:translations
 
       - name: Dependency audit summary
         working-directory: mobile

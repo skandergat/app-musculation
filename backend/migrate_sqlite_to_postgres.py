@@ -2,7 +2,8 @@
 """Import a validated SQLite staging database into PostgreSQL.
 
 Safety:
-- Requires a PostgreSQL DSN; never prints the connection string.
+- Requires LIFTELY_DATABASE_URL (legacy aliases SUPABASE_DB_URL and
+  DATABASE_URL are accepted); never prints the connection string.
 - Refuses existing target rows unless --allow-identical-existing is set and
   the complete target table content exactly matches the SQLite source.
 - Runs the entire import in one PostgreSQL transaction.
@@ -23,6 +24,7 @@ TABLE_ORDER = (
     "users",
     "exercices",
     "auth_mail_limits",
+    "auth_login_limits",
     "sessions",
     "auth_action_tokens",
     "templates",
@@ -71,7 +73,7 @@ def main() -> int:
         return 2
     if not dsn:
         print(
-            "ERREUR : définis SUPABASE_DB_URL dans l'environnement "
+            "ERREUR : définis LIFTELY_DATABASE_URL dans l'environnement "
             "(ne colle pas le secret dans le code ni dans le chat).",
             file=sys.stderr,
         )

@@ -126,8 +126,8 @@ export default function ConnexionScreen() {
             style={styles.passwordVisibilityButton}
             onPress={() => setShowPassword((visible) => !visible)}
             accessibilityRole="button"
-            accessibilityLabel={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-            accessibilityHint="Appuyez pour afficher ou masquer le mot de passe"
+            accessibilityLabel={showPassword ? t('hidePassword') : t('showPassword')}
+            accessibilityHint={t('togglePasswordHint')}
             hitSlop={8}
           >
             <Text style={[styles.passwordEye, dark && styles.passwordEyeDark]}>👁</Text>
