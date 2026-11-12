@@ -11,18 +11,12 @@ on:
       - backend/postgres_schema.sql
       - backend/fixtures/reset_staging_source.sql.gz.b64
   workflow_dispatch:
-    inputs:
-      confirmation:
-        description: "Saisir exactement INITIALISER_LIFTELY_SUPABASE pour autoriser l'import"
-        required: true
-        type: string
 
 permissions:
   contents: read
 
 jobs:
   import:
-    if: ${{ github.event_name == 'push' || inputs.confirmation == 'INITIALISER_LIFTELY_SUPABASE' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
