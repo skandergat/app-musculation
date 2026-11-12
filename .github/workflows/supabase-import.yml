@@ -38,27 +38,37 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Reconstituer la fixture SQLite assainie
+      - name: Reconstituer la fixture SQLite depuis le dump SQL compressé
         shell: bash
         run: |
-          base64 --decode backend/fixtures/reset_staging_source.sql.gz.b64 | gzip --decompress > migration_staging.db
+          base64 --decode backend/fixtures/reset_staging_source.sql.gz.b64 > migration_staging.sql.gz
           python - <<'PY'
+          import gzip
           import sqlite3
+
+          with gzip.open("migration_staging.sql.gz", "rt", encoding="utf-8") as dump:
+              script = dump.read()
+
+          db = sqlite3.connect("migration_staging.db")
+          db.executescript(script)
+          db.commit()
+          db.close()
+
           db = sqlite3.connect("file:migration_staging.db?mode=ro", uri=True)
           assert db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
-          counts = dict(db.execute(
-              "SELECT name, (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=m.name) FROM sqlite_master m WHERE type='table'"
-          ))
           expected = {
               "users": 0, "exercices": 349, "sessions": 0,
               "auth_action_tokens": 0, "auth_mail_limits": 0,
               "auth_login_limits": 0, "templates": 0, "template_exercices": 0,
               "seances": 0, "series": 0, "seance_exercices": 0,
           }
-          actual = {table: db.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0] for table in expected}
+          actual = {
+              table: db.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0]
+              for table in expected
+          }
           assert actual == expected, f"Fixture inattendue: {actual}"
           assert not db.execute("PRAGMA foreign_key_check").fetchall()
-          print("Fixture validée : 349 exercices, aucun compte ni historique.")
+          print("Fixture SQL reconstruite et validée : 349 exercices, aucun compte ni historique.")
           db.close()
           PY
 
@@ -102,7 +112,7 @@ jobs:
           --source migration_staging.db
           --allow-identical-existing
 
-      - name: Postflight — exiger une correspondance exacte des dix tables
+      - name: Postflight — exiger une correspondance exacte des onze tables
         shell: bash
         run: |
           python backend/migration_preflight.py --sqlite migration_staging.db --schema public > preflight-after.json
@@ -125,7 +135,7 @@ jobs:
               assert item["row_content_matches"] is True, (table, item)
           assert report["foreign_keys"]["missing_on_target"] == []
           assert report["foreign_keys"]["extra_on_target"] == []
-          print("POSTFLIGHT VALIDÉ : 349 exercices, neuf tables vides, contenu identique.")
+          print("POSTFLIGHT VALIDÉ : 349 exercices, dix tables vides, contenu identique.")
           PY
 
       - name: Publier les rapports de contrôle
