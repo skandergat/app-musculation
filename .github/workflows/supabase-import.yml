@@ -1,6 +1,11 @@
 name: LIFTELY — initialisation contrôlée du schéma Supabase
 
 on:
+  push:
+    branches:
+      - ops/run-supabase-migration
+    paths:
+      - .github/workflows/supabase-import.yml
   workflow_dispatch:
     inputs:
       confirmation:
@@ -13,7 +18,7 @@ permissions:
 
 jobs:
   import:
-    if: ${{ inputs.confirmation == 'INITIALISER_LIFTELY_SUPABASE' }}
+    if: ${{ github.event_name == 'push' || inputs.confirmation == 'INITIALISER_LIFTELY_SUPABASE' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
