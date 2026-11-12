@@ -6,6 +6,10 @@ on:
       - ops/run-supabase-migration
     paths:
       - .github/workflows/supabase-import.yml
+      - backend/migrate_sqlite_to_postgres.py
+      - backend/migration_preflight.py
+      - backend/postgres_schema.sql
+      - backend/fixtures/reset_staging_source.sql.gz.b64
   workflow_dispatch:
     inputs:
       confirmation:
