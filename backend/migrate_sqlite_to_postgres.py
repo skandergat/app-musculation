@@ -63,7 +63,7 @@ def main() -> int:
     args = parse_args()
     source_path = Path(args.source).expanduser().resolve()
     schema_path = Path(args.schema).expanduser().resolve()
-    dsn = os.getenv("LIFTELY_DATABASE_URL") or os.getenv("SUPABASE_DB_URL") or os.getenv("DATABASE_URL")
+    dsn = (os.getenv("LIFTELY_DATABASE_URL") or os.getenv("SUPABASE_DB_URL") or os.getenv("DATABASE_URL") or "").strip()
 
     if not source_path.is_file():
         print(f"ERREUR : fichier source introuvable : {source_path}", file=sys.stderr)
