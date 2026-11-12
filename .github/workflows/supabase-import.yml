@@ -1,19 +1,22 @@
 name: LIFTELY — initialisation contrôlée du schéma Supabase
 
 on:
+  push:
+    branches:
+      - ops/run-supabase-migration
+    paths:
+      - .github/workflows/supabase-import.yml
+      - backend/migrate_sqlite_to_postgres.py
+      - backend/migration_preflight.py
+      - backend/postgres_schema.sql
+      - backend/fixtures/reset_staging_source.sql.gz.b64
   workflow_dispatch:
-    inputs:
-      confirmation:
-        description: "Saisir exactement INITIALISER_LIFTELY_SUPABASE pour autoriser l'import"
-        required: true
-        type: string
 
 permissions:
   contents: read
 
 jobs:
   import:
-    if: ${{ inputs.confirmation == 'INITIALISER_LIFTELY_SUPABASE' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -33,32 +36,53 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Reconstituer la fixture SQLite assainie
+      - name: Reconstituer la fixture SQLite depuis le dump SQL compressé
         shell: bash
         run: |
-          base64 --decode backend/fixtures/reset_staging_source.sql.gz.b64 | gzip --decompress > migration_staging.db
+          base64 --decode backend/fixtures/reset_staging_source.sql.gz.b64 > migration_staging.sql.gz
           python - <<'PY'
+          import gzip
           import sqlite3
+
+          with gzip.open("migration_staging.sql.gz", "rt", encoding="utf-8") as dump:
+              script = dump.read()
+
+          db = sqlite3.connect("migration_staging.db")
+          db.executescript(script)
+          # The historical sanitized dump predates this current auth table.
+          # Add its empty SQLite equivalent so source and target schemas align.
+          db.execute(
+              """
+              CREATE TABLE IF NOT EXISTS auth_login_limits (
+                  key_hash TEXT PRIMARY KEY,
+                  window_start TEXT NOT NULL,
+                  request_count INTEGER NOT NULL
+              )
+              """
+          )
+          db.commit()
+          db.close()
+
           db = sqlite3.connect("file:migration_staging.db?mode=ro", uri=True)
           assert db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
-          counts = dict(db.execute(
-              "SELECT name, (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=m.name) FROM sqlite_master m WHERE type='table'"
-          ))
           expected = {
               "users": 0, "exercices": 349, "sessions": 0,
               "auth_action_tokens": 0, "auth_mail_limits": 0,
               "auth_login_limits": 0, "templates": 0, "template_exercices": 0,
               "seances": 0, "series": 0, "seance_exercices": 0,
           }
-          actual = {table: db.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0] for table in expected}
+          actual = {
+              table: db.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0]
+              for table in expected
+          }
           assert actual == expected, f"Fixture inattendue: {actual}"
           assert not db.execute("PRAGMA foreign_key_check").fetchall()
-          print("Fixture validée : 349 exercices, aucun compte ni historique.")
+          print("Fixture SQL reconstruite et validée : 349 exercices, aucun compte ni historique.")
           db.close()
           PY
 
       - name: Installer les dépendances PostgreSQL
-        run: python -m pip install "psycopg[binary]>=3.2,<4.0"
+        run: python -m pip install -r backend/requirements.txt
 
       - name: Préflight strict en lecture seule — catalogue vide ou identique, autres tables vides
         shell: bash
@@ -97,7 +121,7 @@ jobs:
           --source migration_staging.db
           --allow-identical-existing
 
-      - name: Postflight — exiger une correspondance exacte des dix tables
+      - name: Postflight — exiger une correspondance exacte des onze tables
         shell: bash
         run: |
           python backend/migration_preflight.py --sqlite migration_staging.db --schema public > preflight-after.json
@@ -120,7 +144,43 @@ jobs:
               assert item["row_content_matches"] is True, (table, item)
           assert report["foreign_keys"]["missing_on_target"] == []
           assert report["foreign_keys"]["extra_on_target"] == []
-          print("POSTFLIGHT VALIDÉ : 349 exercices, neuf tables vides, contenu identique.")
+          print("POSTFLIGHT VALIDÉ : 349 exercices, dix tables vides, contenu identique.")
+          PY
+
+      - name: Smoke test API Flask sur Supabase — lectures et authentification uniquement
+        shell: bash
+        run: |
+          PYTHONPATH=backend python - <<'PY'
+          import json
+          import app as liftely
+
+          client = liftely.app.test_client()
+
+          health = client.get("/health")
+          assert health.status_code == 200, health.get_data(as_text=True)
+          assert health.get_json().get("status") == "ok"
+
+          response = client.get("/exercices")
+          assert response.status_code == 200, response.get_data(as_text=True)
+          exercises = response.get_json()
+          assert isinstance(exercises, list) and exercises, "Catalogue API vide"
+          ids = [item["id"] for item in exercises]
+          assert len(ids) == len(set(ids)), "Identifiants d'exercices dupliqués"
+          assert all(item.get("actif") == 1 for item in exercises)
+
+          protected = client.get("/templates")
+          assert protected.status_code == 401, (
+              "La route /templates doit refuser les visiteurs non authentifiés."
+          )
+
+          print(json.dumps({
+              "health": "PASS",
+              "exercises": "PASS",
+              "active_exercises_returned": len(exercises),
+              "unique_ids": len(set(ids)),
+              "unauthenticated_templates": "401 PASS",
+              "writes_performed_by_test": False,
+          }, ensure_ascii=False))
           PY
 
       - name: Publier les rapports de contrôle

@@ -1,13 +1,17 @@
 # Migration PostgreSQL / Supabase — LIFTELY
 
-## État au 1er novembre 2026
+## État vérifié au 12 novembre 2026
 
-- Le dépôt `main` contient l'adaptateur PostgreSQL (`backend/db_compat.py`) et son intégration dans `backend/app.py`.
-- Les tests d'int?gration PostgreSQL ont r?ussi sur une instance PostgreSQL isol?e en CI, avec la base de staging assainie : 349 exercices, dix autres tables applicatives vides, comparaison exacte des onze tables et v?rification des cl?s ?trang?res et s?quences.
-- V?rification en lecture seule du projet Supabase le 5 novembre 2026 : dix tables applicatives LIFTELY existaient dans le sch?ma `public`. La table `exercices` contenait 349 lignes et ses identifiants allaient de 1 ? 349. La table `auth_login_limits`, ajout?e ensuite au sch?ma applicatif, doit ?galement ?tre v?rifi?e avant l'import.
-- Les colonnes, cl?s primaires, contraintes uniques, relations et s?quences ont ?t? inspect?es pour le sch?ma alors pr?sent. Les identifiants sont g?n?r?s automatiquement. `seances.user_id` n'a volontairement pas de cl? ?trang?re dans le sch?ma SQLite actuel.
-- Le service Render `liftely-api` est sur le plan Free, branche `main`, avec d?ploiement automatique. Ne pas supposer que `LIFTELY_DATABASE_URL` est configur?e.
-- **Aucune migration de production ni modification de configuration Render n'a ?t? effectu?e.** Le backend doit rester sur SQLite tant que le pr?flight r?el et les tests API PostgreSQL ne sont pas valid?s.
+- Le schéma applicatif Supabase `public` contient les onze tables attendues.
+- Les onze tables ont la Row Level Security activée.
+- La table `exercices` contient 349 lignes ; les dix autres tables applicatives sont vides.
+- L'import SQLite → PostgreSQL a été exécuté avec succès dans une transaction par GitHub Actions, run [43309393635](https://github.com/skandergat/app-musculation/actions/runs/43309393635).
+- Le préflight n'a signalé aucun bloqueur ; les neuf clés étrangères correspondent ; le postflight a confirmé une égalité exacte du contenu des onze tables.
+- Le test Flask sur la vraie base Supabase a validé `/health`, `/exercices` (337 exercices actifs et identifiants uniques) et le refus `401` de `/templates` sans authentification. Ce test n'a créé aucune donnée.
+- L'historique Supabase contient les migrations `20261112205509_enable_rls_auth_login_limits` et `20261112212316_reconcile_auth_login_limits_table`.
+- La source SQLite de staging a été conservée sans modification. Aucun compte ni historique utilisateur n'a été importé.
+- Le service Render `liftely-api` n'a pas encore été basculé : il reste sur SQLite tant que `LIFTELY_DATABASE_URL` n'est pas configurée dans son environnement. Le code de compatibilité PostgreSQL est déjà présent dans `main`.
+- Dernière étape de bascule : ajouter dans Render la même URI PostgreSQL protégée que celle utilisée par GitHub Actions, sous la variable `LIFTELY_DATABASE_URL`, puis vérifier le déploiement et les routes publiques. Ne jamais publier cette URI dans Git ou dans une conversation.
 
 ## Fichiers
 
