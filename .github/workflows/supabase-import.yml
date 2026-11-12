@@ -51,6 +51,17 @@ jobs:
 
           db = sqlite3.connect("migration_staging.db")
           db.executescript(script)
+          # The historical sanitized dump predates this current auth table.
+          # Add its empty SQLite equivalent so source and target schemas align.
+          db.execute(
+              """
+              CREATE TABLE IF NOT EXISTS auth_login_limits (
+                  key_hash TEXT PRIMARY KEY,
+                  window_start TEXT NOT NULL,
+                  request_count INTEGER NOT NULL
+              )
+              """
+          )
           db.commit()
           db.close()
 
