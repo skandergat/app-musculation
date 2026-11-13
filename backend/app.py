@@ -295,8 +295,8 @@ def assurer_base():
         conn = get_db()
         required = {
             "users", "exercices", "sessions", "auth_action_tokens",
-            "auth_mail_limits", "templates", "template_exercices",
-            "seances", "series", "seance_exercices",
+            "auth_mail_limits", "auth_login_limits", "templates",
+            "template_exercices", "seances", "series", "seance_exercices",
         }
         found = {
             row["table_name"]
