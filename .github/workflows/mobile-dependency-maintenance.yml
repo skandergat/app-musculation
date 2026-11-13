@@ -1,3 +1,4 @@
+# Apply patched decode-uri-component 0.5.1 and re-run the safe dependency refresh.
 # Bootstrap run after permission-safe workflow update.
 name: LIFTELY mobile dependency maintenance
 
