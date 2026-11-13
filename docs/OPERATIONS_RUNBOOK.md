@@ -84,3 +84,11 @@ Le backend utilise l'API transactionnelle HTTPS si LIFTELY_BREVO_API_KEY est con
 
 ## Régions
 Render Oregon et Supabase Londres. Mesurer la latence avant décision. Déplacer Render exige un nouveau service dans une région européenne, copie des secrets, test et bascule avec rollback. Ne pas déplacer Supabase ni supprimer l'ancien service à l'aveugle.
+
+
+## Rollback après activation Argon2id
+
+La version de compatibilité PR #86 (commit `1f0dc45d2257abe021d15a0b46832f120df8297e`) sait vérifier à la fois les hashes PBKDF2 legacy et Argon2id. Après activation de l'écriture Argon2id, un rollback applicatif doit rester sur ce commit ou un commit ultérieur contenant cette compatibilité. **Ne pas redéployer une version antérieure à PR #86** : elle ne sait pas vérifier les nouveaux hashes Argon2id et pourrait empêcher certains utilisateurs de se connecter.
+
+La migration des hashes se fait à la connexion, sans changement de schéma. Les comptes encore en PBKDF2 migrent au prochain login ; les comptes déjà Argon2id restent valides. Un rollback vers PR #86 peut vérifier les deux formats, mais recommencera à écrire l'ancien format PBKDF2 pour les nouveaux mots de passe. Documenter tout rollback et vérifier un login de compte de test après l'opération.
+
