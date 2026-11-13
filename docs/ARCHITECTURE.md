@@ -29,6 +29,7 @@ Le client Expo/React Native appelle l'API Flask par HTTPS, avec Bearer token pou
 | backend/account_lifecycle_smoke.py | Parcours compte |
 | backend/account_isolation_smoke.py | Isolation inter-comptes |
 | backend/security_smoke.py | Contrôles sécurité |
+| scripts/backup-supabase.ps1 | Dump PostgreSQL et archive 7-Zip chiffrée pour sauvegarde manuelle |
 | supabase/migrations/ | Migrations versionnées |
 | .github/workflows/ci.yml | CI backend + mobile |
 | .github/workflows/postgres-integration.yml | Tests PostgreSQL isolés |

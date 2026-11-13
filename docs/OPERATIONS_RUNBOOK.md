@@ -45,19 +45,23 @@ Chaque mois : npm audit/Expo Doctor, revue accès fournisseurs, vérification ba
 ## Sauvegarde Supabase (plan Free)
 La documentation Supabase indique que les projets Free n'ont pas de sauvegarde quotidienne automatique ; Pro/Team/Enterprise en ont. PITR est payant. Pour conserver le budget zéro, faire un dump logique manuel chiffré hors du dépôt Git public.
 
-Exemple opérateur PowerShell depuis un poste de confiance avec client PostgreSQL installé :
+Le dépôt fournit maintenant le script scripts/backup-supabase.ps1. Il requiert le client PostgreSQL 17+ (pg_dump/pg_restore) et 7-Zip. Il refuse d'écrire dans le dépôt Git, crée un dump custom, vérifie sa lisibilité, crée une archive 7z chiffrée AES-256 avec noms de fichiers chiffrés, vérifie l'archive puis supprime le dump temporaire.
+
+Depuis une session PowerShell de confiance :
 ~~~powershell
 $secureDsn = Read-Host "URI PostgreSQL" -AsSecureString
 $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureDsn)
-try { $env:LIFTELY_DATABASE_URL = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) }
-finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
-pg_dump --format=custom --no-owner --no-acl --file ".\liftely-$(Get-Date -Format yyyyMMdd-HHmmss).dump" "$env:LIFTELY_DATABASE_URL"
-pg_restore --list ".\liftely-AAAAmmjj-HHmmss.dump"
-# Chiffrer avec age ou 7-Zip AES-256 ; conserver la clé séparément du fichier.
-Remove-Item Env:LIFTELY_DATABASE_URL
+try {
+  $env:LIFTELY_DATABASE_URL = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+  .\scripts\backup-supabase.ps1
+}
+finally {
+  [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+  Remove-Item Env:LIFTELY_DATABASE_URL -ErrorAction SilentlyContinue
+}
 ~~~
 
-Ne pas conserver un dump en clair dans GitHub, un artifact public ou un dossier synchronisé non chiffré. Vérifier le dump, chiffrer, copier hors site et supprimer le fichier en clair.
+Le script demande deux fois la phrase secrète 7-Zip ; conserver cette phrase séparément de l'archive. Le fichier chiffré est créé par défaut dans %USERPROFILE%\LIFTELY-Backups. Copier ensuite ce fichier vers un stockage privé hors site. Ne jamais conserver un dump en clair dans GitHub, un artifact public ou un dossier synchronisé non chiffré. Le script n'envoie rien dans le cloud et ne crée pas de sauvegarde automatique.
 
 ### Test de restauration
 1. Créer une base PostgreSQL isolée non-production.

@@ -36,4 +36,4 @@ RLS actif sur les 11 tables. Aucune policy RLS et aucun privilège table/séquen
 ## Migration et sauvegarde
 Préflight : backend/migration_preflight.py. Import : backend/migrate_sqlite_to_postgres.py. Tests : backend/test_sqlite_postgres_import.py, backend/test_real_staging_migration.py, backend/postgres_integration_smoke.py. Ne pas relancer le workflow d'import initial sur la production déjà peuplée.
 
-Selon la documentation Supabase, le plan Free ne fournit pas de sauvegardes quotidiennes automatiques. Un export logique manuel chiffré et stocké hors du dépôt public est donc indispensable tant que le plan reste Free. Voir docs/OPERATIONS_RUNBOOK.md.
+Selon la documentation Supabase, le plan Free ne fournit pas de sauvegardes quotidiennes automatiques. Un export logique manuel chiffré et stocké hors du dépôt public est donc indispensable tant que le plan reste Free. Le script scripts/backup-supabase.ps1 automatise le dump, le contrôle et le chiffrement local ; le transfert hors site et le test de restauration restent à effectuer.
