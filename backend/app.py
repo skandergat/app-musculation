@@ -174,6 +174,18 @@ def verify_password(password, stored_hash):
         return False
 
     if stored_hash.startswith("$argon2id$"):
+        parts = stored_hash.split("$")
+        # N'accepter que les paramètres Argon2id émis par l'application.
+        # Cela évite qu'un hash altéré demande une quantité arbitraire de mémoire/CPU.
+        if (
+            len(parts) != 6
+            or parts[1] != "argon2id"
+            or parts[2] != "v=19"
+            or parts[3] != "m=19456,t=2,p=1"
+            or not parts[4]
+            or not parts[5]
+        ):
+            return False
         try:
             return PASSWORD_HASHER.verify(stored_hash, password)
         except (VerifyMismatchError, VerificationError, InvalidHashError):
