@@ -18,7 +18,7 @@ LIFTELY est une application de suivi de musculation et de calisthenics. Le mobil
 | Dépôt GitHub | Public, `skandergat/app-musculation` |
 | Branche principale | `main` |
 | API Render | `liftely-api`, Live, plan Free, Oregon |
-| Base de production | Supabase `liftely`, PostgreSQL 17.11, Londres (`eu-west-2`) |
+| Base de production | Supabase `liftely`, PostgreSQL 17.11, Londres (`eu-west-2`), organisation Free |
 | Connexion API → PostgreSQL | Confirmée ; `GET /health` retourne le moteur utilisé |
 | Catalogue | 349 exercices, 337 actifs |
 | Comptes et historiques en base | Tables présentes mais vides au dernier contrôle |
@@ -407,7 +407,7 @@ Au dernier audit CI, les tests backend, le lint, le typecheck, l'export Web et E
 - PostgreSQL : 17.11.
 - Tables applicatives : 11.
 - Migrations : 5 au dernier contrôle.
-- Plan exact et options de backup : à confirmer dans le Dashboard.
+- Organisation Supabase : plan Free confirmé. Pas de sauvegarde quotidienne automatique incluse ; prévoir export chiffré régulier et copie hors site.
 
 ### Brevo
 
@@ -419,7 +419,7 @@ Au dernier audit CI, les tests backend, le lint, le typecheck, l'export Web et E
 
 Le script `scripts/backup-supabase.ps1` réalise un dump custom PostgreSQL, vérifie sa lisibilité, chiffre une archive 7z AES-256 avec noms chiffrés, puis supprime le dump temporaire. Il requiert PostgreSQL client 17+ et 7-Zip. Il refuse d'écrire dans le dépôt Git.
 
-Le script n'a pas été exécuté ici et aucune restauration n'a été testée. Le plan Supabase doit être confirmé : le Free ne comprend pas les sauvegardes quotidiennes automatiques ; les projets Pro/Team/Enterprise sont sauvegardés quotidiennement selon la politique Supabase. Prévoir une copie chiffrée hors site et un exercice de restauration.
+Le script n'a pas été exécuté ici et aucune restauration n'a été testée. L'organisation Supabase est sur le plan Free : pas de sauvegarde quotidienne automatique incluse. Les plans Pro/Team/Enterprise bénéficient de sauvegardes quotidiennes selon la politique Supabase. Le script manuel doit être exécuté régulièrement et une copie chiffrée hors site doit être conservée. Prévoir une copie chiffrée hors site et un exercice de restauration.
 
 ## 13. Publication iOS / Android
 
