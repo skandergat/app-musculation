@@ -229,6 +229,13 @@ def main() -> int:
 
     source = args.source.resolve()
     output = args.output.resolve()
+    try:
+        output.relative_to(ROOT.resolve())
+    except ValueError:
+        pass
+    else:
+        print("ERREUR : la copie de test doit être créée hors du dépôt Git.", file=sys.stderr)
+        return 2
     if not source.is_file():
         print(f"ERREUR : base source introuvable : {source}", file=sys.stderr)
         return 2
