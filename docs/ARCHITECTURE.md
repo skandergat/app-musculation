@@ -42,7 +42,7 @@ Expo Router sépare les groupes (auth) et (app). Le layout racine enveloppe l'ap
 Il s'agit d'un système d'authentification applicatif maison, pas de Supabase Auth. Flask vérifie les mots de passe (PBKDF2-HMAC-SHA256 avec sel), crée les jetons de session et stocke leur hash. Les jetons d'action e-mail sont à usage unique et stockés sous forme de hash. Le client stocke le jeton natif dans Expo SecureStore ; le Web utilise le stockage local.
 
 ## API — santé, pages publiques, auth
-- GET /health
+- GET /health ; POST /health/brevo-sandbox (requête Brevo sandbox, aucun e-mail livré)
 - GET /privacy ; GET /account-deletion
 - GET /email/verify ; GET /email/reset-password ; GET /email/delete-account
 - POST /auth/register ; POST /auth/verify-email-request ; POST /auth/verify-email
