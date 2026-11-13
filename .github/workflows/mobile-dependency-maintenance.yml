@@ -1,5 +1,6 @@
 # Apply patched decode-uri-component 0.5.1 and re-run the safe dependency refresh.
 # Bootstrap run after permission-safe workflow update.
+# Manual audit trigger: 2026-11-13; candidate only, no auto-merge.
 name: LIFTELY mobile dependency maintenance
 
 on:
