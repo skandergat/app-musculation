@@ -4,6 +4,7 @@ on:
   pull_request:
   push:
     branches:
+      - main
       - fix/postgres-consolidation
       - fix/postgres-migration-hardening
 
@@ -15,7 +16,7 @@ jobs:
     runs-on: ubuntu-24.04
     services:
       postgres:
-        image: postgres:16
+        image: postgres:17
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -33,7 +34,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: '3.12'
+          python-version: '3.14'
       - name: Install backend dependencies
         run: python -m pip install -r backend/requirements.txt
       - name: Provision isolated PostgreSQL schema
