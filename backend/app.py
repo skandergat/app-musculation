@@ -1,5 +1,7 @@
 ﻿from flask import Flask, jsonify, render_template, request
 from werkzeug.middleware.proxy_fix import ProxyFix
+from argon2 import PasswordHasher, Type
+from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
 import sqlite3
 try:
     from .db_compat import POSTGRES_ENABLED, INTEGRITY_ERRORS, connect_database
@@ -151,26 +153,47 @@ def hash_password(password, salt=None):
     return f"{salt.hex()}${password_hash.hex()}"
 
 
+# Paramètres OWASP Argon2id (19 MiB, 2 passes, parallélisme 1).
+# Cette release sait vérifier Argon2id mais continue d'écrire le hash PBKDF2
+# historique afin de constituer une base de rollback avant le changement d'écriture.
+PASSWORD_HASHER = PasswordHasher(
+    time_cost=2,
+    memory_cost=19_456,
+    parallelism=1,
+    hash_len=32,
+    salt_len=16,
+    type=Type.ID,
+)
+
+
 def verify_password(password, stored_hash):
     """
-    Vérifie un mot de passe contre son hash.
+    Vérifie les anciens hashes PBKDF2 et le futur format Argon2id.
     """
+    if not isinstance(stored_hash, str):
+        return False
+
+    if stored_hash.startswith("$argon2id$"):
+        try:
+            return PASSWORD_HASHER.verify(stored_hash, password)
+        except (VerifyMismatchError, VerificationError, InvalidHashError):
+            return False
+
     try:
         salt_hex, hash_hex = stored_hash.split("$")
         salt = bytes.fromhex(salt_hex)
+        expected_hash = bytes.fromhex(hash_hex)
+        if len(salt) != 16 or len(expected_hash) != 32:
+            return False
 
-        password_hash = hashlib.pbkdf2_hmac(
+        actual_hash = hashlib.pbkdf2_hmac(
             "sha256",
             password.encode("utf-8"),
             salt,
             200_000,
         )
-
-        return secrets.compare_digest(
-            password_hash.hex(),
-            hash_hex,
-        )
-    except Exception:
+        return secrets.compare_digest(actual_hash, expected_hash)
+    except (AttributeError, TypeError, ValueError):
         return False
 
 
