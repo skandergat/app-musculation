@@ -33,6 +33,9 @@ jobs:
 
       - name: Health endpoint tests
         run: python -m unittest backend.test_health
+      - name: SQLite reset-copy safety tests
+        run: python -m unittest scripts.test_reset_liftely_user_data_copy
+
 
       - name: Validate PowerShell backup script syntax
         shell: pwsh
