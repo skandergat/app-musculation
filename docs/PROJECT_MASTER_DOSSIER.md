@@ -27,7 +27,7 @@ LIFTELY est une application de suivi de musculation et de calisthenics. Le mobil
 | EAS | `mobile/eas.json` présent ; projet EAS et identifiants stores non liés |
 | Builds stores | Aucune build de production validée à ce jour |
 | Politique de confidentialité | Page publiée comme brouillon non indexable ; champs juridiques à compléter |
-| Sauvegarde | Script manuel + workflow GitHub chiffré prêt ; secrets GitHub absents ; aucune sauvegarde/restauration réelle prouvée |
+| Sauvegarde | Workflow GitHub chiffré exécuté avec succès ; restauration testée sur PostgreSQL isolé ; artifact chiffré conservé 7 jours |
 
 ### Décisions structurantes
 
@@ -72,7 +72,7 @@ GitHub Actions --> tests, lint, TypeScript, Expo Doctor,
 | Mobile | Expo SDK 57, React Native 0.86.3, React 19.2.3, TypeScript 6 |
 | Navigation | Expo Router |
 | Sécurité stockage mobile | Expo SecureStore sur natif ; stockage Web distinct |
-| API | Python 3.12 en CI, Flask 3, Gunicorn |
+| API | Python 3.14 sur Render et dans la CI, Flask 3, Gunicorn |
 | PostgreSQL | psycopg 3 |
 | Base production | Supabase PostgreSQL 17.11 |
 | Base locale | SQLite |
@@ -319,9 +319,9 @@ Règles :
 
 - Git.
 - Node.js 22 LTS (version CI) et npm.
-- Python 3.12 (version CI).
+- Python 3.14 (version observée dans les wheels `cp314` installées sur Render le 13 novembre 2026 et alignée dans la CI).
 - PowerShell sur Windows.
-- Pour PostgreSQL local : PostgreSQL 16+ pour CI/tests, et PostgreSQL 17+ pour dumps de la production PostgreSQL 17.
+- Pour PostgreSQL local : PostgreSQL 17+ (même version majeure que la production et la CI).
 - Pour le script de sauvegarde Windows : `pg_dump`, `pg_restore`, 7-Zip.
 
 ### Cloner et lancer le mobile
@@ -352,7 +352,7 @@ npx.cmd expo export --platform web
 
 Depuis la racine :
 ```powershell
-py -3.12 -m venv .venv
+py -3.14 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r .\backend\requirements.txt
 .\.venv\Scripts\python.exe .\backend\app.py
 ```
@@ -399,7 +399,7 @@ Après la PR #78, le dernier audit npm de la branche principale est à **0 vuln�
 - Auto-deploy : activé sur commit.
 - Plan : Free.
 - Région : Oregon.
-- Health Check Path : vide au dernier contrôle ; à configurer manuellement sur `/health` dans Render Dashboard > service > Settings > Health & Checks. Le connecteur d'administration utilisé pendant l'audit ne permet pas de modifier ce champ.
+- Health Check Path : `/health`, confirmé dans la configuration Render le 13 novembre 2026 ; les sondes récentes répondent HTTP 200.
 
 ### Supabase
 
@@ -407,7 +407,7 @@ Après la PR #78, le dernier audit npm de la branche principale est à **0 vuln�
 - Région : `eu-west-2`.
 - PostgreSQL : 17.11.
 - Tables applicatives : 11.
-- Migrations : 5 au dernier contrôle.
+- Migrations : 6 fichiers versionnés au dernier contrôle du 13 novembre 2026.
 - Organisation Supabase : plan Free confirmé. Pas de sauvegarde quotidienne automatique incluse ; prévoir export chiffré régulier et copie hors site.
 
 ### Brevo
@@ -420,7 +420,7 @@ Après la PR #78, le dernier audit npm de la branche principale est à **0 vuln�
 
 Le script `scripts/backup-supabase.ps1` réalise un dump custom PostgreSQL, vérifie sa lisibilité, chiffre une archive 7z AES-256 avec noms chiffrés, puis supprime le dump temporaire. Il requiert PostgreSQL client 17+ et 7-Zip. Il refuse d'écrire dans le dépôt Git.
 
-L'organisation Supabase est sur le plan Free : aucune sauvegarde quotidienne automatique n'est incluse. Le workflow `.github/workflows/supabase-backup.yml` est planifié quotidiennement à 04:00 UTC et chiffre les dumps PostgreSQL en AES-256 avant de les stocker comme artifacts GitHub pour 7 jours. Il attend les secrets de dépôt `LIFTELY_DATABASE_URL` et `LIFTELY_BACKUP_PASSPHRASE` (minimum 32 caractères aléatoires). Le premier contrôle a sauté proprement en l'absence des secrets : aucune connexion ni export. Le dépôt étant public, les artifacts sont téléchargeables par les lecteurs, mais le contenu est chiffré ; la passphrase doit rester dans un coffre indépendant et les archives doivent être copiées hors site. Le script manuel PowerShell reste disponible. Aucune sauvegarde réelle ni restauration n'a encore été exécutée.
+L'organisation Supabase est sur le plan Free : aucune sauvegarde quotidienne automatique n'est incluse. Le workflow `.github/workflows/supabase-backup.yml` est planifié quotidiennement à 04:00 UTC et chiffre les dumps PostgreSQL en AES-256 avant de les stocker comme artifacts GitHub pour 7 jours. Il attend les secrets de dépôt `LIFTELY_DATABASE_URL` et `LIFTELY_BACKUP_PASSPHRASE` (minimum 32 caractères aléatoires). Le workflow a produit avec succès une archive chiffrée (run GitHub Actions `43515211149`, artifact `liftely-supabase-backup-43515211149`). Une restauration de contrôle a également réussi dans un PostgreSQL 17 jetable (run `43518028317`) : les 349 exercices ont été restaurés. La base Supabase de production n'a pas été modifiée pendant ce test. L'artifact GitHub expire après 7 jours ; le copier dans un stockage privé durable et conserver la passphrase séparément. Le script manuel PowerShell reste disponible.
 
 ## 13. Publication iOS / Android
 
@@ -441,11 +441,11 @@ Ces identifiants sont pérennes et peuvent être difficiles à changer après pu
 |---|---|---|
 | P0 avant mise en production publique | Identité juridique, contact et politique confidentialité complète | Obligatoire pour déclarations et transparence |
 | P0 avant store | Bundle IDs, EAS project, comptes Apple/Google, builds natifs | Nécessite le propriétaire des comptes |
-| P1 | Sauvegarde chiffrée hors site et restauration testée | Réduire le risque de perte de données |
-| P1 | Health Check Path Render = `/health` | Configuration Dashboard manuelle |
+| P1 | Copie durable hors site de l'archive chiffrée | L'artifact GitHub expire après 7 jours ; conserver une copie privée et la passphrase séparément |
+| Terminé | Health Check Render = `/health` | Configuration vérifiée et sondes HTTP 200 le 13 novembre 2026 |
 | P1 | Revue sécurité indépendante de l'authentification maison | Réduire risques auth/session/IDOR |
 | Terminé | Audit npm mobile : 0 vulnérabilité ; Expo Doctor 21/21 | PR #78 et CI du 13 novembre 2026 |
-| P1 | Branch `main` non protégée au dernier contrôle | Activer ruleset/required checks et revue PR |
+| Terminé | Protection de `main` | Ruleset actif ; contrôles requis `validate`, `Analyze source code`, `postgres-adapter`, `mobile-validate` |
 | P2 | Render Oregon ↔ Supabase Londres | Mesurer latence ; migration région seulement avec plan de bascule |
 | P2 | Test de livraison Brevo réel | Nécessite destinataire autorisé et domaine expéditeur vérifié |
 | P2 | Réduire le monolithe `backend/app.py` | Modulariser par domaine sans casser les tests |
@@ -472,7 +472,7 @@ Ces identifiants sont pérennes et peuvent être difficiles à changer après pu
 - Compte EAS et project ID.
 - Comptes Apple Developer / App Store Connect et Google Play Console.
 - Propriété du domaine et DNS si un domaine personnalisé est prévu.
-- Rétention effective des artifacts GitHub, stockage privé hors site, phrase secrète de sauvegarde et exercice de restauration.
+- Copie privée durable de l'archive chiffrée et vérification périodique de la restauration (l'artifact GitHub expire après 7 jours).
 - Phrase de chiffrement sauvegarde conservée dans un coffre, distincte des archives.
 - Destinataire de test autorisé et domaine expéditeur Brevo validé.
 - Décision sur le passage du dépôt public au privé.
