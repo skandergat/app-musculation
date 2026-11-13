@@ -44,6 +44,7 @@ jobs:
             echo "Backup skipped: the encryption passphrase must be at least 32 characters." >> "$GITHUB_STEP_SUMMARY"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Backup credentials are present; starting encrypted backup validation."
           fi
 
       - name: Checkout
