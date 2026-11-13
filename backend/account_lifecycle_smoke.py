@@ -58,7 +58,12 @@ client = backend.app.test_client()
 # Hosting-platform health check must verify database reachability.
 health = client.get("/health")
 assert health.status_code == 200, health.get_data(as_text=True)
-assert health.get_json() == {"status": "ok"}
+health_payload = health.get_json()
+assert health_payload["status"] == "ok", health_payload
+assert health_payload["database_backend"] == (
+    "postgresql" if backend.POSTGRES_ENABLED else "sqlite"
+), health_payload
+assert isinstance(health_payload["transactional_email_configured"], bool), health_payload
 
 original_get_db = backend.get_db
 try:
