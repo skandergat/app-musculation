@@ -241,7 +241,7 @@ Toutes les routes privées doivent obtenir l'utilisateur depuis le Bearer token 
 ## 7. Authentification et sécurité des données
 
 - Authentification applicative maison dans Flask ; pas Supabase Auth.
-- Mots de passe hachés avec PBKDF2-HMAC-SHA256, sel aléatoire et 200 000 itérations dans le code actuel.
+- Le format actuellement écrit reste PBKDF2-HMAC-SHA256 à 200 000 itérations ; cette release de compatibilité sait aussi vérifier le futur format versionné. L'activation de 600 000 itérations et le rehash transparent sont prévus dans une seconde release, après déploiement de cette base de rollback.
 - Jetons de session et jetons d'action persistés sous forme de hash SHA-256.
 - Durée de session : 30 jours.
 - Vérification e-mail : lien 48 h.
