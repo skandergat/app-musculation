@@ -1,0 +1,119 @@
+name: LIFTELY backup restore drill
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - ops/restore-drill
+    paths:
+      - .github/workflows/supabase-restore-test.yml
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  restore-test:
+    name: Restore encrypted backup into disposable PostgreSQL
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: restore_test_only
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      LIFTELY_BACKUP_PASSPHRASE: ${{ secrets.LIFTELY_BACKUP_PASSPHRASE }}
+      PGPASSWORD: restore_test_only
+    steps:
+      - name: Check encryption secret
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$LIFTELY_BACKUP_PASSPHRASE" || ${#LIFTELY_BACKUP_PASSPHRASE} -lt 32 ]]; then
+            echo "::error::The backup passphrase secret is missing or too short."
+            exit 1
+          fi
+          echo "Encryption secret is present."
+
+      - name: Download the known successful encrypted backup
+        uses: actions/download-artifact@v4
+        with:
+          name: liftely-supabase-backup-43515211149
+          run-id: 43515211149
+          repository: skandergat/app-musculation
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/liftely-artifact
+
+      - name: Decrypt and restore public application schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +x
+          umask 077
+          archive="$(find "$RUNNER_TEMP/liftely-artifact" -maxdepth 1 -type f -name '*.dump.gpg' -print -quit)"
+          if [[ -z "$archive" ]]; then
+            echo "::error::Encrypted dump archive was not found."
+            exit 1
+          fi
+
+          passfile="$RUNNER_TEMP/liftely-restore-passphrase"
+          dump="$RUNNER_TEMP/liftely-restore.dump"
+          printf '%s' "$LIFTELY_BACKUP_PASSPHRASE" > "$passfile"
+          chmod 600 "$passfile"
+
+          docker run --rm --network host \
+            -e PGPASSWORD \
+            -v "$RUNNER_TEMP/liftely-artifact:/backup:ro" \
+            -v "$RUNNER_TEMP:/restore" \
+            -e ARCHIVE_NAME="$(basename "$archive")" \
+            -e PASSPHRASE_FILE=/restore/liftely-restore-passphrase \
+            postgres:17-alpine sh -ceu '
+              apk add --no-cache gnupg >/dev/null
+              gpg --batch --yes --pinentry-mode loopback \
+                --passphrase-file "$PASSPHRASE_FILE" \
+                --output /restore/liftely-restore.dump \
+                --decrypt "/backup/$ARCHIVE_NAME"
+              pg_restore --list /restore/liftely-restore.dump >/dev/null
+              createdb -h 127.0.0.1 -U postgres liftely_restore_test
+              pg_restore --exit-on-error --no-owner --no-acl --schema=public \
+                -h 127.0.0.1 -U postgres -d liftely_restore_test \
+                /restore/liftely-restore.dump
+              tables="$(psql -h 127.0.0.1 -U postgres -d liftely_restore_test -Atqc \
+                "SELECT count(*) FROM information_schema.tables WHERE table_schema = '''public''' AND table_type = '''BASE TABLE'''")"
+              echo "Restored public tables: $tables"
+              if ! psql -h 127.0.0.1 -U postgres -d liftely_restore_test -Atqc \
+                "SELECT to_regclass('''public.exercices''') IS NOT NULL" | grep -qx t; then
+                echo "::error::The public.exercices table is missing after restore."
+                exit 1
+              fi
+              exercises="$(psql -h 127.0.0.1 -U postgres -d liftely_restore_test -Atqc \
+                "SELECT count(*) FROM public.exercices")"
+              echo "Restored exercises: $exercises"
+              if [[ "$exercises" -ne 349 ]]; then
+                echo "::error::Expected 349 exercises, got $exercises."
+                exit 1
+              fi
+              echo "Public application schema restore test passed."
+            '
+
+          rm -f "$passfile" "$dump"
+
+      - name: Summarize successful restore test
+        if: success()
+        run: |
+          {
+            echo "## LIFTELY restore drill passed"
+            echo "- The encrypted artifact was downloaded and decrypted using the stored Actions secret."
+            echo "- The public application schema was restored into a disposable PostgreSQL 17 service."
+            echo "- The public.exercices table was verified to contain 349 rows."
+            echo "- No connection to the production Supabase database was made."
+          } >> "$GITHUB_STEP_SUMMARY"
