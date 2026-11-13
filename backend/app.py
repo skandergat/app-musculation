@@ -99,7 +99,7 @@ def purger_auth_temporaire_periodiquement():
     global _LAST_AUTH_CLEANUP
     # Health probes must reach health_check(), which handles database failures
     # and returns 503 instead of being intercepted by periodic cleanup.
-    if request.endpoint == "health_check":
+    if request.endpoint in {"health_check", "health_brevo_sandbox"}:
         return
     maintenant = datetime.now()
     if maintenant - _LAST_AUTH_CLEANUP < timedelta(hours=1):
@@ -191,6 +191,69 @@ def email_valide(email):
 
 def get_db():
     return connect_database(DB_PATH, timeout=10)
+
+
+_BREVO_SANDBOX_LOCK = threading.Lock()
+_BREVO_SANDBOX_CACHE = {"checked_at": None, "ok": False}
+
+
+@app.post("/health/brevo-sandbox")
+def health_brevo_sandbox():
+    """Validate Brevo transactional API in sandbox mode; no email is delivered."""
+    api_key = os.getenv("LIFTELY_BREVO_API_KEY", "").strip()
+    sender = os.getenv("LIFTELY_EMAIL_FROM", "").strip()
+    if not api_key or not sender:
+        return jsonify({"status": "unconfigured", "sandbox_request_accepted": False}), 503
+
+    now = datetime.utcnow()
+    with _BREVO_SANDBOX_LOCK:
+        checked_at = _BREVO_SANDBOX_CACHE["checked_at"]
+        if checked_at and now - checked_at < timedelta(minutes=5):
+            ok = bool(_BREVO_SANDBOX_CACHE["ok"])
+            return jsonify(
+                {"status": "ok" if ok else "unhealthy", "sandbox_request_accepted": ok, "cached": True}
+            ), 200 if ok else 503
+
+        try:
+            import json
+            from urllib.request import Request, urlopen
+            from urllib.error import HTTPError, URLError
+
+            payload = {
+                "sender": {
+                    "name": os.getenv("LIFTELY_EMAIL_SENDER_NAME", "LIFTELY").strip() or "LIFTELY",
+                    "email": sender,
+                },
+                "to": [{"email": "no-delivery@invalid.example"}],
+                "subject": "[LIFTELY] Brevo sandbox connectivity check",
+                "textContent": "Sandbox probe only. No email should be delivered.",
+                "headers": {"X-Sib-Sandbox": "drop"},
+            }
+            req = Request(
+                "https://api.brevo.com/v3/smtp/email",
+                data=json.dumps(payload).encode("utf-8"),
+                headers={
+                    "accept": "application/json",
+                    "api-key": api_key,
+                    "content-type": "application/json",
+                },
+                method="POST",
+            )
+            with urlopen(req, timeout=10) as response:
+                ok = response.status == 201
+        except HTTPError as exc:
+            app.logger.warning("Brevo sandbox health check rejected (HTTP %s).", exc.code)
+            ok = False
+        except (URLError, OSError, ValueError) as exc:
+            app.logger.warning("Brevo sandbox health check unavailable (%s).", type(exc).__name__)
+            ok = False
+
+        _BREVO_SANDBOX_CACHE["checked_at"] = now
+        _BREVO_SANDBOX_CACHE["ok"] = ok
+
+    return jsonify(
+        {"status": "ok" if ok else "unhealthy", "sandbox_request_accepted": ok, "cached": False}
+    ), 200 if ok else 503
 
 
 @app.route("/health", methods=["GET"])
