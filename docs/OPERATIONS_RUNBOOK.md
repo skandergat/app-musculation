@@ -41,7 +41,7 @@ Contrôles non destructifs :
 EXPO_PUBLIC_API_URL est publique et ne doit jamais contenir de secret.
 
 ## Contrôles périodiques
-À chaque release : CI générale + PostgreSQL, lint, typecheck, traductions, Expo Doctor, export Web ; déploiement live ; /health 2xx ; /exercices non vide ; routes privées 401 sans auth ; aucun log ERROR/FATAL.
+À chaque release : CI générale + PostgreSQL, npm audit, pip-audit, lint, typecheck, traductions, Expo Doctor, export Web ; déploiement live ; /health 2xx avec PostgreSQL ; /exercices non vide ; routes privées 401 sans auth ; aucun log ERROR/FATAL.
 Chaque mois : workflow GitHub mobile-dependency-maintenance (branche candidate à revoir, jamais auto-fusionnée), revue accès fournisseurs, vérification backup et restauration, quotas Render/Supabase/Brevo, rétention logs. Un workflow production-smoke vérifie quotidiennement /health (PostgreSQL), le probe Brevo sandbox sans livraison, les disclosures hébergeur/régions et le statut noindex de la page confidentialité, le catalogue et le refus 401 des routes privées.
 
 ## Sauvegarde Supabase (plan Free)
