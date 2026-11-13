@@ -1,7 +1,7 @@
 import json
 import os
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 from backend import app as backend_app
 
@@ -64,10 +64,8 @@ class HealthEndpointTests(unittest.TestCase):
 
     @patch("urllib.request.urlopen")
     def test_brevo_probe_uses_sandbox_header_and_never_delivers(self, urlopen):
-        response = Mock()
+        response = MagicMock()
         response.status = 201
-        response.__enter__ = Mock(return_value=response)
-        response.__exit__ = Mock(return_value=False)
         urlopen.return_value = response
         backend_app._BREVO_SANDBOX_CACHE.update({"checked_at": None, "ok": False})
 
