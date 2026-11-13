@@ -21,7 +21,7 @@ RLS actif sur 11 tables. Aucun grant table/séquence direct à anon/authenticate
 CodeQL analyse chaque semaine le code Python et JavaScript/TypeScript ; Dependabot vérifie mensuellement npm, pip et GitHub Actions et ouvre des propositions soumises à revue. Aucun auto-merge n'est activé. 
 
 ## Dépendances
-Dernier audit CI après la PR #41 : **10 vulnérabilités moderate, 0 high, 0 critical, 0 low** (contre 21 initialement). Le dernier high, decode-uri-component <=0.5.0, est corrigé par un override vers 0.5.1. Les 10 moderate restantes concernent le tooling Expo/ESLint, notamment @typescript-eslint et minimatch ; la correction automatique npm propose un downgrade majeur Expo vers SDK 52, refusé pour préserver SDK 57. Revoir à chaque release Expo et ne pas utiliser npm audit fix --force. La CI a validé npm ci, traductions, lint, TypeScript, Expo Doctor 21/21 et export Web.
+Dernier audit après fusion de la PR #78 : **0 vulnérabilité npm** (0 low, 0 moderate, 0 high, 0 critical). Le dernier correctif ajoute un override `minimatch` vers 11.0.8, sans downgrade Expo SDK 57. La CI candidate a validé npm ci, traductions, lint, TypeScript, Expo Doctor 21/21, export Web, intégration PostgreSQL et CodeQL. Continuer l'audit à chaque release et ne pas utiliser `npm audit fix --force`.
 
 ## Données personnelles
 Données : nom, e-mail, hash mot de passe, jetons, séances, charges, répétitions, templates et historique. Langue/thème locaux. Base Londres ; API Render Oregon ; e-mails via Brevo. La durée réelle de conservation des logs et backups n'est pas vérifiée. Vérifier le code avant d'annoncer publiquement les durées d'expiration.

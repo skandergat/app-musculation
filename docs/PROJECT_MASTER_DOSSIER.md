@@ -27,7 +27,7 @@ LIFTELY est une application de suivi de musculation et de calisthenics. Le mobil
 | EAS | `mobile/eas.json` présent ; projet EAS et identifiants stores non liés |
 | Builds stores | Aucune build de production validée à ce jour |
 | Politique de confidentialité | Page publiée comme brouillon non indexable ; champs juridiques à compléter |
-| Sauvegarde | Script manuel chiffré présent ; sauvegarde et restauration réelles non encore prouvées |
+| Sauvegarde | Script manuel + workflow GitHub chiffré prêt ; secrets GitHub absents ; aucune sauvegarde/restauration réelle prouvée |
 
 ### Décisions structurantes
 
@@ -382,7 +382,7 @@ Workflows actuels :
 - `.github/workflows/mobile-dependency-maintenance.yml` : candidat de mise à jour mensuel, tests, sans fusion automatique.
 - `.github/workflows/supabase-import.yml` : workflow historique d'import contrôlé ; ne pas exécuter à nouveau sur production.
 
-Au dernier audit CI, les tests backend, le lint, le typecheck, l'export Web et Expo Doctor 21/21 passaient. Le dernier audit npm montrait 10 vulnérabilités modérées, 0 high, 0 critical et 0 low ; les correctifs automatiques restants proposés par npm impliquent notamment un downgrade majeur Expo vers SDK 52. Ne pas utiliser `npm audit fix --force`. Vérifier le résultat d'un nouveau run avant d'affirmer que le nombre a changé.
+Après la PR #78, le dernier audit npm de la branche principale est à **0 vulnérabilité** (0 low, 0 moderate, 0 high, 0 critical). L'override `minimatch` vers 11.0.8 supprime les avis transitifs sans downgrade Expo. La CI candidate a validé `npm ci`, traductions, lint, TypeScript, Expo Doctor 21/21, export Web, intégration PostgreSQL et CodeQL. Ne pas utiliser `npm audit fix --force` ; maintenir l'audit sur chaque release.
 
 ## 12. Déploiement et exploitation
 
@@ -419,11 +419,12 @@ Au dernier audit CI, les tests backend, le lint, le typecheck, l'export Web et E
 
 Le script `scripts/backup-supabase.ps1` réalise un dump custom PostgreSQL, vérifie sa lisibilité, chiffre une archive 7z AES-256 avec noms chiffrés, puis supprime le dump temporaire. Il requiert PostgreSQL client 17+ et 7-Zip. Il refuse d'écrire dans le dépôt Git.
 
-Le script n'a pas été exécuté ici et aucune restauration n'a été testée. L'organisation Supabase est sur le plan Free : pas de sauvegarde quotidienne automatique incluse. Les plans Pro/Team/Enterprise bénéficient de sauvegardes quotidiennes selon la politique Supabase. Le script manuel doit être exécuté régulièrement et une copie chiffrée hors site doit être conservée. Prévoir une copie chiffrée hors site et un exercice de restauration.
+L'organisation Supabase est sur le plan Free : aucune sauvegarde quotidienne automatique n'est incluse. Le workflow `.github/workflows/supabase-backup.yml` est planifié quotidiennement à 04:00 UTC et chiffre les dumps PostgreSQL en AES-256 avant de les stocker comme artifacts GitHub pour 7 jours. Il attend les secrets de dépôt `LIFTELY_DATABASE_URL` et `LIFTELY_BACKUP_PASSPHRASE` (minimum 32 caractères aléatoires). Le premier contrôle a sauté proprement en l'absence des secrets : aucune connexion ni export. Le dépôt étant public, les artifacts sont téléchargeables par les lecteurs, mais le contenu est chiffré ; la passphrase doit rester dans un coffre indépendant et les archives doivent être copiées hors site. Le script manuel PowerShell reste disponible. Aucune sauvegarde réelle ni restauration n'a encore été exécutée.
 
 ## 13. Publication iOS / Android
 
 - `mobile/eas.json` existe et définit development, preview et production.
+- Les profils EAS `preview` et `production` définissent `EXPO_PUBLIC_API_URL=https://liftely-api.onrender.com`. Faute de staging, le preview utilise donc les données de production ; utiliser uniquement un compte QA dédié et ne pas faire de tests destructifs.
 - `expo-dev-client` est installé.
 - `mobile/app.json` a le nom, slug, scheme, icônes, splash, plugins et web output.
 - Les champs `ios.bundleIdentifier`, `android.package` et `extra.eas.projectId` ne sont pas renseignés.
@@ -470,7 +471,7 @@ Ces identifiants sont pérennes et peuvent être difficiles à changer après pu
 - Compte EAS et project ID.
 - Comptes Apple Developer / App Store Connect et Google Play Console.
 - Propriété du domaine et DNS si un domaine personnalisé est prévu.
-- Statut exact du plan Supabase, sauvegardes, rétention et facturation.
+- Rétention effective des artifacts GitHub, stockage privé hors site, phrase secrète de sauvegarde et exercice de restauration.
 - Phrase de chiffrement sauvegarde conservée dans un coffre, distincte des archives.
 - Destinataire de test autorisé et domaine expéditeur Brevo validé.
 - Décision sur le passage du dépôt public au privé.
