@@ -4,7 +4,7 @@
 Actifs : comptes, e-mails, hash de mots de passe, jetons, historiques d'entraînement, base PostgreSQL, clés fournisseurs et sauvegardes. Menaces : prise de compte, accès horizontal IDOR/BOLA, fuite de secrets, erreurs de migration, dépendances compromises et sauvegardes/logs non chiffrés.
 
 ## Contrôles identifiés
-- Hash mot de passe PBKDF2-HMAC-SHA256 avec sel.
+- Hash mot de passe PBKDF2-HMAC-SHA256, sel aléatoire 16 octets et 600 000 itérations. Les hashes historiques à 200 000 itérations restent vérifiables et sont automatiquement réhachés au premier login réussi.
 - Hash SHA-256 des jetons d'action et de session persistés.
 - Jetons d'action temporaires et à usage unique.
 - Stockage mobile natif SecureStore ; stockage local Web à évaluer face au risque XSS.
