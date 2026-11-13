@@ -41,7 +41,7 @@ export default function InscriptionScreen() {
       return;
     }
 
-    if (password.length < 8) {
+    if (password.length < 15) {
       setMessage(t('passwordMin'));
       setMessageSuccess(false);
       return;
