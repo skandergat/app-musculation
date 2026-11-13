@@ -31,6 +31,9 @@ jobs:
       - name: Validate Python syntax
         run: python -m py_compile backend/app.py init_db.py
 
+      - name: Health endpoint tests
+        run: python -m unittest backend.test_health
+
       - name: Account lifecycle smoke test
         run: python -m backend.account_lifecycle_smoke
 
