@@ -71,6 +71,176 @@ jobs:
           archive="$backup_dir/liftely-$stamp.dump.gpg"
           passfile="$RUNNER_TEMP/liftely-backup-passphrase"
 
+          # Remove accidental trailing whitespace/newlines from the Actions secret.
+          while [[ "$LIFTELY_DATABASE_URL" == *            -e LIFTELY_DATABASE_URL \
+            -v "$backup_dir:/backup" \
+            postgres:17-alpine \
+            sh -ceu 'pg_dump --dbname="$LIFTELY_DATABASE_URL" --format=custom --no-owner --no-acl --file=/backup/backup.dump && pg_restore --list /backup/backup.dump >/dev/null'
+          mv "$backup_dir/backup.dump" "$dump"
+
+          # Keep the encryption passphrase out of command-line arguments and repository artifacts.
+          printf '%s' "$LIFTELY_BACKUP_PASSPHRASE" > "$passfile"
+          chmod 600 "$passfile"
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase-file "$passfile" \
+            --symmetric --cipher-algo AES256 \
+            --output "$archive" "$dump"
+
+          # Verify that the encrypted archive decrypts successfully before publishing it.
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase-file "$passfile" \
+            --output /dev/null --decrypt "$archive"
+
+          checksum="$(sha256sum "$archive" | cut -d ' ' -f 1)"
+          size="$(du -h "$archive" | cut -f 1)"
+          rm -f "$dump" "$passfile"
+
+          {
+            echo "## Encrypted Supabase backup created"
+            echo "- UTC timestamp: $stamp"
+            echo "- Encrypted archive size: $size"
+            echo "- SHA-256: `$checksum`"
+            echo "- Plaintext dump removed from the runner workspace."
+            echo "- Artifact retention: 7 days."
+            echo "- This repository is public: artifacts are downloadable by repository readers but encrypted. Keep a strong unique passphrase outside GitHub and copy backups to private off-site storage."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload encrypted backup only
+        if: steps.credentials.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: liftely-supabase-backup-${{ github.run_id }}
+          path: ${{ runner.temp }}/liftely-backup/*.dump.gpg
+          if-no-files-found: error
+          retention-days: 7
+ ' || "$LIFTELY_DATABASE_URL" == *            -e LIFTELY_DATABASE_URL \
+            -v "$backup_dir:/backup" \
+            postgres:17-alpine \
+            sh -ceu 'pg_dump --dbname="$LIFTELY_DATABASE_URL" --format=custom --no-owner --no-acl --file=/backup/backup.dump && pg_restore --list /backup/backup.dump >/dev/null'
+          mv "$backup_dir/backup.dump" "$dump"
+
+          # Keep the encryption passphrase out of command-line arguments and repository artifacts.
+          printf '%s' "$LIFTELY_BACKUP_PASSPHRASE" > "$passfile"
+          chmod 600 "$passfile"
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase-file "$passfile" \
+            --symmetric --cipher-algo AES256 \
+            --output "$archive" "$dump"
+
+          # Verify that the encrypted archive decrypts successfully before publishing it.
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase-file "$passfile" \
+            --output /dev/null --decrypt "$archive"
+
+          checksum="$(sha256sum "$archive" | cut -d ' ' -f 1)"
+          size="$(du -h "$archive" | cut -f 1)"
+          rm -f "$dump" "$passfile"
+
+          {
+            echo "## Encrypted Supabase backup created"
+            echo "- UTC timestamp: $stamp"
+            echo "- Encrypted archive size: $size"
+            echo "- SHA-256: `$checksum`"
+            echo "- Plaintext dump removed from the runner workspace."
+            echo "- Artifact retention: 7 days."
+            echo "- This repository is public: artifacts are downloadable by repository readers but encrypted. Keep a strong unique passphrase outside GitHub and copy backups to private off-site storage."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload encrypted backup only
+        if: steps.credentials.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: liftely-supabase-backup-${{ github.run_id }}
+          path: ${{ runner.temp }}/liftely-backup/*.dump.gpg
+          if-no-files-found: error
+          retention-days: 7
+\t' || "$LIFTELY_DATABASE_URL" == *            -e LIFTELY_DATABASE_URL \
+            -v "$backup_dir:/backup" \
+            postgres:17-alpine \
+            sh -ceu 'pg_dump --dbname="$LIFTELY_DATABASE_URL" --format=custom --no-owner --no-acl --file=/backup/backup.dump && pg_restore --list /backup/backup.dump >/dev/null'
+          mv "$backup_dir/backup.dump" "$dump"
+
+          # Keep the encryption passphrase out of command-line arguments and repository artifacts.
+          printf '%s' "$LIFTELY_BACKUP_PASSPHRASE" > "$passfile"
+          chmod 600 "$passfile"
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase-file "$passfile" \
+            --symmetric --cipher-algo AES256 \
+            --output "$archive" "$dump"
+
+          # Verify that the encrypted archive decrypts successfully before publishing it.
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase-file "$passfile" \
+            --output /dev/null --decrypt "$archive"
+
+          checksum="$(sha256sum "$archive" | cut -d ' ' -f 1)"
+          size="$(du -h "$archive" | cut -f 1)"
+          rm -f "$dump" "$passfile"
+
+          {
+            echo "## Encrypted Supabase backup created"
+            echo "- UTC timestamp: $stamp"
+            echo "- Encrypted archive size: $size"
+            echo "- SHA-256: `$checksum`"
+            echo "- Plaintext dump removed from the runner workspace."
+            echo "- Artifact retention: 7 days."
+            echo "- This repository is public: artifacts are downloadable by repository readers but encrypted. Keep a strong unique passphrase outside GitHub and copy backups to private off-site storage."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload encrypted backup only
+        if: steps.credentials.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: liftely-supabase-backup-${{ github.run_id }}
+          path: ${{ runner.temp }}/liftely-backup/*.dump.gpg
+          if-no-files-found: error
+          retention-days: 7
+\r' || "$LIFTELY_DATABASE_URL" == *            -e LIFTELY_DATABASE_URL \
+            -v "$backup_dir:/backup" \
+            postgres:17-alpine \
+            sh -ceu 'pg_dump --dbname="$LIFTELY_DATABASE_URL" --format=custom --no-owner --no-acl --file=/backup/backup.dump && pg_restore --list /backup/backup.dump >/dev/null'
+          mv "$backup_dir/backup.dump" "$dump"
+
+          # Keep the encryption passphrase out of command-line arguments and repository artifacts.
+          printf '%s' "$LIFTELY_BACKUP_PASSPHRASE" > "$passfile"
+          chmod 600 "$passfile"
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase-file "$passfile" \
+            --symmetric --cipher-algo AES256 \
+            --output "$archive" "$dump"
+
+          # Verify that the encrypted archive decrypts successfully before publishing it.
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase-file "$passfile" \
+            --output /dev/null --decrypt "$archive"
+
+          checksum="$(sha256sum "$archive" | cut -d ' ' -f 1)"
+          size="$(du -h "$archive" | cut -f 1)"
+          rm -f "$dump" "$passfile"
+
+          {
+            echo "## Encrypted Supabase backup created"
+            echo "- UTC timestamp: $stamp"
+            echo "- Encrypted archive size: $size"
+            echo "- SHA-256: `$checksum`"
+            echo "- Plaintext dump removed from the runner workspace."
+            echo "- Artifact retention: 7 days."
+            echo "- This repository is public: artifacts are downloadable by repository readers but encrypted. Keep a strong unique passphrase outside GitHub and copy backups to private off-site storage."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload encrypted backup only
+        if: steps.credentials.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: liftely-supabase-backup-${{ github.run_id }}
+          path: ${{ runner.temp }}/liftely-backup/*.dump.gpg
+          if-no-files-found: error
+          retention-days: 7
+\n' ]]; do
+            LIFTELY_DATABASE_URL="${LIFTELY_DATABASE_URL%?}"
+          done
+          export LIFTELY_DATABASE_URL
+
           # The DSN is passed only through the container environment, never echoed.
           docker run --rm \
             -e LIFTELY_DATABASE_URL \
