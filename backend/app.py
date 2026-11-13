@@ -136,21 +136,9 @@ def purger_auth_temporaire_periodiquement():
 # OUTILS
 # ============================================================
 
-def hash_password(password, salt=None):
-    """
-    Hash sécurisé du mot de passe avec PBKDF2-HMAC-SHA256.
-    """
-    if salt is None:
-        salt = secrets.token_bytes(16)
-
-    password_hash = hashlib.pbkdf2_hmac(
-        "sha256",
-        password.encode("utf-8"),
-        salt,
-        200_000,
-    )
-
-    return f"{salt.hex()}${password_hash.hex()}"
+def hash_password(password):
+    """Crée un hash Argon2id avec les paramètres d'application."""
+    return PASSWORD_HASHER.hash(password)
 
 
 # Paramètres OWASP Argon2id (19 MiB, 2 passes, parallélisme 1).
@@ -195,6 +183,16 @@ def verify_password(password, stored_hash):
         return secrets.compare_digest(actual_hash, expected_hash)
     except (AttributeError, TypeError, ValueError):
         return False
+
+
+def password_hash_needs_upgrade(stored_hash):
+    """Les hashes PBKDF2 legacy sont ré-hachés en Argon2id après login."""
+    if not isinstance(stored_hash, str) or not stored_hash.startswith("$argon2id$"):
+        return True
+    try:
+        return PASSWORD_HASHER.check_needs_rehash(stored_hash)
+    except (VerifyMismatchError, VerificationError, InvalidHashError, TypeError, ValueError):
+        return True
 
 
 def hash_token(token):
@@ -2072,9 +2070,9 @@ def register():
         return jsonify({"error": "Le nom est trop long"}), 400
     if not email or not email_valide(email):
         return jsonify({"error": "Adresse email invalide"}), 400
-    if len(password) < 8:
+    if len(password) < 15:
         return jsonify({
-            "error": "Le mot de passe doit contenir au moins 8 caractères"
+            "error": "Le mot de passe doit contenir au moins 15 caractères"
         }), 400
     if len(password) > 256:
         return jsonify({"error": "Le mot de passe est trop long"}), 400
@@ -2286,6 +2284,13 @@ def login():
             "code": "email_not_verified",
         }), 403
 
+    # Migration transparente : anciens hashes PBKDF2 vers Argon2id.
+    if password_hash_needs_upgrade(user["password_hash"]):
+        conn.execute(
+            "UPDATE users SET password_hash = ? WHERE id = ?",
+            (hash_password(password), user["id"]),
+        )
+
     conn.commit()
     effacer_limite_connexion_reussie(email)
     token = secrets.token_urlsafe(32)
@@ -2379,9 +2384,9 @@ def reinitialiser_mot_de_passe():
     data = request.get_json(silent=True) or {}
     token = str(data.get("token", "")).strip()
     password = str(data.get("password", ""))
-    if len(password) < 8 or len(password) > 256:
+    if len(password) < 15 or len(password) > 256:
         return jsonify({
-            "error": "Le mot de passe doit contenir entre 8 et 256 caractères."
+            "error": "Le mot de passe doit contenir entre 15 et 256 caractères."
         }), 400
     if not token:
         return jsonify({"error": "Lien invalide ou expiré."}), 400
