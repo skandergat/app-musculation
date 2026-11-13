@@ -103,7 +103,7 @@ Inscription, confirmation e-mail, connexion/déconnexion, reset mot de passe, su
 - Build : pip install -r requirements.txt ; start : gunicorn --bind 0.0.0.0:$PORT app:app.
 - Supabase liftely, PostgreSQL 17.11, eu-west-2.
 - Catalogue 349 exercices (337 actifs). Les dix tables de comptes et d'entraînement sont vides au dernier contrôle.
-- RLS actif sur 11 tables ; aucune policy ; aucun grant direct table/séquence aux rôles anon/authenticated.
+- RLS actif sur 11 tables ; aucune policy ; aucun grant direct table/séquence/fonction aux rôles `anon`, `authenticated` et `service_role`. Les migrations applicatives doivent rester exécutées avec le rôle `postgres` ; les default ACL du rôle plateforme `supabase_admin` sont gérées par Supabase et ne sont pas modifiables avec le rôle courant.
 - Health Check Path Render vide au dernier contrôle.
 - Plan Supabase et rétention effective des backups à confirmer.
 
