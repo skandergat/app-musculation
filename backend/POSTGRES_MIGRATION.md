@@ -8,7 +8,7 @@
 - Service Render `liftely-api` : état `live`, branche `main`, racine `backend/`, déploiement automatique activé.
 - Le backend Render utilise PostgreSQL/Supabase via `LIFTELY_DATABASE_URL`. La connexion a été confirmée par les requêtes de l'API et par la lecture directe de la base.
 - `/health` a répondu `{"status":"ok"}` ; `/exercices` renvoie le catalogue actif ; le test d'intégration vérifie également le refus `401` de `/templates` sans authentification.
-- Le déploiement du 13 novembre correspondant au commit `4a5e9d359e1c80e46408e88a0f065be6e1446b84` est `live`. Il ajoute la vérification de la table `auth_login_limits` au démarrage.
+- Le déploiement Render actuellement `live` correspond au commit `d0cc9e609a4d76b8305b23376649747891577ab9` (13 novembre, 11:16 UTC) : Argon2id est utilisé pour les nouveaux mots de passe et les hashes PBKDF2 historiques sont migrés après login réussi. Le déploiement précédent `1f0dc45d2257abe021d15a0b46832f120df8297e` avait ajouté la compatibilité de vérification Argon2id et constitue la base minimale de rollback.
 - Render est dans la région Oregon alors que Supabase est à Londres. Ce décalage géographique est un risque de latence à réévaluer avant une montée en charge.
 
 ## Données de production
