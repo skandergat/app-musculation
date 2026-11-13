@@ -45,9 +45,15 @@ EXPO_PUBLIC_API_URL est publique et ne doit jamais contenir de secret.
 Chaque mois : workflow GitHub mobile-dependency-maintenance (branche candidate à revoir, jamais auto-fusionnée), revue accès fournisseurs, vérification backup et restauration, quotas Render/Supabase/Brevo, rétention logs. Un workflow production-smoke vérifie quotidiennement /health (PostgreSQL), le probe Brevo sandbox sans livraison, les disclosures hébergeur/régions et le statut noindex de la page confidentialité, le catalogue et le refus 401 des routes privées.
 
 ## Sauvegarde Supabase (plan Free)
-La documentation Supabase indique que les projets Free n'ont pas de sauvegarde quotidienne automatique ; Pro/Team/Enterprise en ont. PITR est payant. Pour conserver le budget zéro, faire un dump logique manuel chiffré hors du dépôt Git public.
+L'organisation Supabase est sur le plan Free : aucune sauvegarde quotidienne automatique n'est incluse. PITR est payant. Pour conserver le budget zéro, deux voies sont disponibles : workflow GitHub chiffré (après configuration des secrets) et dump manuel chiffré.
 
-Le dépôt fournit maintenant le script scripts/backup-supabase.ps1. Il requiert le client PostgreSQL 17+ (pg_dump/pg_restore) et 7-Zip. Il refuse d'écrire dans le dépôt Git, crée un dump custom, vérifie sa lisibilité, crée une archive 7z chiffrée AES-256 avec noms de fichiers chiffrés, vérifie l'archive puis supprime le dump temporaire.
+### Workflow GitHub Actions
+Le workflow `.github/workflows/supabase-backup.yml` s'exécute quotidiennement à 04:00 UTC et peut être lancé manuellement. Il attend les secrets de dépôt `LIFTELY_DATABASE_URL` et `LIFTELY_BACKUP_PASSPHRASE` (au moins 32 caractères aléatoires). Sans les deux secrets, il saute proprement l'export. Lorsqu'ils sont présents, il exécute `pg_dump` avec PostgreSQL 17, vérifie le dump, chiffre en AES-256 GnuPG, vérifie le déchiffrement, puis publie uniquement l'archive chiffrée comme artifact pour 7 jours.
+
+Le dépôt étant public, les artifacts peuvent être téléchargés par les lecteurs du dépôt. La protection repose donc sur une passphrase longue, unique et gardée hors de GitHub. Copier régulièrement les archives vers un stockage privé indépendant ; 7 jours d'artifacts ne constituent pas une sauvegarde hors site durable. Le premier test du workflow a détecté l'absence des secrets et a sauté l'export sans connexion à la base ni accès aux données.
+
+### Script manuel PowerShell
+Le dépôt fournit également `scripts/backup-supabase.ps1`. Il requiert le client PostgreSQL 17+ (`pg_dump`/`pg_restore`) et 7-Zip. Il refuse d'écrire dans le dépôt Git, crée un dump custom, vérifie sa lisibilité, crée une archive 7z chiffrée AES-256 avec noms de fichiers chiffrés, vérifie l'archive puis supprime le dump temporaire.
 
 Depuis une session PowerShell de confiance :
 ~~~powershell
