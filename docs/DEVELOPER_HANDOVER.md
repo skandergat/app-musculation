@@ -79,7 +79,7 @@ Backend/Render :
 - LIFTELY_CORS_ORIGINS : allowlist exacte des origines Web.
 - LIFTELY_DATA_CONTROLLER, LIFTELY_DATA_CONTROLLER_ADDRESS, LIFTELY_PRIVACY_CONTACT : informations juridiques à fournir.
 - LIFTELY_HOSTING_PROVIDER, LIFTELY_HOSTING_REGION, LIFTELY_BACKUP_RETENTION, LIFTELY_LOG_RETENTION : inventaire confidentialité, ne pas inventer les durées.
-Voir backend/.env.example et docs/OPERATIONS_RUNBOOK.md.
+Voir backend/.env.example, docs/OPERATIONS_RUNBOOK.md et scripts/backup-supabase.ps1 pour les sauvegardes chiffrées.
 
 ## Fonctionnalités actuelles
 Inscription, confirmation e-mail, connexion/déconnexion, reset mot de passe, suppression de compte, catalogue Gym/Calisthenics, séances et séries, templates, historique, progression, profil, paramètres, FR/EN/DE/AR, thème clair/sombre.
