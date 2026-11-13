@@ -27,7 +27,7 @@ LIFTELY est une application mobile de suivi de musculation et de calisthenics. C
 | CI | GitHub Actions |
 | Hébergement API | Render |
 
-## Règles impératives
+## Contrôles automatisés\n- CI backend/mobile et intégration PostgreSQL sur GitHub Actions.\n- Smoke check quotidien de l'API de production : PostgreSQL, catalogue et autorisation.\n- Maintenance mensuelle des dépendances mobiles via branche candidate et revue humaine.\n\n## Règles impératives
 1. Aucun secret, URI PostgreSQL, clé Brevo ou clé Supabase dans Git.
 2. Ne jamais pointer les tests/migrations vers la production.
 3. Ne jamais réimporter la fixture de staging dans la base de production déjà initialisée.
