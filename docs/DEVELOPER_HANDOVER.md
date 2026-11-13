@@ -101,6 +101,7 @@ Inscription, confirmation e-mail, connexion/déconnexion, reset mot de passe, su
 - Supabase liftely, PostgreSQL 17.11, eu-west-2.
 - Catalogue 349 exercices (337 actifs). Les dix tables de comptes et d'entraînement sont vides au dernier contrôle.
 - RLS actif sur 11 tables ; aucune policy ; aucun grant direct table/séquence aux rôles anon/authenticated.
+- Argon2id actif sur Render ; PBKDF2 legacy migré au login réussi.
 - Health Check Path Render vide au dernier contrôle.
 - Plan Supabase et rétention effective des backups à confirmer.
 
