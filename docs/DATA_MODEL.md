@@ -31,7 +31,7 @@ Production : Supabase PostgreSQL 17.11, schéma public. Schéma de référence :
 - Les dix autres tables : 0 ligne au dernier contrôle. Refaire les COUNT avant toute opération de maintenance.
 
 ## Sécurité Supabase
-RLS actif sur les 11 tables. Aucune policy RLS et aucun privilège table/séquence direct pour anon/authenticated au dernier contrôle ; aucune fonction ou vue publique. L'API serveur utilise la connexion DB privilégiée. Le signal Advisor rls_enabled_no_policy est informatif dans ce modèle ; ne pas ajouter de policy permissive pour le faire disparaître. Réévaluer ensemble grants/policies si l'accès Supabase direct est introduit.
+RLS actif sur les 11 tables. Aucune policy RLS et aucun privilège table/séquence direct pour anon/authenticated au dernier contrôle ; aucune fonction ou vue publique. Les privilèges par défaut du rôle postgres ont également été révoqués pour les futurs objets afin d'empêcher leur exposition automatique par la Data API. L'API serveur utilise la connexion DB privilégiée. Le signal Advisor rls_enabled_no_policy est informatif dans ce modèle ; ne pas ajouter de policy permissive pour le faire disparaître. Réévaluer ensemble grants/policies si l'accès Supabase direct est introduit.
 
 ## Migration et sauvegarde
 Préflight : backend/migration_preflight.py. Import : backend/migrate_sqlite_to_postgres.py. Tests : backend/test_sqlite_postgres_import.py, backend/test_real_staging_migration.py, backend/postgres_integration_smoke.py. Ne pas relancer le workflow d'import initial sur la production déjà peuplée.

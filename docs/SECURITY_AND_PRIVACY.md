@@ -15,7 +15,7 @@ Actifs : comptes, e-mails, hash de mots de passe, jetons, historiques d'entraîn
 - CI : cycle de vie compte, isolation, sécurité, PostgreSQL, lint, TypeScript et export.
 
 ## Supabase
-RLS actif sur 11 tables. Aucun grant table/séquence direct à anon/authenticated au dernier contrôle, aucune fonction ni vue publique. Le client mobile ne doit pas accéder à la Data API. Le backend utilise LIFTELY_DATABASE_URL. Le signal rls_enabled_no_policy est informatif dans ce modèle : ne pas ajouter de policies permissives pour le supprimer. Auditer les default privileges avant de créer de nouvelles tables.
+RLS actif sur 11 tables. Aucun grant table/séquence direct à anon/authenticated au dernier contrôle, aucune fonction ni vue publique. Le client mobile ne doit pas accéder à la Data API. Le backend utilise LIFTELY_DATABASE_URL. Le signal rls_enabled_no_policy est informatif dans ce modèle : ne pas ajouter de policies permissives pour le supprimer. Une migration a aussi révoqué les privilèges Data API automatiques du rôle postgres pour les futures tables, séquences et fonctions du schéma public. Toute exposition future doit être explicitement accordée et accompagnée d'une politique adaptée.
 
 ## Dépendances
 Dernier audit connu : 21 vulnérabilités npm (4 high, 12 moderate, 5 low). Ce chiffre doit être actualisé après correctifs. Ne jamais utiliser npm audit fix --force ni downgrader SDK 57 vers SDK 52. Chaque correctif doit être isolé dans une PR et validé par lint, typecheck, Expo Doctor et export.
