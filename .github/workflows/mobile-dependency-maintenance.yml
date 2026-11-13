@@ -30,6 +30,9 @@ jobs:
       - name: Install current locked dependencies
         working-directory: mobile
         run: npm ci
+      - name: Pin the patched decode-uri-component release
+        working-directory: mobile
+        run: npm pkg set 'overrides.decode-uri-component=^0.5.1'
       - name: Apply compatible npm security updates (never force)
         working-directory: mobile
         run: npm audit fix --no-fund || true
