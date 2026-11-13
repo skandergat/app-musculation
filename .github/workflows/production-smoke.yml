@@ -33,6 +33,15 @@ jobs:
             echo "::error::Transactional email settings are missing. No message was sent."
             exit 1
           fi
+      - name: Verify Brevo transactional API in sandbox mode (no delivery)
+        env:
+          BASE_URL: https://liftely-api.onrender.com
+        run: |
+          set -euo pipefail
+          result=$(curl --fail --silent --show-error --request POST "$BASE_URL/health/brevo-sandbox")
+          echo "$result" | jq .
+          echo "$result" | jq -e '.status == "ok" and .sandbox_request_accepted == true' >/dev/null
+
       - name: Verify exercise catalogue
         env:
           BASE_URL: https://liftely-api.onrender.com
