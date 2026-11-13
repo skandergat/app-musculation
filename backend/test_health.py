@@ -1,3 +1,4 @@
+import json
 import os
 import unittest
 from unittest.mock import Mock, patch
@@ -60,6 +61,67 @@ class HealthEndpointTests(unittest.TestCase):
         response = self.client.get("/health")
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.get_json(), {"status": "unhealthy"})
+
+    @patch("urllib.request.urlopen")
+    def test_brevo_probe_uses_sandbox_header_and_never_delivers(self, urlopen):
+        response = Mock()
+        response.status = 201
+        response.__enter__ = Mock(return_value=response)
+        response.__exit__ = Mock(return_value=False)
+        urlopen.return_value = response
+        backend_app._BREVO_SANDBOX_CACHE.update({"checked_at": None, "ok": False})
+
+        with patch.dict(
+            os.environ,
+            {
+                "LIFTELY_BREVO_API_KEY": "non-empty-test-placeholder",
+                "LIFTELY_EMAIL_FROM": "sender@example.invalid",
+            },
+        ):
+            result = self.client.post("/health/brevo-sandbox")
+
+        self.assertEqual(result.status_code, 200)
+        payload = result.get_json()
+        self.assertTrue(payload["sandbox_request_accepted"])
+        request = urlopen.call_args.args[0]
+        body = json.loads(request.data.decode("utf-8"))
+        self.assertEqual(body["headers"]["X-Sib-Sandbox"], "drop")
+        self.assertEqual(body["to"][0]["email"], "no-delivery@invalid.example")
+        self.assertNotIn("messageId", payload)
+
+    @patch("urllib.request.urlopen")
+    def test_brevo_probe_is_cached_for_five_minutes(self, urlopen):
+        response = Mock()
+        response.status = 201
+        response.__enter__ = Mock(return_value=response)
+        response.__exit__ = Mock(return_value=False)
+        urlopen.return_value = response
+        backend_app._BREVO_SANDBOX_CACHE.update({"checked_at": None, "ok": False})
+
+        with patch.dict(
+            os.environ,
+            {
+                "LIFTELY_BREVO_API_KEY": "non-empty-test-placeholder",
+                "LIFTELY_EMAIL_FROM": "sender@example.invalid",
+            },
+        ):
+            first = self.client.post("/health/brevo-sandbox")
+            second = self.client.post("/health/brevo-sandbox")
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertTrue(second.get_json()["cached"])
+        urlopen.assert_called_once()
+
+    def test_brevo_probe_fails_closed_when_not_configured(self):
+        backend_app._BREVO_SANDBOX_CACHE.update({"checked_at": None, "ok": False})
+        with patch.dict(
+            os.environ,
+            {"LIFTELY_BREVO_API_KEY": "", "LIFTELY_EMAIL_FROM": ""},
+        ):
+            response = self.client.post("/health/brevo-sandbox")
+        self.assertEqual(response.status_code, 503)
+        self.assertFalse(response.get_json()["sandbox_request_accepted"])
 
 
 if __name__ == "__main__":
