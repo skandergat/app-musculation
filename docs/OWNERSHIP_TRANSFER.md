@@ -39,8 +39,8 @@ Code source, tags, docs, export chiffré, procédure restauration testée, inven
 
 ## État technique au 13 novembre 2026
 - Supabase PostgreSQL 17.11 actif ; cinq migrations appliquées et versionnées ; privilèges par défaut du rôle postgres entièrement révoqués pour anon/authenticated/service_role sur les futurs objets du schéma public.
-- Smoke production du 13 novembre vert : PostgreSQL, 337 exercices actifs, route privée 401, Brevo sandbox accepté sans livraison, page confidentialité noindex avec hébergeurs/régions exacts. Déploiement Argon2id Render `dep-dbrf38nf3r2c73bvfleg` Live.
-- Sécurité mobile/backend : `npm audit` à 0 vulnérabilité ; Expo Doctor 21/21, lint, TypeScript, traductions et export Web verts après PR #78. PR #86/#87 activent Argon2id avec compatibilité PBKDF2 et migration transparente au login. PR #92 ajoute `pip-audit` à la CI ; résultat : `No known vulnerabilities found`.
+- Smoke production post-politique mot de passe du 13 novembre vert (`43418126209`) : PostgreSQL, 337 exercices actifs, route privée 401, Brevo sandbox accepté sans livraison, page confidentialité noindex avec hébergeurs/régions exacts. Déploiement Render `dep-dbrfaoe1egvs73fon2sg` Live.
+- Sécurité mobile/backend : `npm audit` à 0 vulnérabilité ; Expo Doctor 21/21, lint, TypeScript, traductions et export Web verts après PR #78. PR #86/#87/#96 activent Argon2id avec compatibilité PBKDF2 et migration transparente au login ; nouveaux mots de passe 15–256 caractères. PR #92 ajoute `pip-audit` à la CI ; résultat : `No known vulnerabilities found`.
 - CodeQL hebdomadaire et Dependabot mensuel configurés ; aucune fusion automatique.
 - EAS profiles development/preview/production présents ; expo-dev-client installé ; icône iOS LIFTELY corrigée.
 - Scripts locaux fournis : backup Supabase chiffré (non exécuté) et reset SQLite copy-only (tests CI verts).

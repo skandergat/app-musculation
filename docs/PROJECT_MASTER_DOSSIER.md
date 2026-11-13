@@ -241,7 +241,7 @@ Toutes les routes privées doivent obtenir l'utilisateur depuis le Bearer token 
 ## 7. Authentification et sécurité des données
 
 - Authentification applicative maison dans Flask ; pas Supabase Auth.
-- Depuis les PR #86 et #87, les nouveaux mots de passe et les réinitialisations sont hashés en Argon2id (19 456 KiB, 2 passes, parallélisme 1). Après une connexion réussie, les anciens hashes PBKDF2-HMAC-SHA256 (200 000 itérations) sont re-hachés en Argon2id, sans reset forcé ni révocation de session. Le vérificateur conserve la compatibilité PBKDF2 pour les comptes qui ne se sont pas encore reconnectés. La PR #87 est déployée sur Render : déploiement `dep-dbrf38nf3r2c73bvfleg` Live. Le smoke de production `43416320842` confirme PostgreSQL, Brevo sandbox accepté sans livraison, 337 exercices et HTTP 401 sur `/templates`.
+- Depuis les PR #86, #87 et #96, les nouveaux mots de passe et les réinitialisations sont hashés en Argon2id (19 456 KiB, 2 passes, parallélisme 1). Inscription et réinitialisation imposent 15 à 256 caractères ; aucun changement forcé pour les comptes existants. Après une connexion réussie, les hashes PBKDF2-HMAC-SHA256 historiques (200 000 itérations) sont re-hachés en Argon2id, sans révocation de session. Le déploiement Render `dep-dbrfaoe1egvs73fon2sg` est Live. Le smoke post-déploiement `43418126209` confirme PostgreSQL, Brevo sandbox accepté sans livraison, 337 exercices actifs et HTTP 401 sur `/templates`.
 - Jetons de session et jetons d'action persistés sous forme de hash SHA-256.
 - Durée de session : 30 jours.
 - Vérification e-mail : lien 48 h.

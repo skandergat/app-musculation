@@ -84,7 +84,7 @@ Backend/Render :
 Voir backend/.env.example, docs/OPERATIONS_RUNBOOK.md, scripts/backup-supabase.ps1 pour les sauvegardes chiffrées et scripts/reset_liftely_user_data_copy.py pour assainir une copie SQLite sans toucher à la source.
 
 ## Sécurité des mots de passe
-Depuis les PR #86 et #87, les nouvelles inscriptions et réinitialisations utilisent Argon2id (m=19 456 KiB, t=2, p=1). Les anciens hashes PBKDF2-HMAC-SHA256 à 200 000 itérations restent compatibles et sont convertis après connexion réussie. La release de rollback #86 sait vérifier les deux formats ; ne pas revenir à une version antérieure à #86 après le déploiement de la phase Argon2id.
+Depuis les PR #86, #87 et #96, les nouvelles inscriptions et réinitialisations utilisent Argon2id (m=19 456 KiB, t=2, p=1) et exigent 15 à 256 caractères. Les anciens hashes PBKDF2-HMAC-SHA256 à 200 000 itérations restent compatibles et sont convertis après connexion réussie. La release de rollback #86 sait vérifier les deux formats ; ne pas revenir à une version antérieure à #86.
 
 ## Fonctionnalités actuelles
 Inscription, confirmation e-mail, connexion/déconnexion, reset mot de passe, suppression de compte, catalogue Gym/Calisthenics, séances et séries, templates, historique, progression, profil, paramètres, FR/EN/DE/AR, thème clair/sombre.
