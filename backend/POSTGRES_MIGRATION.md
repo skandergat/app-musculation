@@ -2,7 +2,7 @@
 
 ## État de production vérifié au 13 novembre 2026
 
-<badge>Production active sur PostgreSQL</badge>
+**État : production active sur PostgreSQL.**
 
 - Projet Supabase `liftely`, région `eu-west-2` (Londres), PostgreSQL **17.11**.
 - Service Render `liftely-api` : état `live`, branche `main`, racine `backend/`, déploiement automatique activé.
