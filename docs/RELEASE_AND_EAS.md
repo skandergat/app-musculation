@@ -52,3 +52,12 @@ Vérifier les quotas et coûts EAS avant de lancer les builds. Les frais Apple D
 - [ ] App Privacy / Data safety renseignés
 - [ ] Preview testée iOS et Android
 - [ ] Rollback et monitoring prêts
+
+
+## URL API des builds
+
+Les profils `preview` et `production` définissent explicitement `EXPO_PUBLIC_API_URL=https://liftely-api.onrender.com`. Cela évite qu'un bundle EAS de production échoue parce que l'URL API est absente.
+
+**Attention :** il n'existe pas encore de backend de staging. Les builds preview et production communiquent donc avec la base réelle Supabase via l'API Render. Ne pas les utiliser pour des tests destructifs ; créer un compte QA dédié et ne pas injecter de données réelles. Créer un environnement staging séparé avant d'ouvrir la preview à des testeurs externes.
+
+Le profil `development` ne fixe pas cette variable : le développeur doit utiliser son `.env.local` ou le fallback réseau local.
