@@ -97,6 +97,10 @@ _AUTH_CLEANUP_LOCK = threading.Lock()
 @app.before_request
 def purger_auth_temporaire_periodiquement():
     global _LAST_AUTH_CLEANUP
+    # Health probes must reach health_check(), which handles database failures
+    # and returns 503 instead of being intercepted by periodic cleanup.
+    if request.endpoint == "health_check":
+        return
     maintenant = datetime.now()
     if maintenant - _LAST_AUTH_CLEANUP < timedelta(hours=1):
         return
