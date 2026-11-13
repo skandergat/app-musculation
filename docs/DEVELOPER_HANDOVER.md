@@ -1,5 +1,7 @@
 # Dossier de reprise technique — LIFTELY
 
+> Pour une vue exhaustive du produit, de l'API, du modèle de données, des risques et des inconnues, commencer par [le dossier maître](PROJECT_MASTER_DOSSIER.md). La matrice des variables et accès est dans [ENVIRONMENT_AND_ACCESS_MATRIX.md](ENVIRONMENT_AND_ACCESS_MATRIX.md).
+
 ## Objet
 Permettre à un développeur, une agence ou un acquéreur technique de reprendre le dépôt, comprendre le produit, lancer un environnement local, tester les parcours, exploiter l'API et maintenir la production sans dépendre des conversations précédentes.
 
