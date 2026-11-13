@@ -40,7 +40,7 @@ L'import transactionnel a été validé par GitHub Actions, run [43309393635](ht
 - Supabase Security Advisor affiche encore l'information `RLS enabled no policy` sur les onze tables. C'est cohérent avec le choix de ne créer aucune politique d'accès direct ; l'accès Data API reste bloqué par l'absence de privilèges. Ne pas ajouter de politique permissive sans revoir l'architecture d'authentification.
 - Six index ont été ajoutés sur les clés étrangères non indexées : `sessions.user_id`, `templates.user_id`, `template_exercices.exercice_id`, `seance_exercices.exercice_id`, `series.seance_id`, `series.exercice_id`.
 - Le Performance Advisor ne signale plus de clé étrangère sans index. Les index « inutilisés » sur les tables vides ne doivent pas être supprimés sur cette seule base.
-- Les privilèges par défaut du rôle créateur \`postgres\` dans \`public\` ont été durcis : les futurs objets ne reçoivent plus automatiquement les droits Data API (tables, séquences, fonctions) pour \`anon\`, \`authenticated\` et \`service_role\`. Les nouvelles permissions doivent être accordées explicitement. Les ACL du rôle interne \`supabase_admin\` ne sont pas modifiées par cette migration.
+- Les privilèges par défaut du rôle créateur `postgres` dans `public` ont été durcis : les futurs objets ne reçoivent plus automatiquement les droits Data API (tables, séquences, fonctions) pour `anon`, `authenticated` et `service_role`. Les nouvelles permissions doivent être accordées explicitement. Les ACL du rôle interne `supabase_admin` ne sont pas modifiées par cette migration.
 
 ## Historique des migrations
 
@@ -49,6 +49,7 @@ Les trois migrations appliquées en production sont désormais versionnées dans
 1. `20261112205509_enable_rls_auth_login_limits.sql`
 2. `20261112212316_reconcile_auth_login_limits_table.sql`
 3. `20261113094009_harden_public_schema_and_index_foreign_keys.sql`
+4. `20261113100533_revoke_public_default_privileges.sql`
 
 Ne pas rejouer une migration manuellement si elle figure déjà dans `supabase_migrations.schema_migrations`. Les fichiers versionnés doivent rester identiques aux instructions SQL enregistrées dans l'historique distant.
 
