@@ -419,7 +419,7 @@ Au dernier audit CI, les tests backend, le lint, le typecheck, l'export Web et E
 
 Le script `scripts/backup-supabase.ps1` réalise un dump custom PostgreSQL, vérifie sa lisibilité, chiffre une archive 7z AES-256 avec noms chiffrés, puis supprime le dump temporaire. Il requiert PostgreSQL client 17+ et 7-Zip. Il refuse d'écrire dans le dépôt Git.
 
-Le script n'a pas été exécuté ici et aucune restauration n'a été testée. L'organisation Supabase est sur le plan Free : pas de sauvegarde quotidienne automatique incluse. Les plans Pro/Team/Enterprise bénéficient de sauvegardes quotidiennes selon la politique Supabase. Le script manuel doit être exécuté régulièrement et une copie chiffrée hors site doit être conservée. Prévoir une copie chiffrée hors site et un exercice de restauration.
+L'organisation Supabase est sur le plan Free : aucune sauvegarde quotidienne automatique n'est incluse. Le workflow `.github/workflows/supabase-backup.yml` est planifié quotidiennement à 04:00 UTC et chiffre les dumps PostgreSQL en AES-256 avant de les stocker comme artifacts GitHub pour 7 jours. Il attend les secrets de dépôt `LIFTELY_DATABASE_URL` et `LIFTELY_BACKUP_PASSPHRASE` (minimum 32 caractères aléatoires). Le premier contrôle a sauté proprement en l'absence des secrets : aucune connexion ni export. Le dépôt étant public, les artifacts sont téléchargeables par les lecteurs, mais le contenu est chiffré ; la passphrase doit rester dans un coffre indépendant et les archives doivent être copiées hors site. Le script manuel PowerShell reste disponible. Aucune sauvegarde réelle ni restauration n'a encore été exécutée.
 
 ## 13. Publication iOS / Android
 
