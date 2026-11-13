@@ -118,6 +118,8 @@ export default function InscriptionScreen() {
           onChangeText={(value) => { setPassword(value); setMessage(''); }}
           secureTextEntry
           autoCapitalize="none"
+          autoComplete="new-password"
+          maxLength={256}
           editable={!creationReussie}
         />
 
@@ -129,6 +131,8 @@ export default function InscriptionScreen() {
           onChangeText={(value) => { setConfirmation(value); setMessage(''); }}
           secureTextEntry
           autoCapitalize="none"
+          autoComplete="new-password"
+          maxLength={256}
           editable={!creationReussie}
         />
 
