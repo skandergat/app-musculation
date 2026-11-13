@@ -1,0 +1,100 @@
+name: LIFTELY mobile dependency maintenance
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 7 1 * *"
+  push:
+    branches:
+      - chore/mobile-sdk57-dependency-refresh
+    paths:
+      - .github/workflows/mobile-dependency-maintenance.yml
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - name: Install current locked dependencies
+        working-directory: mobile
+        run: npm ci
+      - name: Apply compatible npm security updates (never force)
+        working-directory: mobile
+        run: npm audit fix --no-fund || true
+      - name: Align Expo SDK dependencies and install EAS dev client
+        working-directory: mobile
+        run: |
+          npx expo install --fix
+          npx expo install expo-dev-client
+          ROUTER_VERSION=$(node -p "require('./node_modules/expo-router/package.json').version")
+          CURRENT_PATCH=$(find patches -maxdepth 1 -name 'expo-router+*.patch' -print -quit)
+          TARGET_PATCH="patches/expo-router+${ROUTER_VERSION}.patch"
+          if [ -n "$CURRENT_PATCH" ] && [ "$CURRENT_PATCH" != "$TARGET_PATCH" ]; then
+            cp "$CURRENT_PATCH" "$TARGET_PATCH"
+            rm "$CURRENT_PATCH"
+          fi
+          npm install --no-audit --no-fund
+      - name: Reproducible clean install
+        working-directory: mobile
+        run: npm ci
+      - name: Open dependency maintenance pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: chore/automated-mobile-dependency-refresh
+          delete-branch: false
+          title: "chore(mobile): refresh Expo SDK 57 dependencies"
+          commit-message: "chore(mobile): refresh Expo SDK 57 dependencies"
+          body: |
+            Automated non-forced dependency maintenance.
+            - npm audit fix (without --force)
+            - Expo SDK-compatible package alignment
+            - Expo development client for EAS development builds
+            - Expo Router patch filename synchronized with installed package version
+            - Clean npm ci, lint, typecheck, translation parity, Expo Doctor and web export run in CI.
+            No automatic merge. Review all package and lockfile changes before merging.
+          add-paths: |
+            mobile/package.json
+            mobile/package-lock.json
+            mobile/patches/**
+      - name: Translation parity
+        working-directory: mobile
+        run: npm run check:translations
+      - name: Lint
+        working-directory: mobile
+        run: npm run lint
+      - name: TypeScript
+        working-directory: mobile
+        run: npx tsc --noEmit
+      - name: Expo Doctor
+        working-directory: mobile
+        run: npx expo-doctor
+      - name: Web production export
+        working-directory: mobile
+        env:
+          EXPO_PUBLIC_API_URL: https://api.example.invalid
+        run: npx expo export --platform web
+      - name: npm audit summary
+        working-directory: mobile
+        run: |
+          npm audit --json > audit-report.json || true
+          node scripts/audit-summary.cjs
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const r = JSON.parse(fs.readFileSync('audit-report.json', 'utf8'));
+          const v = r.metadata?.vulnerabilities || {};
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+            '### npm audit\n\n' + JSON.stringify(v, null, 2) + '\n');
+          NODE
