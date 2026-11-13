@@ -1,43 +1,46 @@
-# LIFTELY database migration decision record
+# LIFTELY — décision de migration de base de données
 
-**Status: migration blocked pending an explicit source-of-truth decision.**  
-**Last local SQLite comparison: 2026-10-25.**
+**Statut : migration vers Supabase PostgreSQL exécutée et validée en production.**  
+**Dernière vérification : 13 novembre 2026.**
 
-## Current database evidence
+## Décision et source de vérité
 
-Two different local SQLite files were inspected:
+- **Source de vérité production :** projet Supabase `liftely`, PostgreSQL 17.11, région `eu-west-2` (Londres).
+- **API production :** service Render `liftely-api`, région Oregon, connecté à Supabase via `LIFTELY_DATABASE_URL`.
+- **Catalogue conservé :** 349 exercices, dont 337 actifs.
+- **Comptes et historiques :** aucune donnée utilisateur n'a été importée. Les dix autres tables applicatives sont vides.
 
-| Table | Project-root `musculation.db` | `backend/musculation.db` |
-|---|---:|---:|
-| `exercices` | 349 | 349 |
-| `users` | 3 | 2 |
-| `sessions` | 5 | 8 |
-| `seances` | 45 | 43 |
-| `series` | 64 | 51 |
-| `templates` | absent | 2 |
-| `template_exercices` | absent | 4 |
-| `auth_action_tokens` | absent | 4 |
-| `auth_mail_limits` | absent | 3 |
-| `seance_exercices` | absent | 11 |
+Le choix d'import a été réalisé à partir de la fixture SQLite assainie versionnée dans le dépôt : 349 exercices et aucune donnée de compte, séance, série ou template. Le workflow GitHub Actions [43309393635](https://github.com/skandergat/app-musculation/actions/runs/43309393635) a exécuté le préflight, l'import transactionnel, le postflight avec comparaison exacte et le smoke test API sur le vrai projet Supabase.
 
-The two files are not interchangeable copies. The rows with matching IDs include conflicting user/account fields and conflicting workout-history references/values. In particular, matching session and series IDs do not establish that the records refer to the same real workout.
+## Historique des deux fichiers SQLite locaux
 
-A read-only check of the Supabase project's `public` schema previously returned no application tables or columns. Therefore the production project has not yet been shown to contain the LIFTELY application schema. Do not create that schema in production just to satisfy this preflight; validate schema initialization against the disposable PostgreSQL CI service and a dedicated Supabase test project first.
+Les deux anciennes bases locales inspectées en octobre 2026 n'étaient pas interchangeables : elles contenaient des comptes et historiques différents, parfois des identifiants identiques associés à des contenus différents. Il n'a donc pas été décidé de fusionner leurs utilisateurs ou séances par ID.
 
-## Required decision before migration
+Cette divergence locale ne remet pas en cause la migration de production : la fixture assainie utilisée ne contenait aucun de ces comptes/historiques. Les fichiers locaux d'origine doivent rester des archives de référence et ne doivent pas être importés dans la production sans un nouveau projet de réconciliation explicitement approuvé.
 
-1. Preserve both source files as immutable backups.
-2. Decide which database is authoritative for accounts and workout history. Do not choose based only on file size, row count, or modification time.
-3. If data from both files must be retained, design an explicit reconciliation map for users, sessions, workouts, series, templates, and exercise references. Do not merge rows by numeric ID.
-4. Keep the production Render database setting unchanged until a migration plan has been reviewed and tested.
-5. Run `backend/migration_preflight.py` against a dedicated, disposable PostgreSQL/Supabase test database. It opens SQLite read-only and PostgreSQL in a read-only transaction.
-6. Validate schema, foreign keys, row-content comparison, account flows, workout CRUD, templates, and sequence/identity behavior on the isolated target.
-7. Back up the chosen source, run a controlled migration, then verify row counts, row content, relationships, and application smoke tests before any production cutover.
+## Vérifications de production
 
-## What CI can and cannot prove
+- Onze tables applicatives présentes.
+- RLS activé sur les onze tables.
+- Privilèges de tables et séquences retirés aux rôles Data API `anon` et `authenticated`.
+- Aucun index manquant sur les clés étrangères après ajout de six index.
+- Catalogue : 349 lignes, identifiants 1–349, aucun doublon, 337 actifs.
+- API : `/health` OK, `/exercices` renvoie le catalogue, routes privées refusées sans authentification.
+- Tests d'intégration PostgreSQL : adaptateur, import transactionnel, rollback, séquences et cycle complet compte/séance validés en CI.
 
-The GitHub Actions workflow uses a disposable PostgreSQL 16 service to test adapter compatibility and backend flows. This is useful integration evidence, but it is **not** a connection to the user's Supabase project. Supabase-specific validation remains pending until an isolated Supabase test project and its connection string are available. Never paste a database password into chat or commit it to the repository.
+## Garde-fous désormais applicables
 
-## Current safety rule
+1. Ne pas réimporter la fixture de staging : la production est déjà initialisée.
+2. Ne pas importer les anciennes bases SQLite locales dans Supabase.
+3. Ne pas supprimer ou tronquer les tables de production sans demande explicite, sauvegarde vérifiée et plan de retour arrière.
+4. Utiliser PostgreSQL isolé ou une branche Supabase de test pour les nouveaux tests d'intégration.
+5. Traiter Render et Supabase comme deux services distincts pour les sauvegardes : un rollback Render ne restaure pas la base.
+6. Garder les secrets dans les variables d'environnement protégées uniquement.
 
-No automatic merge of the two SQLite files, no destructive cleanup of source records, no production database switch, and no migration into the production Supabase project.
+## Points opérationnels restant à terminer
+
+- Vérifier la rétention et la restauration des sauvegardes Supabase.
+- Configurer le health-check Render sur `/health`.
+- Réévaluer le décalage de région Render Oregon / Supabase Londres avant montée en charge.
+- Effectuer un test de livraison Brevo avec un destinataire explicitement autorisé.
+- Compléter les informations juridiques et la rétention des données dans la politique de confidentialité avant publication sur les stores.
