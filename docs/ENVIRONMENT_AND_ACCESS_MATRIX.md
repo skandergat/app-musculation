@@ -56,7 +56,7 @@ Aucun secret n'est reproduit dans ce document.
 |---|---|---|---|
 | GitHub | `skandergat/app-musculation` | Admin du dépôt, Actions, Dependabot, CodeQL, collaborateurs, secrets, règles de branche | Dépôt public ; main non protégée au dernier contrôle |
 | Render | Workspace `app`, service `liftely-api` | Accès workspace, service, variables, logs, deploys, facturation | Service Live ; Oregon ; Free |
-| Supabase | Organisation/projet `liftely` | Owner/admin, DB, clés, logs, migrations, backups, facturation | PostgreSQL 17.11, eu-west-2 ; plan exact à vérifier |
+| Supabase | Organisation/projet `liftely` | Owner/admin, DB, clés, logs, migrations, backups, facturation | PostgreSQL 17.11, eu-west-2 ; organisation Free (pas de backup quotidien automatique) |
 | Brevo | Compte transactionnel | Owner/admin, expéditeur validé, domaine, API keys, logs et réputation | Probe sandbox API réussi ; livraison réelle non prouvée |
 | Expo | Compte EAS | Organisation, projet, projectId, credentials, builds, secrets EAS | Pas de projectId lié identifié |
 | Apple | Developer / App Store Connect | Titulaire, équipe, certificats, profils, accords, fiches store | Non confirmé |
