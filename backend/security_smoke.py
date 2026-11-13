@@ -1,7 +1,9 @@
 """Tests de sécurité ciblés : anti-brute-force et en-têtes HTTP globaux."""
 from __future__ import annotations
 
+import hashlib
 import os
+import secrets
 import sqlite3
 import tempfile
 from datetime import datetime, timedelta
@@ -36,6 +38,21 @@ def add_argon2_user(email: str, password: str) -> None:
         "INSERT INTO users (nom, email, password_hash, date_creation, email_verified_at) "
         "VALUES (?, ?, ?, ?, ?)",
         ("Argon2 Security Test", email, stored,
+         datetime.now().isoformat(), datetime.now().isoformat()),
+    )
+    conn.commit()
+    conn.close()
+
+
+def add_legacy_user(email: str, password: str) -> None:
+    salt = secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 200_000)
+    stored = salt.hex() + "$" + digest.hex()
+    conn = sqlite3.connect(DB)
+    conn.execute(
+        "INSERT INTO users (nom, email, password_hash, date_creation, email_verified_at) "
+        "VALUES (?, ?, ?, ?, ?)",
+        ("Legacy Security Test", email, stored,
          datetime.now().isoformat(), datetime.now().isoformat()),
     )
     conn.commit()
@@ -105,6 +122,24 @@ versioned_login = client.post(
     environ_overrides={"REMOTE_ADDR": "198.51.100.13"},
 )
 assert versioned_login.status_code == 200, versioned_login.data
+
+# Un compte PBKDF2 historique est re-haché en Argon2id au login réussi.
+legacy_email = "legacy-rehash@example.test"
+legacy_password = "LegacyRehash123!"
+add_legacy_user(legacy_email, legacy_password)
+legacy_login = client.post(
+    "/auth/login",
+    json={"email": legacy_email, "password": legacy_password},
+    environ_overrides={"REMOTE_ADDR": "198.51.100.14"},
+)
+assert legacy_login.status_code == 200, legacy_login.data
+conn = sqlite3.connect(DB)
+rehash = conn.execute(
+    "SELECT password_hash FROM users WHERE email = ?", (legacy_email,)
+).fetchone()[0]
+conn.close()
+assert rehash.startswith("$argon2id$"), rehash[:40]
+assert backend.verify_password(legacy_password, rehash)
 
 # La limite IP globale s'applique même avec des adresses e-mail différentes.
 for attempt in range(60):
