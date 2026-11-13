@@ -1,101 +1,68 @@
 # Migration PostgreSQL / Supabase — LIFTELY
 
-## État vérifié au 12 novembre 2026
+## État de production vérifié au 13 novembre 2026
 
-- Le schéma applicatif Supabase `public` contient les onze tables attendues.
-- Les onze tables ont la Row Level Security activée.
-- La table `exercices` contient 349 lignes ; les dix autres tables applicatives sont vides.
-- L'import SQLite → PostgreSQL a été exécuté avec succès dans une transaction par GitHub Actions, run [43309393635](https://github.com/skandergat/app-musculation/actions/runs/43309393635).
-- Le préflight n'a signalé aucun bloqueur ; les neuf clés étrangères correspondent ; le postflight a confirmé une égalité exacte du contenu des onze tables.
-- Le test Flask sur la vraie base Supabase a validé `/health`, `/exercices` (337 exercices actifs et identifiants uniques) et le refus `401` de `/templates` sans authentification. Ce test n'a créé aucune donnée.
-- L'historique Supabase contient les migrations `20261112205509_enable_rls_auth_login_limits` et `20261112212316_reconcile_auth_login_limits_table`.
-- La source SQLite de staging a été conservée sans modification. Aucun compte ni historique utilisateur n'a été importé.
-- Le service Render `liftely-api` n'a pas encore été basculé : il reste sur SQLite tant que `LIFTELY_DATABASE_URL` n'est pas configurée dans son environnement. Le code de compatibilité PostgreSQL est déjà présent dans `main`.
-- Dernière étape de bascule : ajouter dans Render la même URI PostgreSQL protégée que celle utilisée par GitHub Actions, sous la variable `LIFTELY_DATABASE_URL`, puis vérifier le déploiement et les routes publiques. Ne jamais publier cette URI dans Git ou dans une conversation.
+<badge>Production active sur PostgreSQL</badge>
 
-## Fichiers
+- Projet Supabase `liftely`, région `eu-west-2` (Londres), PostgreSQL **17.11**.
+- Service Render `liftely-api` : état `live`, branche `main`, racine `backend/`, déploiement automatique activé.
+- Le backend Render utilise PostgreSQL/Supabase via `LIFTELY_DATABASE_URL`. La connexion a été confirmée par les requêtes de l'API et par la lecture directe de la base.
+- `/health` a répondu `{"status":"ok"}` ; `/exercices` renvoie le catalogue actif ; le test d'intégration vérifie également le refus `401` de `/templates` sans authentification.
+- Le déploiement du 13 novembre correspondant au commit `4a5e9d359e1c80e46408e88a0f065be6e1446b84` est `live`. Il ajoute la vérification de la table `auth_login_limits` au démarrage.
+- Render est dans la région Oregon alors que Supabase est à Londres. Ce décalage géographique est un risque de latence à réévaluer avant une montée en charge.
 
-- `postgres_schema.sql` : d?finition des onze tables applicatives, contraintes et index.
-- `migrate_sqlite_to_postgres.py` : import transactionnel depuis SQLite. Par d?faut, refuse les tables cibles non vides ; avec `--allow-identical-existing`, accepte uniquement les tables dont le contenu complet correspond exactement ? la source, sans r?ins?rer les lignes.
-- `migration_preflight.py` : comparaison en lecture seule du schéma, des index, des clés étrangères, des nombres de lignes et du contenu.
-- `test_real_staging_migration.py` : test reproductible de la vraie fixture assainie sur un schéma PostgreSQL temporaire isolé.
-- `fixtures/reset_staging_source.sql.gz.b64` : fixture de staging assainie, sans comptes ni historique.
+## Données de production
 
-## Base de référence validée
+Les onze tables applicatives attendues sont présentes dans le schéma `public`.
 
-La fixture de staging contient exactement :
-
-| Table | Lignes |
+| Table | Lignes au dernier contrôle |
 |---|---:|
-| exercices | 349 |
-| users | 0 |
-| sessions | 0 |
-| auth_action_tokens | 0 |
-| auth_mail_limits | 0 |
-| auth_login_limits | 0 |
-| templates | 0 |
-| template_exercices | 0 |
-| seances | 0 |
-| series | 0 |
-| seance_exercices | 0 |
+| `exercices` | **349** |
+| `users` | 0 |
+| `sessions` | 0 |
+| `auth_action_tokens` | 0 |
+| `auth_mail_limits` | 0 |
+| `auth_login_limits` | 0 |
+| `templates` | 0 |
+| `template_exercices` | 0 |
+| `seances` | 0 |
+| `series` | 0 |
+| `seance_exercices` | 0 |
 
-Cette fixture ne doit être utilisée que si elle correspond toujours à la source de données que le propriétaire souhaite conserver. Elle ne contient aucun ancien compte ni historique.
+Le catalogue comprend 337 exercices actifs (185 gym et 152 calisthenics) et 12 exercices gym inactifs. Les identifiants du catalogue vont de 1 à 349, sans trou ni doublon. Aucun compte, historique, séance ou template local n'a été importé : la fixture assainie retenue ne contenait que les 349 exercices.
 
-## Procédure contrôlée
+L'import transactionnel a été validé par GitHub Actions, run [43309393635](https://github.com/skandergat/app-musculation/actions/runs/43309393635). Le préflight, le postflight avec comparaison exacte du contenu des onze tables, les séquences, les clés étrangères et le smoke test Flask sur la vraie base Supabase ont réussi.
 
-1. Vérifier qu'une sauvegarde de la base source actuelle existe et confirmer que la fixture assainie est bien la source retenue.
-2. Vérifier que les dix tables applicatives et leurs contraintes existent dans `public`. Si le schéma existe déjà, ne pas le recréer ni le supprimer. Pour une cible réellement vide, appliquer `postgres_schema.sql` uniquement dans `public`. Ne jamais exécuter de `DROP`, `TRUNCATE` ou de commande visant les schémas Supabase internes.
-3. Depuis un environnement sécurisé disposant de la fixture SQLite et de la chaîne de connexion PostgreSQL, exécuter le préflight en lecture seule.
-4. Si et seulement si le préflight ne signale aucun bloqueur, exécuter l'importeur avec `--source <base_staging.sqlite>`. L'importeur n'écrase aucune ligne existante et annule la transaction en cas d'erreur.
-5. Relancer le préflight et exiger une correspondance exacte des onze tables, des clés étrangères et des séquences.
-6. Vérifier les routes de l'API sur une configuration de test avant tout basculement de Render.
-7. Configurer Render pour utiliser Supabase uniquement après validation explicite des contrôles précédents et conservation d'une possibilité de retour arrière.
+## Sécurité et index
 
-## Mise à niveau d'un schéma PostgreSQL déjà initialisé
+- RLS est activé sur les onze tables.
+- Les privilèges directs sur les tables et séquences du schéma `public` ont été retirés aux rôles `anon` et `authenticated`. Le mobile passe par l'API Flask, pas par la Data API Supabase.
+- Supabase Security Advisor affiche encore l'information `RLS enabled no policy` sur les onze tables. C'est cohérent avec le choix de ne créer aucune politique d'accès direct ; l'accès Data API reste bloqué par l'absence de privilèges. Ne pas ajouter de politique permissive sans revoir l'architecture d'authentification.
+- Six index ont été ajoutés sur les clés étrangères non indexées : `sessions.user_id`, `templates.user_id`, `template_exercices.exercice_id`, `seance_exercices.exercice_id`, `series.seance_id`, `series.exercice_id`.
+- Le Performance Advisor ne signale plus de clé étrangère sans index. Les index « inutilisés » sur les tables vides ne doivent pas être supprimés sur cette seule base.
+- Les privilèges par défaut des rôles gérés Supabase n'ont pas pu être modifiés depuis le rôle courant. Réauditer les ACL par défaut si de nouvelles tables sont ajoutées.
 
-La protection anti-brute-force ajoute la table `auth_login_limits`. Si la base PostgreSQL a été initialisée avec une version antérieure du schéma, exécuter une seule fois dans le schéma applicatif (par exemple `public`) avant de déployer le nouveau backend :
+## Historique des migrations
 
-```sql
-CREATE TABLE IF NOT EXISTS auth_login_limits (
-    key_hash TEXT PRIMARY KEY,
-    window_start TEXT NOT NULL,
-    request_count INTEGER NOT NULL
-);
-```
+Les trois migrations appliquées en production sont désormais versionnées dans `supabase/migrations/` :
 
-Cette opération ne modifie aucune donnée de compte ou d'entraînement et ne touche pas aux schémas internes Supabase.
+1. `20261112205509_enable_rls_auth_login_limits.sql`
+2. `20261112212316_reconcile_auth_login_limits_table.sql`
+3. `20261113094009_harden_public_schema_and_index_foreign_keys.sql`
 
-## Exécution de l'importeur
+Ne pas rejouer une migration manuellement si elle figure déjà dans `supabase_migrations.schema_migrations`. Les fichiers versionnés doivent rester identiques aux instructions SQL enregistrées dans l'historique distant.
 
-Ne jamais placer une URI PostgreSQL, un mot de passe ou une clé Supabase dans Git, un fichier versionné ou une conversation. Utiliser une variable d'environnement protégée :
+## Render et e-mails
 
-```powershell
-$env:LIFTELY_DATABASE_URL = "<URI PostgreSQL saisie localement et protégée>"
-python -m pip install -r .\backend\requirements.txt
-python .\backend\migration_preflight.py --sqlite .\migration_staging.db --schema public
-python .\backend\migrate_sqlite_to_postgres.py --source .\migration_staging.db
-python .\backend\migration_preflight.py --sqlite .\migration_staging.db --schema public
-```
+- `LIFTELY_DATABASE_URL` est configurée dans l'environnement Render ; ne jamais copier sa valeur dans Git, un ticket ou une conversation.
+- `LIFTELY_PUBLIC_BASE_URL` a été configurée à `https://liftely-api.onrender.com` pour construire les liens de vérification, de réinitialisation et de suppression de compte.
+- Brevo est le fournisseur transactionnel prévu via API HTTPS. La configuration de l'URL publique a été faite, mais aucun e-mail réel n'a été envoyé pendant l'audit ; un test de livraison reste à faire avec un destinataire explicitement autorisé.
+- Le chemin de contrôle HTTP Render n'est pas configuré (champ vide). L'API expose `/health` ; définir ce chemin dans le Dashboard Render lors du prochain durcissement opérationnel.
 
-Pour une première initialisation sur une cible vide, appliquer le schéma séparément avant l'import (ou utiliser `--create-schema` si l'environnement et la cible ont été explicitement vérifiés comme dédiés et vides).
+## Règles de sécurité opérationnelle
 
-## Garde-fous
-
-- Ne pas définir `LIFTELY_DATABASE_URL` sur Render avant la fin du contrôle post-import.
-- Ne pas utiliser la fixture assainie pour remplacer une base qui contiendrait des comptes ou de l'historique à conserver.
-- Ne pas supposer que le bouton « Save » du SQL Editor exécute une requête : l'exécution est une action distincte.
-- Ne jamais considérer le déploiement Render réussi comme preuve que la base Supabase est initialisée ou que l'application utilise PostgreSQL.
-
-
-## Import Supabase depuis GitHub Actions
-
-Un workflow manuel et protégé est disponible dans `.github/workflows/supabase-import.yml`.
-
-1. Dans GitHub, ouvrir **Settings → Secrets and variables → Actions → New repository secret**.
-2. Créer le secret `LIFTELY_DATABASE_URL` avec l'URI PostgreSQL de Supabase (privilégier la chaîne **Session pooler**, sans jamais la publier dans le dépôt ou une conversation).
-3. Ouvrir **Actions → LIFTELY — initialisation contrôlée du schéma Supabase → Run workflow**.
-4. Saisir exactement `INITIALISER_LIFTELY_SUPABASE` dans le champ de confirmation et lancer le workflow.
-
-Le workflow reconstitue la fixture assainie depuis le d?p?t et v?rifie son int?grit?. Il exige que les dix tables autres que `exercices` soient vides. La table `exercices` peut ?tre vide ou contenir exactement les 349 lignes de la fixture ; dans ce dernier cas, le contenu complet doit correspondre et les lignes sont conserv?es sans r?insertion. Il bloque si le catalogue est partiel ou diff?rent, si le sch?ma ne correspond pas ou si le secret est absent. Le postflight exige une correspondance exacte du contenu des onze tables et des cl?s ?trang?res. Les rapports sont conserv?s comme artefact GitHub Actions pendant 14 jours.
-
-**Ce workflow n'effectue aucun basculement Render.** Après l'import, il faudra encore valider les routes API avec PostgreSQL avant de configurer le service Render.
+- Ne jamais réimporter la fixture de staging dans la production : le catalogue est déjà présent et les tables de comptes/historique sont volontairement vides.
+- Ne jamais exécuter `DROP`, `TRUNCATE`, ou des commandes de purge sur la base de production sans demande explicite et sauvegarde vérifiée.
+- Ne jamais publier une URI PostgreSQL, un mot de passe, une clé Supabase ou une clé Brevo.
+- Pour tester les migrations, l'adaptateur et les parcours compte/séance, utiliser PostgreSQL isolé en CI ou une branche Supabase de test, pas la production.
+- Pour un rollback applicatif, restaurer un déploiement Render précédent ne restaure pas automatiquement la base. La stratégie de sauvegarde et de restauration Supabase doit être vérifiée séparément.
