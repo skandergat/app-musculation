@@ -34,7 +34,6 @@ jobs:
         run: npm ci
       - name: Pin the patched decode-uri-component release
         working-directory: mobile
-        run: npm pkg set 'overrides.decode-uri-component=^0.5.1'
         run: |
           npm pkg set 'overrides.decode-uri-component=^0.5.1'
           npm pkg set 'overrides.minimatch=^11.0.8'
