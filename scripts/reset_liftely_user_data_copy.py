@@ -42,7 +42,7 @@ def connect_read_only(path: Path) -> sqlite3.Connection:
 
 def table_names(connection: sqlite3.Connection) -> set[str]:
     return {
-        row["name"] for row in connection.execute(
+        row[0] for row in connection.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table'"
         )
     }
