@@ -66,6 +66,7 @@ class HealthEndpointTests(unittest.TestCase):
     def test_brevo_probe_uses_sandbox_header_and_never_delivers(self, urlopen):
         response = MagicMock()
         response.status = 201
+        response.__enter__.return_value = response
         urlopen.return_value = response
         backend_app._BREVO_SANDBOX_CACHE.update({"checked_at": None, "ok": False})
 
@@ -91,6 +92,7 @@ class HealthEndpointTests(unittest.TestCase):
     def test_brevo_probe_is_cached_for_five_minutes(self, urlopen):
         response = MagicMock()
         response.status = 201
+        response.__enter__.return_value = response
         urlopen.return_value = response
         backend_app._BREVO_SANDBOX_CACHE.update({"checked_at": None, "ok": False})
 
