@@ -12,7 +12,6 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   refresh:
@@ -49,26 +48,19 @@ jobs:
       - name: Reproducible clean install
         working-directory: mobile
         run: npm ci
-      - name: Open dependency maintenance pull request
-        uses: peter-evans/create-pull-request@v7
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: chore/automated-mobile-dependency-refresh
-          delete-branch: false
-          title: "chore(mobile): refresh Expo SDK 57 dependencies"
-          commit-message: "chore(mobile): refresh Expo SDK 57 dependencies"
-          body: |
-            Automated non-forced dependency maintenance.
-            - npm audit fix (without --force)
-            - Expo SDK-compatible package alignment
-            - Expo development client for EAS development builds
-            - Expo Router patch filename synchronized with installed package version
-            - Clean npm ci, lint, typecheck, translation parity, Expo Doctor and web export run in CI.
-            No automatic merge. Review all package and lockfile changes before merging.
-          add-paths: |
-            mobile/package.json
-            mobile/package-lock.json
-            mobile/patches/**
+      - name: Push dependency candidate branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B chore/automated-mobile-dependency-refresh
+          git add mobile/package.json mobile/package-lock.json mobile/patches
+          if git diff --cached --quiet; then
+            echo "No dependency changes generated."
+            exit 0
+          fi
+          git commit -m "chore(mobile): refresh Expo SDK 57 dependencies"
+          git push origin HEAD:refs/heads/chore/automated-mobile-dependency-refresh --force
+          echo "Candidate branch: https://github.com/skandergat/app-musculation/compare/main...chore/automated-mobile-dependency-refresh?expand=1" >> "$GITHUB_STEP_SUMMARY"
       - name: Translation parity
         working-directory: mobile
         run: npm run check:translations
