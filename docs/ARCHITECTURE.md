@@ -40,7 +40,7 @@ Le client Expo/React Native appelle l'API Flask par HTTPS, avec Bearer token pou
 Expo Router sépare les groupes (auth) et (app). Le layout racine enveloppe l'application dans I18nProvider, ColorSchemeProvider et AuthProvider. Les écrans privés ne sont affichés que lorsque l'utilisateur est chargé et connecté.
 
 ## Authentification
-Il s'agit d'un système d'authentification applicatif maison, pas de Supabase Auth. Flask vérifie les mots de passe (PBKDF2-HMAC-SHA256 avec sel), crée les jetons de session et stocke leur hash. Les jetons d'action e-mail sont à usage unique et stockés sous forme de hash. Le client stocke le jeton natif dans Expo SecureStore ; le Web utilise le stockage local.
+Il s'agit d'un système d'authentification applicatif maison, pas de Supabase Auth. Flask écrit les nouveaux mots de passe avec Argon2id (19 456 KiB, 2 passes, parallélisme 1), vérifie encore les hashes PBKDF2-HMAC-SHA256 historiques et les re-hache en Argon2id après une connexion réussie. Les jetons de session et d'action e-mail sont stockés sous forme de hash ; les jetons d'action sont à usage unique. Le client stocke le jeton natif dans Expo SecureStore ; le Web utilise le stockage local.
 
 ## API — santé, pages publiques, auth
 - GET /health ; POST /health/brevo-sandbox (requête Brevo sandbox, aucun e-mail livré)
