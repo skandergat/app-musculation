@@ -34,15 +34,24 @@ Inviter le nouveau propriétaire via les procédures officielles. Ne pas partage
 ## Livrables
 Code source, tags, docs, export chiffré, procédure restauration testée, inventaire services/coûts, matrice variables sans secrets, architecture/endpoints/modèle données, décisions migration, confidentialité, backlog et PV de transfert des accès.
 
+## État technique au 13 novembre 2026
+- Supabase PostgreSQL 17.11 actif ; cinq migrations appliquées et versionnées ; privilèges par défaut du rôle postgres entièrement révoqués pour anon/authenticated/service_role sur les futurs objets du schéma public.
+- Smoke production quotidien vert : PostgreSQL, 337 exercices actifs, route privée 401, Brevo sandbox accepté sans livraison, page confidentialité noindex avec hébergeurs/régions exacts.
+- Sécurité mobile : 0 high/critical, 10 moderate restantes ; Expo Doctor 21/21, lint, TypeScript, traductions et export web verts.
+- CodeQL hebdomadaire et Dependabot mensuel configurés ; aucune fusion automatique.
+- EAS profiles development/preview/production présents ; expo-dev-client installé ; icône iOS LIFTELY corrigée.
+- Scripts locaux fournis : backup Supabase chiffré (non exécuté) et reset SQLite copy-only (tests CI verts).
+- Dépôt GitHub actuellement public ; aucune protection de branche main vérifiée/configurée.
+
 ## Points restant à fournir par le propriétaire
 - Identité juridique et coordonnées responsable de traitement.
 - Bundle ID iOS et package Android.
 - Compte/projet EAS et comptes Apple/Google.
 - Rétention réelle backups/logs.
-- Sauvegarde hors site et test de restauration.
-- Test réel Brevo avec destinataire autorisé.
+- Exécuter le script de sauvegarde, copier l'archive chiffrée hors site et effectuer un test de restauration isolé.
+- Test réel Brevo avec destinataire autorisé (sandbox API déjà validé, aucune livraison effectuée).
 - Health Check Path Render.
-- Correctifs npm/Expo à valider.
+- Dix alertes npm moderate restantes à réévaluer lors des prochains patchs SDK.
 - Évaluation déplacement Render Europe après mesures.
 
 ## Acceptation
