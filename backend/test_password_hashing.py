@@ -1,10 +1,20 @@
 import hashlib
 import unittest
 
+from argon2 import PasswordHasher, Type
+
 from backend import app
 
 
 class PasswordHashCompatibilityTests(unittest.TestCase):
+    def test_new_password_hashes_use_argon2id(self):
+        password = "New Password 123!"
+        encoded = app.hash_password(password)
+
+        self.assertTrue(encoded.startswith("$argon2id$v=19$m=19456,t=2,p=1$"))
+        self.assertTrue(app.verify_password(password, encoded))
+        self.assertFalse(app.verify_password("wrong password", encoded))
+
     def test_legacy_pbkdf2_hash_remains_supported(self):
         password = "Legacy Password 123!"
         salt = bytes.fromhex("102132435465768798a9bacbdcedfe0f")
@@ -14,7 +24,7 @@ class PasswordHashCompatibilityTests(unittest.TestCase):
         self.assertTrue(app.verify_password(password, legacy))
         self.assertFalse(app.verify_password("wrong password", legacy))
 
-    def test_argon2id_format_is_supported_before_it_is_written(self):
+    def test_argon2id_format_is_supported(self):
         password = "Argon2id Password 123!"
         encoded = app.PASSWORD_HASHER.hash(password)
 
@@ -22,15 +32,15 @@ class PasswordHashCompatibilityTests(unittest.TestCase):
         self.assertTrue(app.verify_password(password, encoded))
         self.assertFalse(app.verify_password("wrong password", encoded))
 
+    def test_argon2id_unexpected_parameters_are_rejected(self):
+        password = "Unexpected Parameters 123!"
+        weak_hasher = PasswordHasher(time_cost=1, memory_cost=1024, parallelism=1, type=Type.ID)
+        encoded = weak_hasher.hash(password)
+        self.assertFalse(app.verify_password(password, encoded))
+
     def test_malformed_hash_is_rejected(self):
-        malformed = [
-            "",
-            "not-a-hash",
-            "$argon2id$not-a-valid-encoding",
-            "salt$not-hex",
-            "00112233445566778899aabbccddeeff$" + ("00" * 31),
-            "pbkdf2_sha256$600000$0011$0011",
-        ]
+        malformed = ["", "not-a-hash", "$argon2id$not-a-valid-encoding", "salt$not-hex",
+                     "00112233445566778899aabbccddeeff$" + ("00" * 31), "pbkdf2_sha256$600000$0011$0011"]
         for value in malformed:
             with self.subTest(value=value):
                 self.assertFalse(app.verify_password("anything", value))
