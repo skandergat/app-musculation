@@ -205,7 +205,7 @@ def health_brevo_sandbox():
     if not api_key or not sender:
         return jsonify({"status": "unconfigured", "sandbox_request_accepted": False}), 503
 
-    now = datetime.utcnow()
+    now = datetime.now()
     with _BREVO_SANDBOX_LOCK:
         checked_at = _BREVO_SANDBOX_CACHE["checked_at"]
         if checked_at and now - checked_at < timedelta(minutes=5):
