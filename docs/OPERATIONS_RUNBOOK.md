@@ -9,7 +9,7 @@
 | Brevo | Compte propriétaire | E-mails transactionnels |
 
 ## Déploiement Render
-État observé : auto-deploy sur chaque commit main, déclencheur `commit`, région Oregon, plan Free, Health Check Path vide. Pour le durcissement pré-lancement, définir `/health`, basculer le déclencheur sur `checksPass` si disponible et ajouter des build filters limités au backend afin d'éviter les déploiements provoqués par la documentation/mobile. Ces paramètres doivent être changés dans le Dashboard Render (le connecteur disponible ne les expose pas).
+État observé le 13 novembre 2026 : auto-deploy sur `main`, déclencheur `checksPass`, région Oregon, plan Free, Health Check Path `/health`. Le service a déployé le commit `68c3f20030b291a54861249c3c2813cbc02b4d4f` ; build et déploiement réussis, puis sondes `/health` en HTTP 200. Aucun build filter backend-only n'est confirmé : une modification de documentation peut donc encore déclencher un déploiement.
 Branche main, racine backend/, auto-deploy actif.
 - Build : pip install -r requirements.txt
 - Start : gunicorn --bind 0.0.0.0:$PORT app:app
@@ -21,7 +21,7 @@ Contrôles non destructifs :
 - GET /exercices : catalogue.
 - GET /templates sans token : doit renvoyer 401.
 
-**Health Check Path** est vide au dernier contrôle. À configurer dans Render Dashboard > liftely-api > Settings > Health & Checks > Health Check Path : /health. Les outils disponibles ici ne permettent pas de modifier ce champ ; ne pas prétendre qu'il est configuré.
+**Health Check Path** est configuré sur `/health` (vérifié dans la configuration Render le 13 novembre 2026). Les journaux du dernier déploiement montrent plusieurs réponses HTTP 200 aux sondes Render.
 
 ## Variables
 | Variable | Usage | Secret |
@@ -50,7 +50,7 @@ L'organisation Supabase est sur le plan Free : aucune sauvegarde quotidienne aut
 ### Workflow GitHub Actions
 Le workflow `.github/workflows/supabase-backup.yml` s'exécute quotidiennement à 04:00 UTC et peut être lancé manuellement. Il attend les secrets de dépôt `LIFTELY_DATABASE_URL` et `LIFTELY_BACKUP_PASSPHRASE` (au moins 32 caractères aléatoires). Sans les deux secrets, il saute proprement l'export. Lorsqu'ils sont présents, il exécute `pg_dump` avec PostgreSQL 17, vérifie le dump, chiffre en AES-256 GnuPG, vérifie le déchiffrement, puis publie uniquement l'archive chiffrée comme artifact pour 7 jours.
 
-Le dépôt étant public, les artifacts peuvent être téléchargés par les lecteurs du dépôt. La protection repose donc sur une passphrase longue, unique et gardée hors de GitHub. Copier régulièrement les archives vers un stockage privé indépendant ; 7 jours d'artifacts ne constituent pas une sauvegarde hors site durable. Le premier test du workflow a détecté l'absence des secrets et a sauté l'export sans connexion à la base ni accès aux données.
+Le dépôt étant public, les artifacts peuvent être téléchargés par les lecteurs du dépôt. La protection repose donc sur une passphrase longue, unique et gardée hors de GitHub. Le run `43515211149` a réussi et a publié l'archive chiffrée `liftely-supabase-backup-43515211149` (rétention 7 jours). Copier l'archive vers un stockage privé indépendant avant expiration ; 7 jours d'artifacts ne constituent pas une sauvegarde hors site durable.
 
 ### Script manuel PowerShell
 Le dépôt fournit également `scripts/backup-supabase.ps1`. Il requiert le client PostgreSQL 17+ (`pg_dump`/`pg_restore`) et 7-Zip. Il refuse d'écrire dans le dépôt Git, crée un dump custom, vérifie sa lisibilité, crée une archive 7z chiffrée AES-256 avec noms de fichiers chiffrés, vérifie l'archive puis supprime le dump temporaire.
@@ -77,7 +77,7 @@ Le script demande deux fois la phrase secrète 7-Zip ; conserver cette phrase s�
 3. Vérifier tables, catalogue, séquences, contraintes et clés étrangères.
 4. Exécuter le smoke test backend contre cette base.
 5. Documenter date, résultat, RPO/RTO et supprimer la base temporaire.
-Aucune sauvegarde réelle ni restauration n'a été exécutée pendant cet audit ; pratiquer la procédure avant lancement public.
+Exercice de restauration réalisé avec succès (run `43518028317`) dans une base PostgreSQL 17 jetable : archive téléchargée, déchiffrée, restaurée et contrôlée ; les 349 exercices sont présents. La base Supabase de production n'a pas été modifiée. Conserver le rapport de run comme preuve et répéter périodiquement l'exercice.
 
 ## Brevo
 Le backend utilise l'API transactionnelle HTTPS si LIFTELY_BREVO_API_KEY est configurée ; SMTP TLS existe en fallback. L'expéditeur doit être validé. Brevo propose le sandbox via header X-Sib-Sandbox: drop : valide payload/auth mais n'envoie aucun mail et ne crée aucun log. Test réel seulement avec un destinataire autorisé. Aucun test réel effectué.
