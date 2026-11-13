@@ -241,7 +241,7 @@ Toutes les routes privées doivent obtenir l'utilisateur depuis le Bearer token 
 ## 7. Authentification et sécurité des données
 
 - Authentification applicative maison dans Flask ; pas Supabase Auth.
-- Le format actuellement écrit reste PBKDF2-HMAC-SHA256 à 200 000 itérations ; cette release de compatibilité sait aussi vérifier les hashes Argon2id (19 MiB, 2 passes, parallélisme 1). La bascule de l'écriture vers Argon2id et le rehash transparent des anciens hashes sont prévus dans une seconde release, après déploiement de cette base de rollback.
+- Les nouveaux mots de passe sont hachés avec Argon2id (19 MiB, 2 passes, parallélisme 1). Les anciens hashes PBKDF2-HMAC-SHA256 à 200 000 itérations restent vérifiables et sont re-hachés en Argon2id au prochain login réussi. Inscription et réinitialisation exigent 15 caractères minimum (256 maximum), sans règles artificielles de composition. La release de compatibilité PR #86 est le minimum sûr pour un rollback ; ne pas revenir à une version antérieure qui ne sait pas lire Argon2id.
 - Jetons de session et jetons d'action persistés sous forme de hash SHA-256.
 - Durée de session : 30 jours.
 - Vérification e-mail : lien 48 h.
