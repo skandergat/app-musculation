@@ -241,7 +241,7 @@ Toutes les routes privées doivent obtenir l'utilisateur depuis le Bearer token 
 ## 7. Authentification et sécurité des données
 
 - Authentification applicative maison dans Flask ; pas Supabase Auth.
-- Depuis les PR #86 et #87, les nouveaux mots de passe et les réinitialisations sont hashés en Argon2id (19 456 KiB, 2 passes, parallélisme 1). Après une connexion réussie, les anciens hashes PBKDF2-HMAC-SHA256 (200 000 itérations) sont re-hachés en Argon2id, sans reset forcé ni révocation de session. Le vérificateur conserve la compatibilité PBKDF2 pour les comptes qui ne se sont pas encore reconnectés. La PR #87 a été validée par les tests unitaires, le smoke de sécurité et l'intégration PostgreSQL ; le déploiement Render du commit d0cc9e6 doit être confirmé Live avant de considérer la bascule en production comme achevée.
+- Depuis les PR #86 et #87, les nouveaux mots de passe et les réinitialisations sont hashés en Argon2id (19 456 KiB, 2 passes, parallélisme 1). Après une connexion réussie, les anciens hashes PBKDF2-HMAC-SHA256 (200 000 itérations) sont re-hachés en Argon2id, sans reset forcé ni révocation de session. Le vérificateur conserve la compatibilité PBKDF2 pour les comptes qui ne se sont pas encore reconnectés. La PR #87 est déployée sur Render : déploiement `dep-dbrf38nf3r2c73bvfleg` Live. Le smoke de production `43416320842` confirme PostgreSQL, Brevo sandbox accepté sans livraison, 337 exercices et HTTP 401 sur `/templates`.
 - Jetons de session et jetons d'action persistés sous forme de hash SHA-256.
 - Durée de session : 30 jours.
 - Vérification e-mail : lien 48 h.
@@ -382,7 +382,7 @@ Workflows actuels :
 - `.github/workflows/mobile-dependency-maintenance.yml` : candidat de mise à jour mensuel, tests, sans fusion automatique.
 - `.github/workflows/supabase-import.yml` : workflow historique d'import contrôlé ; ne pas exécuter à nouveau sur production.
 
-Après la PR #78, le dernier audit npm de la branche principale est à **0 vulnérabilité** (0 low, 0 moderate, 0 high, 0 critical). L'override `minimatch` vers 11.0.8 supprime les avis transitifs sans downgrade Expo. La CI candidate a validé `npm ci`, traductions, lint, TypeScript, Expo Doctor 21/21, export Web, intégration PostgreSQL et CodeQL. Ne pas utiliser `npm audit fix --force` ; maintenir l'audit sur chaque release.
+Après la PR #78, le dernier audit npm de la branche principale est à **0 vulnérabilité** (0 low, 0 moderate, 0 high, 0 critical). L'override `minimatch` vers 11.0.8 supprime les avis transitifs sans downgrade Expo. La CI valide `npm ci`, traductions, lint, TypeScript, Expo Doctor 21/21, export Web, intégration PostgreSQL et CodeQL. Depuis la PR #92, `pip-audit -r backend/requirements.txt` est aussi exécuté à chaque CI backend ; la vérification a retourné `No known vulnerabilities found`. Ne pas utiliser `npm audit fix --force` ; maintenir les deux audits à chaque release.
 
 ## 12. Déploiement et exploitation
 
