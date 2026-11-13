@@ -203,7 +203,27 @@ def health_check():
         if conn is not None:
             conn.close()
 
-    return jsonify({"status": "ok"}), 200
+    brevo_configured = bool(
+        os.getenv("LIFTELY_BREVO_API_KEY", "").strip()
+        and os.getenv("LIFTELY_EMAIL_FROM", "").strip()
+    )
+    smtp_configured = all(
+        os.getenv(name, "").strip()
+        for name in (
+            "LIFTELY_SMTP_HOST",
+            "LIFTELY_SMTP_USERNAME",
+            "LIFTELY_SMTP_PASSWORD",
+            "LIFTELY_EMAIL_FROM",
+        )
+    )
+
+    return jsonify(
+        {
+            "status": "ok",
+            "database_backend": "postgresql" if POSTGRES_ENABLED else "sqlite",
+            "transactional_email_configured": brevo_configured or smtp_configured,
+        }
+    ), 200
 
 
 def entier_strict(value):
