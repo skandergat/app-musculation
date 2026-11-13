@@ -47,7 +47,10 @@ La documentation Supabase indique que les projets Free n'ont pas de sauvegarde q
 
 Exemple opérateur PowerShell depuis un poste de confiance avec client PostgreSQL installé :
 ~~~powershell
-$env:LIFTELY_DATABASE_URL = Read-Host "URI PostgreSQL (ne pas la coller dans un ticket)"
+$secureDsn = Read-Host "URI PostgreSQL" -AsSecureString
+$bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureDsn)
+try { $env:LIFTELY_DATABASE_URL = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) }
+finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
 pg_dump --format=custom --no-owner --no-acl --file ".\liftely-$(Get-Date -Format yyyyMMdd-HHmmss).dump" "$env:LIFTELY_DATABASE_URL"
 pg_restore --list ".\liftely-AAAAmmjj-HHmmss.dump"
 # Chiffrer avec age ou 7-Zip AES-256 ; conserver la clé séparément du fichier.
