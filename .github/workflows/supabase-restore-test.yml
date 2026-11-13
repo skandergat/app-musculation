@@ -65,47 +65,48 @@ jobs:
             exit 1
           fi
 
-          passfile="$RUNNER_TEMP/liftely-restore-passphrase"
-          dump="$RUNNER_TEMP/liftely-restore.dump"
-          printf '%s' "$LIFTELY_BACKUP_PASSPHRASE" > "$passfile"
-          chmod 600 "$passfile"
+          printf '%s' "$LIFTELY_BACKUP_PASSPHRASE" > "$RUNNER_TEMP/liftely-restore-passphrase"
+          chmod 600 "$RUNNER_TEMP/liftely-restore-passphrase"
+
+          cat > "$RUNNER_TEMP/restore.sh" <<'RESTORE_SCRIPT'
+          set -euo pipefail
+          apk add --no-cache gnupg >/dev/null
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase-file /restore/liftely-restore-passphrase \
+            --output /restore/liftely-restore.dump \
+            --decrypt "/backup/$(basename "$ARCHIVE_PATH")"
+          pg_restore --list /restore/liftely-restore.dump >/dev/null
+          createdb -h 127.0.0.1 -U postgres liftely_restore_test
+          pg_restore --exit-on-error --no-owner --no-acl --schema=public \
+            -h 127.0.0.1 -U postgres -d liftely_restore_test \
+            /restore/liftely-restore.dump
+          tables="$(psql -h 127.0.0.1 -U postgres -d liftely_restore_test -Atqc \
+            "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'")"
+          echo "Restored public tables: $tables"
+          exists="$(psql -h 127.0.0.1 -U postgres -d liftely_restore_test -Atqc \
+            "SELECT to_regclass('public.exercices') IS NOT NULL")"
+          if [[ "$exists" != "t" ]]; then
+            echo "The public.exercices table is missing after restore."
+            exit 1
+          fi
+          exercises="$(psql -h 127.0.0.1 -U postgres -d liftely_restore_test -Atqc \
+            "SELECT count(*) FROM public.exercices")"
+          echo "Restored exercises: $exercises"
+          if [[ "$exercises" -ne 349 ]]; then
+            echo "Expected 349 exercises, got $exercises."
+            exit 1
+          fi
+          echo "Public application schema restore test passed."
+          RESTORE_SCRIPT
 
           docker run --rm --network host \
             -e PGPASSWORD \
+            -e ARCHIVE_PATH="$(basename "$archive")" \
             -v "$RUNNER_TEMP/liftely-artifact:/backup:ro" \
             -v "$RUNNER_TEMP:/restore" \
-            -e ARCHIVE_NAME="$(basename "$archive")" \
-            -e PASSPHRASE_FILE=/restore/liftely-restore-passphrase \
-            postgres:17-alpine sh -ceu '
-              apk add --no-cache gnupg >/dev/null
-              gpg --batch --yes --pinentry-mode loopback \
-                --passphrase-file "$PASSPHRASE_FILE" \
-                --output /restore/liftely-restore.dump \
-                --decrypt "/backup/$ARCHIVE_NAME"
-              pg_restore --list /restore/liftely-restore.dump >/dev/null
-              createdb -h 127.0.0.1 -U postgres liftely_restore_test
-              pg_restore --exit-on-error --no-owner --no-acl --schema=public \
-                -h 127.0.0.1 -U postgres -d liftely_restore_test \
-                /restore/liftely-restore.dump
-              tables="$(psql -h 127.0.0.1 -U postgres -d liftely_restore_test -Atqc \
-                "SELECT count(*) FROM information_schema.tables WHERE table_schema = '''public''' AND table_type = '''BASE TABLE'''")"
-              echo "Restored public tables: $tables"
-              if ! psql -h 127.0.0.1 -U postgres -d liftely_restore_test -Atqc \
-                "SELECT to_regclass('''public.exercices''') IS NOT NULL" | grep -qx t; then
-                echo "::error::The public.exercices table is missing after restore."
-                exit 1
-              fi
-              exercises="$(psql -h 127.0.0.1 -U postgres -d liftely_restore_test -Atqc \
-                "SELECT count(*) FROM public.exercices")"
-              echo "Restored exercises: $exercises"
-              if [[ "$exercises" -ne 349 ]]; then
-                echo "::error::Expected 349 exercises, got $exercises."
-                exit 1
-              fi
-              echo "Public application schema restore test passed."
-            '
+            postgres:17-alpine sh /restore/restore.sh
 
-          rm -f "$passfile" "$dump"
+          rm -f "$RUNNER_TEMP/liftely-restore-passphrase" "$RUNNER_TEMP/liftely-restore.dump" "$RUNNER_TEMP/restore.sh"
 
       - name: Summarize successful restore test
         if: success()
