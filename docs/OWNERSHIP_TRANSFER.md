@@ -38,7 +38,7 @@ Inviter le nouveau propriétaire via les procédures officielles. Ne pas partage
 Code source, tags, docs, export chiffré, procédure restauration testée, inventaire services/coûts, matrice variables sans secrets, architecture/endpoints/modèle données, décisions migration, confidentialité, backlog et PV de transfert des accès.
 
 ## État technique au 13 novembre 2026
-- Supabase PostgreSQL 17.11 actif ; cinq migrations appliquées et versionnées ; privilèges par défaut du rôle postgres entièrement révoqués pour anon/authenticated/service_role sur les futurs objets du schéma public.
+- Supabase PostgreSQL 17.11 actif ; six migrations appliquées et versionnées. Aucun grant direct table/séquence/fonction pour `anon`, `authenticated` et `service_role`. Les default ACL de `postgres` sont révoqués pour les futurs objets. Limite : les default ACL du superuser plateforme `supabase_admin` restent gérées par Supabase ; aucun objet public applicatif existant n'est détenu par ce rôle (17 objets détenus par `postgres`).
 - Smoke production post-politique mot de passe du 13 novembre vert (`43418126209`) : PostgreSQL, 337 exercices actifs, route privée 401, Brevo sandbox accepté sans livraison, page confidentialité noindex avec hébergeurs/régions exacts. Déploiement Render `dep-dbrfaoe1egvs73fon2sg` Live.
 - Sécurité mobile/backend : `npm audit` à 0 vulnérabilité ; Expo Doctor 21/21, lint, TypeScript, traductions et export Web verts après PR #78. PR #86/#87/#96 activent Argon2id avec compatibilité PBKDF2 et migration transparente au login ; nouveaux mots de passe 15–256 caractères. PR #92 ajoute `pip-audit` à la CI ; résultat : `No known vulnerabilities found`.
 - CodeQL hebdomadaire et Dependabot mensuel configurés ; aucune fusion automatique.

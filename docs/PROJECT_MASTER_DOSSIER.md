@@ -282,8 +282,8 @@ Tables applicatives :
 
 - RLS activé sur les 11 tables.
 - Aucune policy RLS.
-- Pas de privilège table/séquence direct pour `anon` et `authenticated` au dernier contrôle.
-- Privilèges par défaut du rôle `postgres` révoqués pour les rôles Data API sur les futurs objets publics.
+- Aucun privilège direct table/séquence/fonction pour `anon`, `authenticated` et `service_role` après la migration `20261113114438`.
+- Privilèges par défaut du rôle créateur `postgres` révoqués pour les trois rôles Data API. Les default ACL du rôle plateforme `supabase_admin` restent gérées par Supabase ; aucun objet public applicatif existant n'est détenu par ce rôle (17 objets détenus par `postgres`). Réauditer si Supabase crée des objets publics via `supabase_admin`.
 - Le backend utilise une connexion privilégiée ; le client mobile ne doit pas accéder directement aux tables.
 - Le signal Supabase `rls_enabled_no_policy` est informatif dans ce modèle précis ; ne pas créer de policy permissive pour le faire disparaître.
 - Toute exposition directe future nécessite une décision d'architecture, des GRANT explicites et des policies adaptées.
@@ -296,6 +296,7 @@ Voir `supabase/migrations/` et `backend/POSTGRES_MIGRATION.md`. Les versions pr�
 - `20261113094009_harden_public_schema_and_index_foreign_keys.sql`
 - `20261113100533_revoke_public_default_privileges.sql`
 - `20261113102246_revoke_remaining_public_default_privileges.sql`
+- `20261113114438_revoke_data_api_public_object_grants.sql`
 
 Ne pas réappliquer une migration déjà présente dans l'historique distant. Ne jamais relancer le workflow d'import initial sur la base de production déjà initialisée.
 

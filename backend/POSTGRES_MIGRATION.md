@@ -36,21 +36,22 @@ L'import transactionnel a été validé par GitHub Actions, run [43309393635](ht
 ## Sécurité et index
 
 - RLS est activé sur les onze tables.
-- Les privilèges directs sur les tables et séquences du schéma `public` ont été retirés aux rôles `anon` et `authenticated`. Le mobile passe par l'API Flask, pas par la Data API Supabase.
-- Supabase Security Advisor affiche encore l'information `RLS enabled no policy` sur les onze tables. C'est cohérent avec le choix de ne créer aucune politique d'accès direct ; l'accès Data API reste bloqué par l'absence de privilèges. Ne pas ajouter de politique permissive sans revoir l'architecture d'authentification.
+- Les privilèges directs sur les tables, séquences et fonctions du schéma `public` ont été retirés aux rôles `anon`, `authenticated` et `service_role`. Vérification après migration : 0 grant de table, séquence ou fonction pour ces trois rôles ; `has_table_privilege` retourne false sur `public.exercices`. Le mobile passe par l'API Flask, pas par la Data API Supabase.
+- Supabase Security Advisor affiche encore l'information `RLS enabled no policy` sur les onze tables. C'est cohérent avec le choix de ne créer aucune politique d'accès direct ; l'accès Data API est bloqué par l'absence de privilèges objet. Ne pas ajouter de politique permissive sans revoir l'architecture d'authentification.
 - Six index ont été ajoutés sur les clés étrangères non indexées : `sessions.user_id`, `templates.user_id`, `template_exercices.exercice_id`, `seance_exercices.exercice_id`, `series.seance_id`, `series.exercice_id`.
 - Le Performance Advisor ne signale plus de clé étrangère sans index. Les index « inutilisés » sur les tables vides ne doivent pas être supprimés sur cette seule base.
-- Les privilèges par défaut du rôle créateur `postgres` dans `public` ont été entièrement révoqués pour `anon`, `authenticated` et `service_role` sur tables, séquences et fonctions. Les nouveaux objets n'accordent plus aucun privilège automatique à ces rôles ; les nouvelles permissions doivent être accordées explicitement. Les ACL du rôle interne `supabase_admin` ne sont pas modifiées.
+- Les privilèges par défaut du rôle créateur `postgres` dans `public` ont été révoqués pour `anon`, `authenticated` et `service_role` sur tables, séquences et fonctions. Les migrations applicatives exécutées par `postgres` créent donc des objets sans grant automatique à ces rôles. **Limite Supabase à connaître :** les default ACL du rôle plateforme superuser `supabase_admin` conservent des grants Data API ; le rôle de connexion `postgres` n'est pas membre de `supabase_admin` et ne peut pas les modifier. Au contrôle, les 17 objets publics applicatifs existants appartenaient tous à `postgres` (aucun à `supabase_admin`). Réauditer les ACL si un objet public est créé par un rôle plateforme.
 
 ## Historique des migrations
 
-Les cinq migrations appliquées en production sont désormais versionnées dans `supabase/migrations/` :
+Les six migrations appliquées en production sont désormais versionnées dans `supabase/migrations/` :
 
 1. `20261112205509_enable_rls_auth_login_limits.sql`
 2. `20261112212316_reconcile_auth_login_limits_table.sql`
 3. `20261113094009_harden_public_schema_and_index_foreign_keys.sql`
 4. `20261113100533_revoke_public_default_privileges.sql`
 5. `20261113102246_revoke_remaining_public_default_privileges.sql`
+6. `20261113114438_revoke_data_api_public_object_grants.sql`
 
 Ne pas rejouer une migration manuellement si elle figure déjà dans `supabase_migrations.schema_migrations`. Les fichiers versionnés doivent rester identiques aux instructions SQL enregistrées dans l'historique distant.
 
