@@ -145,15 +145,17 @@ assert backend.verify_password(legacy_password, rehash)
 # jamais le premier élément X-Forwarded-For contrôlable par le client.
 spoofed_ip = "203.0.113.250"
 trusted_client_ip = "198.51.100.250"
-with backend.app.test_request_context(
+response = client.post(
     "/auth/register",
+    json={
+        "nom": "Proxy Rate Limit Test",
+        "email": "proxy-check@example.test",
+        "password": "ProxyRateLimitTest123!",
+    },
     headers={"X-Forwarded-For": f"{spoofed_ip}, {trusted_client_ip}"},
     environ_overrides={"REMOTE_ADDR": "10.0.0.10"},
-):
-    conn = backend.get_db()
-    assert backend.autoriser_envoi_email(conn, "proxy-check@example.test") is True
-    conn.commit()
-    conn.close()
+)
+assert response.status_code == 201, (response.status_code, response.data)
 
 conn = sqlite3.connect(DB)
 email_ip_key = backend.hash_token("ip:" + trusted_client_ip)
