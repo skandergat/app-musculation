@@ -145,10 +145,10 @@ registered = client.post(
 )
 assert registered.status_code == 201, registered.data
 assert "token" not in registered.get_json()
-conn = sqlite3.connect(DATABASE)
+conn = backend.get_db()
 registered_hash = conn.execute(
     "SELECT password_hash FROM users WHERE email = ?", (email,)
-).fetchone()[0]
+).fetchone()["password_hash"]
 conn.close()
 assert registered_hash.startswith("$argon2id$")
 
@@ -188,10 +188,10 @@ new_password = client.post(
     json={"token": reset_token, "password": "NewPassword456!"},
 )
 assert new_password.status_code == 200, new_password.data
-conn = sqlite3.connect(DATABASE)
+conn = backend.get_db()
 reset_hash = conn.execute(
     "SELECT password_hash FROM users WHERE email = ?", (email,)
-).fetchone()[0]
+).fetchone()["password_hash"]
 conn.close()
 assert reset_hash.startswith("$argon2id$")
 assert backend.verify_password("NewPassword456!", reset_hash)
