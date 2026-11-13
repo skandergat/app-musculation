@@ -130,6 +130,14 @@ assert privacy.status_code == 200
 assert "Configuration requise avant le lancement".encode() in privacy.data
 assert client.get("/account-deletion").status_code == 200
 
+# Les nouveaux comptes refusent les mots de passe de moins de 15 caractères.
+short_registration = client.post(
+    "/auth/register",
+    json={"nom": "Too short", "email": "too-short@example.test", "password": "ShortPass123!!"},
+)
+assert short_registration.status_code == 400, short_registration.data
+assert "15 caractères" in short_registration.get_json().get("error", "")
+
 email = "lifecycle@example.test"
 registered = client.post(
     "/auth/register",
@@ -137,6 +145,12 @@ registered = client.post(
 )
 assert registered.status_code == 201, registered.data
 assert "token" not in registered.get_json()
+conn = sqlite3.connect(DB)
+registered_hash = conn.execute(
+    "SELECT password_hash FROM users WHERE email = ?", (email,)
+).fetchone()[0]
+conn.close()
+assert registered_hash.startswith("$argon2id$")
 
 unverified_login = client.post(
     "/auth/login", json={"email": email, "password": "OldPassword123!"}
@@ -174,6 +188,13 @@ new_password = client.post(
     json={"token": reset_token, "password": "NewPassword456!"},
 )
 assert new_password.status_code == 200, new_password.data
+conn = sqlite3.connect(DB)
+reset_hash = conn.execute(
+    "SELECT password_hash FROM users WHERE email = ?", (email,)
+).fetchone()[0]
+conn.close()
+assert reset_hash.startswith("$argon2id$")
+assert backend.verify_password("NewPassword456!", reset_hash)
 assert client.get("/auth/me", headers=old_headers).status_code == 401
 assert client.post(
     "/auth/password-reset",
@@ -239,7 +260,7 @@ assert client.post(
     json={
         "nom": "Public delete",
         "email": public_email,
-        "password": "DeletePass123!",
+        "password": "DeletePass123!!",
     },
 ).status_code == 201
 public_verify = token_for("Confirme ton adresse e-mail LIFTELY", public_email)
