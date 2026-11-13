@@ -470,7 +470,7 @@ Ces identifiants sont pérennes et peuvent être difficiles à changer après pu
 - Compte EAS et project ID.
 - Comptes Apple Developer / App Store Connect et Google Play Console.
 - Propriété du domaine et DNS si un domaine personnalisé est prévu.
-- Statut exact du plan Supabase, sauvegardes, rétention et facturation.
+- Rétention effective des artifacts GitHub, stockage privé hors site, phrase secrète de sauvegarde et exercice de restauration.
 - Phrase de chiffrement sauvegarde conservée dans un coffre, distincte des archives.
 - Destinataire de test autorisé et domaine expéditeur Brevo validé.
 - Décision sur le passage du dépôt public au privé.
