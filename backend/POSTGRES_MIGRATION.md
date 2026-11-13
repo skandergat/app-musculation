@@ -60,7 +60,7 @@ Ne pas rejouer une migration manuellement si elle figure déjà dans `supabase_m
 - `LIFTELY_DATABASE_URL` est configurée dans l'environnement Render ; ne jamais copier sa valeur dans Git, un ticket ou une conversation.
 - `LIFTELY_PUBLIC_BASE_URL` a été configurée à `https://liftely-api.onrender.com` pour construire les liens de vérification, de réinitialisation et de suppression de compte.
 - Brevo est le fournisseur transactionnel prévu via API HTTPS. La configuration de l'URL publique a été faite, mais aucun e-mail réel n'a été envoyé pendant l'audit ; un test de livraison reste à faire avec un destinataire explicitement autorisé.
-- Le chemin de contrôle HTTP Render n'est pas configuré (champ vide). L'API expose `/health` ; définir ce chemin dans le Dashboard Render lors du prochain durcissement opérationnel.
+- Le Health Check Render est configuré sur `/health` (vérifié dans la configuration du service le 13 novembre 2026). Cet endpoint vérifie la disponibilité de la base PostgreSQL et renvoie `503` si le contrôle échoue. Les journaux Render du 13 novembre confirment des réponses `200` répétées aux sondes `/health`.
 
 ## Règles de sécurité opérationnelle
 
