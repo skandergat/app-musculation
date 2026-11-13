@@ -40,7 +40,7 @@ Code source, tags, docs, export chiffré, procédure restauration testée, inven
 ## État technique au 13 novembre 2026
 - Supabase PostgreSQL 17.11 actif ; cinq migrations appliquées et versionnées ; privilèges par défaut du rôle postgres entièrement révoqués pour anon/authenticated/service_role sur les futurs objets du schéma public.
 - Smoke production quotidien vert : PostgreSQL, 337 exercices actifs, route privée 401, Brevo sandbox accepté sans livraison, page confidentialité noindex avec hébergeurs/régions exacts.
-- Sécurité mobile : dernier `npm audit` à 0 vulnérabilité ; Expo Doctor 21/21, lint, TypeScript, traductions, export Web, intégration PostgreSQL et CodeQL verts après PR #78.
+- Sécurité mobile : dernier `npm audit` à 0 vulnérabilité ; Expo Doctor 21/21, lint, TypeScript, traductions, export Web, intégration PostgreSQL et CodeQL verts après PR #78. Authentification : Argon2id actif (19 MiB, 2 passes, p=1), PBKDF2 legacy re-hashé au login ; mots de passe nouveaux ≥15 caractères.
 - CodeQL hebdomadaire et Dependabot mensuel configurés ; aucune fusion automatique.
 - EAS profiles development/preview/production présents ; expo-dev-client installé ; icône iOS LIFTELY corrigée.
 - Scripts locaux fournis : backup Supabase chiffré (non exécuté) et reset SQLite copy-only (tests CI verts).
