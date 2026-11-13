@@ -1,7 +1,9 @@
 """Tests de sécurité ciblés : anti-brute-force et en-têtes HTTP globaux."""
 from __future__ import annotations
 
+import hashlib
 import os
+import secrets
 import sqlite3
 import tempfile
 from datetime import datetime, timedelta
@@ -23,6 +25,21 @@ def add_user(email: str, password: str) -> None:
         "INSERT INTO users (nom, email, password_hash, date_creation, email_verified_at) "
         "VALUES (?, ?, ?, ?, ?)",
         ("Security Test", email, backend.hash_password(password),
+         datetime.now().isoformat(), datetime.now().isoformat()),
+    )
+    conn.commit()
+    conn.close()
+
+
+def add_versioned_user(email: str, password: str) -> None:
+    salt = secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 600_000)
+    stored = "pbkdf2_sha256$600000$" + salt.hex() + "$" + digest.hex()
+    conn = sqlite3.connect(DB)
+    conn.execute(
+        "INSERT INTO users (nom, email, password_hash, date_creation, email_verified_at) "
+        "VALUES (?, ?, ?, ?, ?)",
+        ("Versioned Security Test", email, stored,
          datetime.now().isoformat(), datetime.now().isoformat()),
     )
     conn.commit()
@@ -82,6 +99,16 @@ assert client.post(
     json={"email": success_email, "password": "WrongPassword123!"},
     environ_overrides={"REMOTE_ADDR": ip},
 ).status_code == 401
+
+# La release de compatibilité doit aussi pouvoir authentifier un hash versionné.
+versioned_email = "versioned@example.test"
+add_versioned_user(versioned_email, "VersionedPassword123!")
+versioned_login = client.post(
+    "/auth/login",
+    json={"email": versioned_email, "password": "VersionedPassword123!"},
+    environ_overrides={"REMOTE_ADDR": "198.51.100.13"},
+)
+assert versioned_login.status_code == 200, versioned_login.data
 
 # La limite IP globale s'applique même avec des adresses e-mail différentes.
 for attempt in range(60):
