@@ -141,6 +141,33 @@ conn.close()
 assert rehash.startswith("$argon2id$"), rehash[:40]
 assert backend.verify_password(legacy_password, rehash)
 
+# Le rate limit e-mail doit utiliser l'IP normalisée par ProxyFix,
+# jamais le premier élément X-Forwarded-For contrôlable par le client.
+spoofed_ip = "203.0.113.250"
+trusted_client_ip = "198.51.100.250"
+response = client.post(
+    "/auth/register",
+    json={
+        "nom": "Proxy Rate Limit Test",
+        "email": "proxy-check@example.test",
+        "password": "ProxyRateLimitTest123!",
+    },
+    headers={"X-Forwarded-For": f"{spoofed_ip}, {trusted_client_ip}"},
+    environ_overrides={"REMOTE_ADDR": "10.0.0.10"},
+)
+assert response.status_code == 201, (response.status_code, response.data)
+
+conn = sqlite3.connect(DB)
+email_ip_key = backend.hash_token("ip:" + trusted_client_ip)
+spoofed_ip_key = backend.hash_token("ip:" + spoofed_ip)
+assert conn.execute(
+    "SELECT COUNT(*) FROM auth_mail_limits WHERE key_hash = ?", (email_ip_key,)
+).fetchone()[0] == 1
+assert conn.execute(
+    "SELECT COUNT(*) FROM auth_mail_limits WHERE key_hash = ?", (spoofed_ip_key,)
+).fetchone()[0] == 0
+conn.close()
+
 # La limite IP globale s'applique même avec des adresses e-mail différentes.
 for attempt in range(60):
     response = client.post(

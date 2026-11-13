@@ -1708,9 +1708,9 @@ def creer_token_action(conn, user_id, purpose, duree):
 
 def autoriser_envoi_email(conn, email):
     maintenant = datetime.now()
-    # Render sends the visitor's public IP as the first X-Forwarded-For value;
-    # request.remote_addr is the proxy address and would rate-limit all users together.
-    ip_client = request.access_route[0] if request.access_route else request.remote_addr
+    # ProxyFix trusts exactly the final X-Forwarded-For hop added by Render.
+    # Never use access_route[0]: it can be supplied by the client and spoofed.
+    ip_client = request.remote_addr
     clefs = [
         ("email:" + email, 3),
         ("ip:" + (ip_client or "inconnue"), 20),
