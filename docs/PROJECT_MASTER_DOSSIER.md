@@ -27,7 +27,7 @@ LIFTELY est une application de suivi de musculation et de calisthenics. Le mobil
 | EAS | `mobile/eas.json` présent ; projet EAS et identifiants stores non liés |
 | Builds stores | Aucune build de production validée à ce jour |
 | Politique de confidentialité | Page publiée comme brouillon non indexable ; champs juridiques à compléter |
-| Sauvegarde | Script manuel chiffré présent ; sauvegarde et restauration réelles non encore prouvées |
+| Sauvegarde | Script manuel + workflow GitHub chiffré prêt ; secrets GitHub absents ; aucune sauvegarde/restauration réelle prouvée |
 
 ### Décisions structurantes
 
