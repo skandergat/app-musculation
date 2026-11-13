@@ -27,6 +27,8 @@ class PasswordHashCompatibilityTests(unittest.TestCase):
             "",
             "not-a-hash",
             "$argon2id$not-a-valid-encoding",
+            "$argon2id$v=19$m=999999999,t=2,p=1$YWJj$YWJj",
+            "$argon2id$v=19$m=19456,t=2,p=2$YWJj$YWJj",
             "salt$not-hex",
             "00112233445566778899aabbccddeeff$" + ("00" * 31),
             "pbkdf2_sha256$600000$0011$0011",
