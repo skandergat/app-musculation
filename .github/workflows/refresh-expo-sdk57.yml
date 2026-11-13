@@ -1,0 +1,55 @@
+name: Generate Expo SDK 57 patch alignment
+
+on:
+  push:
+    branches:
+      - chore/expo-sdk57-alignment
+    paths:
+      - .github/workflows/refresh-expo-sdk57.yml
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - name: Verify SDK 57 patch releases exist
+        working-directory: mobile
+        run: |
+          npm view expo@57.0.33 version
+          npm view expo-constants@57.0.24 version
+          npm view expo-linking@57.0.14 version
+          npm view expo-router@57.0.31 version
+      - name: Update package manifest and lockfile
+        working-directory: mobile
+        run: |
+          npm pkg set 'dependencies.expo=~57.0.33'
+          npm pkg set 'dependencies.expo-constants=~57.0.24'
+          npm pkg set 'dependencies.expo-linking=~57.0.14'
+          npm pkg set 'dependencies.expo-router=~57.0.31'
+          cp patches/expo-router+57.0.24.patch patches/expo-router+57.0.31.patch
+          rm patches/expo-router+57.0.24.patch
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Commit generated lockfile
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mobile/package.json mobile/package-lock.json mobile/patches
+          if git diff --cached --quiet; then
+            echo "No changes generated."
+            exit 0
+          fi
+          git commit -m "chore(mobile): align Expo SDK 57 patch dependencies"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
