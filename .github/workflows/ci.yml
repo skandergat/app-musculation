@@ -1,4 +1,5 @@
 name: LIFTELY CI
+# Auth compatibility: exercise Argon2id read support before enabling Argon2id writes.
 
 on:
   push:
