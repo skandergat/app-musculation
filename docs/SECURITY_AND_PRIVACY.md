@@ -4,7 +4,7 @@
 Actifs : comptes, e-mails, hash de mots de passe, jetons, historiques d'entraînement, base PostgreSQL, clés fournisseurs et sauvegardes. Menaces : prise de compte, accès horizontal IDOR/BOLA, fuite de secrets, erreurs de migration, dépendances compromises et sauvegardes/logs non chiffrés.
 
 ## Contrôles identifiés
-- Hash mot de passe : Argon2id est maintenant utilisé pour les nouvelles inscriptions et réinitialisations (m=19 456 KiB, t=2, p=1). Les hashes PBKDF2-HMAC-SHA256 historiques (200 000 tours) restent vérifiables et sont migrés automatiquement après une connexion réussie. La version de rollback PR #86 sait lire les deux formats. Ne jamais rollback vers une version antérieure à #86 après activation des écritures Argon2id.
+- Hash mot de passe : Argon2id (m=19 456 KiB, t=2, p=1). Les hashes PBKDF2-HMAC-SHA256 legacy à 200 000 tours restent vérifiables et sont automatiquement re-hachés en Argon2id après login réussi. Les nouveaux comptes et les resets exigent 15 caractères minimum et 256 maximum ; les comptes existants ne sont pas forcés à changer leur mot de passe.
 - Hash SHA-256 des jetons d'action et de session persistés.
 - Jetons d'action temporaires et à usage unique.
 - Stockage mobile natif SecureStore ; stockage local Web à évaluer face au risque XSS.
@@ -21,7 +21,7 @@ RLS actif sur 11 tables. Aucun grant table/séquence direct à anon/authenticate
 CodeQL analyse chaque semaine le code Python et JavaScript/TypeScript ; Dependabot vérifie mensuellement npm, pip et GitHub Actions et ouvre des propositions soumises à revue. Aucun auto-merge n'est activé. 
 
 ## Dépendances
-Dernier audit après fusion de la PR #78 : **0 vulnérabilité npm** (0 low, 0 moderate, 0 high, 0 critical). Le dernier correctif ajoute un override `minimatch` vers 11.0.8, sans downgrade Expo SDK 57. La CI a validé npm ci, traductions, lint, TypeScript, Expo Doctor 21/21, export Web, intégration PostgreSQL et CodeQL. La PR #88 ajoute aussi `pip-audit` à la CI pour auditer les dépendances Python backend. Continuer les audits à chaque release et ne pas utiliser `npm audit fix --force`.
+Dernier audit après fusion de la PR #78 : **0 vulnérabilité npm** (0 low, 0 moderate, 0 high, 0 critical). Le dernier correctif ajoute un override `minimatch` vers 11.0.8, sans downgrade Expo SDK 57. La CI candidate a validé npm ci, traductions, lint, TypeScript, Expo Doctor 21/21, export Web, intégration PostgreSQL et CodeQL. Continuer l'audit à chaque release et ne pas utiliser `npm audit fix --force`.
 
 ## Données personnelles
 Données : nom, e-mail, hash mot de passe, jetons, séances, charges, répétitions, templates et historique. Langue/thème locaux. Base Londres ; API Render Oregon ; e-mails via Brevo. La durée réelle de conservation des logs et backups n'est pas vérifiée. Vérifier le code avant d'annoncer publiquement les durées d'expiration.
