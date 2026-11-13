@@ -13,6 +13,8 @@ Ce document recense les noms de configuration, leur rôle et leur emplacement. I
 
 Fichier d'exemple : `mobile/.env.example`. Le fichier local réel doit rester ignoré par Git.
 
+Les profils EAS `preview` et `production` définissent la même URL publique de production dans `mobile/eas.json`. Le profil `development` utilise le `.env.local` du développeur ou le fallback local. Ne pas traiter `preview` comme un environnement de staging : il écrit dans la vraie base de production.
+
 ## 2. Variables backend / Render
 
 | Nom | Usage | Sensibilité | Règle |
