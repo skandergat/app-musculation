@@ -136,21 +136,9 @@ def purger_auth_temporaire_periodiquement():
 # OUTILS
 # ============================================================
 
-def hash_password(password, salt=None):
-    """
-    Hash sécurisé du mot de passe avec PBKDF2-HMAC-SHA256.
-    """
-    if salt is None:
-        salt = secrets.token_bytes(16)
-
-    password_hash = hashlib.pbkdf2_hmac(
-        "sha256",
-        password.encode("utf-8"),
-        salt,
-        200_000,
-    )
-
-    return f"{salt.hex()}${password_hash.hex()}"
+def hash_password(password):
+    """Crée un hash Argon2id avec les paramètres définis ci-dessous."""
+    return PASSWORD_HASHER.hash(password)
 
 
 # Paramètres OWASP Argon2id (19 MiB, 2 passes, parallélisme 1).
@@ -174,6 +162,15 @@ def verify_password(password, stored_hash):
         return False
 
     if stored_hash.startswith("$argon2id$"):
+        # Refuser les paramètres PHC inattendus avant le calcul.
+        parts = stored_hash.split("$")
+        if (
+            len(parts) != 6
+            or parts[1] != "argon2id"
+            or parts[2] != "v=19"
+            or parts[3] != "m=19456,t=2,p=1"
+        ):
+            return False
         try:
             return PASSWORD_HASHER.verify(stored_hash, password)
         except (VerifyMismatchError, VerificationError, InvalidHashError):
@@ -2285,6 +2282,13 @@ def login():
             "error": "Confirme ton adresse e-mail avant de te connecter.",
             "code": "email_not_verified",
         }), 403
+
+    # Migration transparente après authentification réussie.
+    if not user["password_hash"].startswith("$argon2id$"):
+        conn.execute(
+            "UPDATE users SET password_hash = ? WHERE id = ?",
+            (hash_password(password), user["id"]),
+        )
 
     conn.commit()
     effacer_limite_connexion_reussie(email)
