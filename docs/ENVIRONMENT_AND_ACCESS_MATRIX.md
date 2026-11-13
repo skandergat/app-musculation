@@ -24,8 +24,8 @@ Ces identifiants servent à retrouver les ressources lors d'une reprise. Ils ne 
 
 - Build : `pip install -r requirements.txt` depuis `backend/`.
 - Start : `gunicorn --bind 0.0.0.0:$PORT app:app`.
-- Auto-deploy : activé sur chaque commit de `main`.
-- Health Check Path : champ vide au dernier contrôle ; à régler sur `/health` dans Settings > Health & Checks.
+- Auto-deploy : activé sur `main`, déclencheur `checksPass`.
+- Health Check Path : `/health`, confirmé dans les paramètres Render le 13 novembre 2026 ; sondes HTTP 200 observées.
 - Variables secrètes : leurs noms et fonctions sont inventoriés ci-dessous ; les valeurs restent uniquement dans Render et ne doivent jamais être copiées dans ce dépôt.
 
 
@@ -72,9 +72,9 @@ Source de vérité des noms : `backend/.env.example`, `backend/app.py`, `backend
 
 ## 3. Variables / secrets CI GitHub
 
-Les workflows utilisent le `GITHUB_TOKEN` éphémère fourni par GitHub Actions avec des permissions déclarées au niveau du workflow. Les workflows PostgreSQL utilisent une base PostgreSQL de service éphémère. Les tests de production utilisent l'URL publique et ne nécessitent pas de DSN de production dans le workflow.
+Les workflows utilisent le `GITHUB_TOKEN` éphémère fourni par GitHub Actions avec des permissions déclarées au niveau du workflow. Les workflows PostgreSQL utilisent une base PostgreSQL 17 de service éphémère et Python 3.14, alignés sur les versions majeures observées en production. Les tests de production utilisent l'URL publique et ne nécessitent pas de DSN de production dans le workflow.
 
-Le workflow `.github/workflows/supabase-backup.yml` attend deux secrets Actions au niveau du dépôt : `LIFTELY_DATABASE_URL` et `LIFTELY_BACKUP_PASSPHRASE` (au moins 32 caractères aléatoires). Tant qu'ils ne sont pas créés, le job s'arrête sans connexion ni export. Les artifacts sont chiffrés AES-256 et conservés 7 jours ; le dépôt étant public, les artifacts sont téléchargeables par les lecteurs, mais ne contiennent que le fichier chiffré. Conserver la passphrase dans un coffre indépendant et copier les archives hors site.
+Le workflow `.github/workflows/supabase-backup.yml` utilise les secrets Actions `LIFTELY_DATABASE_URL` et `LIFTELY_BACKUP_PASSPHRASE` (au moins 32 caractères aléatoires). Le run `43515211149` a réussi ; les artifacts sont chiffrés AES-256 et conservés 7 jours. Le dépôt étant public, les artifacts sont téléchargeables par les lecteurs, mais ne contiennent que le fichier chiffré. Conserver la passphrase dans un coffre indépendant et copier chaque archive vers un stockage privé durable avant expiration.
 
 Ne pas ajouter de secret GitHub sans justification, permissions minimales et documentation. Le workflow historique `supabase-import.yml` peut contenir des références à des secrets de migration : ne pas le relancer sur la production sans revue du YAML et des conditions.
 
@@ -84,7 +84,7 @@ Aucun secret n'est reproduit dans ce document.
 
 | Fournisseur | Ressource | Ce que le repreneur doit obtenir | État |
 |---|---|---|---|
-| GitHub | `skandergat/app-musculation` | Admin du dépôt, Actions, Dependabot, CodeQL, collaborateurs, secrets, règles de branche | Dépôt public ; main non protégée au dernier contrôle |
+| GitHub | `skandergat/app-musculation` | Admin du dépôt, Actions, Dependabot, CodeQL, collaborateurs, secrets, règles de branche | Dépôt public ; ruleset `Protect main` actif, quatre contrôles requis |
 | Render | Workspace `app`, service `liftely-api` | Accès workspace, service, variables, logs, deploys, facturation | Service Live ; Oregon ; Free |
 | Supabase | Organisation/projet `liftely` | Owner/admin, DB, clés, logs, migrations, backups, facturation | PostgreSQL 17.11, eu-west-2 ; organisation Free (pas de backup quotidien automatique) |
 | Brevo | Compte transactionnel | Owner/admin, expéditeur validé, domaine, API keys, logs et réputation | Probe sandbox API réussi ; livraison réelle non prouvée |
