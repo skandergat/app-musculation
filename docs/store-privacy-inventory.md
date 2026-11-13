@@ -1,38 +1,55 @@
-# LIFTELY store privacy inventory
+# LIFTELY — inventaire de confidentialité pour les stores
 
-This is the implementation-based inventory for completing Apple App Privacy and Google Play Data safety. Verify it against the final Render, SMTP, analytics, crash reporting, service-log, and backup settings before submitting a store form.
+Cet inventaire reflète l'architecture contrôlée le 13 novembre 2026. Il doit être comparé aux paramètres finaux Render, Supabase, Brevo, logs et sauvegardes avant de remplir Apple App Privacy et Google Play Data safety.
 
-| Data | Why it is processed | Where it is stored |
+## Données traitées
+
+| Donnée | Finalité | Stockage / traitement |
 | --- | --- | --- |
-| Name, email address, account creation date | Create and identify the account; email confirmation and account recovery | LIFTELY SQLite database on the configured Render persistent disk; name and address are also sent to the SMTP processor with the temporary action link |
-| Password | Account authentication | Only a salted PBKDF2-HMAC-SHA256 hash is stored |
-| Session token | Keep the user signed in | Native app secure storage; browser local storage on web; only a SHA-256 hash is stored by the API |
-| Email action token | Confirm an email, reset a password, or authorize account deletion | Only a SHA-256 hash is stored by the API; raw token is sent by SMTP and expires |
-| Email and IP rate-limit identifiers | Reduce automated email abuse | Hashed identifiers in SQLite; the email hash is removed on account deletion and IP hashes expire after at most 24 hours |
-| Workouts, selected exercises, weights, repetitions, dates, and workout templates | Provide workout logging, history, and progression | LIFTELY SQLite database on the configured Render persistent disk |
-| Language and dark-mode preference | Restore the user's display choices | Local app/browser storage; not sent to the API |
+| Nom, adresse e-mail, date de création du compte | Création et gestion du compte, vérification d'adresse et récupération | Supabase PostgreSQL, schéma `public`, région `eu-west-2` (Londres) |
+| Mot de passe | Authentification | Seul un hash PBKDF2-HMAC-SHA256 salé est stocké dans PostgreSQL |
+| Jeton de session | Maintenir la connexion | Stockage sécurisé natif / stockage navigateur ; seul le hash SHA-256 est conservé par l'API |
+| Jeton d'action e-mail | Vérification, réinitialisation, suppression du compte | Seul le hash SHA-256 est conservé par l'API ; le jeton brut est inclus dans un lien temporaire |
+| Identifiants de limitation e-mail/IP | Réduire les abus automatisés | Identifiants hachés dans PostgreSQL, avec durée de conservation limitée par la logique applicative |
+| Séances, exercices, charges, répétitions, dates et templates | Suivi d'entraînement, historique et progression | Supabase PostgreSQL, région `eu-west-2` |
+| Langue et thème | Restaurer les préférences d'affichage | Stockage local de l'application/navigateur ; non transmis à l'API |
 
-## Lifecycle
+## Fournisseurs et régions
 
-- New accounts are unusable until email confirmation. Unverified accounts are deleted after 7 days.
-- Verification links expire after 48 hours; password reset links after 1 hour; account deletion links after 24 hours. Each link is single-use.
-- Resetting a password revokes existing sessions.
-- Confirmed account deletion removes the account, workout history, sets, templates, active sessions, and email action tokens from the active database.
-- Backup retention is controlled by the live hosting configuration and must be confirmed before publication.
-- The Google Play account-deletion web link should point to `https://<public-api-domain>/account-deletion`; publish and test this exact URL before entering it in Play Console.
+- **API :** Render, service `liftely-api`, région Oregon (États-Unis).
+- **Base de données :** Supabase PostgreSQL 17.11, région `eu-west-2` (Londres).
+- **E-mails transactionnels :** Brevo API via HTTPS. L'URL publique utilisée pour les liens d'action est `https://liftely-api.onrender.com`.
+- **Logs :** Render conserve des journaux de service et de requêtes selon les paramètres du compte. La durée exacte doit être vérifiée dans le Dashboard.
+- **Sauvegardes :** confirmer les paramètres de sauvegarde, la rétention et les procédures de restauration Supabase avant de déclarer une durée.
+- Aucun SDK d'analytics ou de publicité n'a été identifié dans les dépendances mobiles examinées. Recontrôler si un fournisseur est ajouté.
 
-## Processors and items to confirm
+Le service Render et la base Supabase sont dans des régions différentes. Cela peut augmenter la latence des requêtes, mais ne change pas la région de stockage de la base, qui est Londres.
 
-- Render hosts the API and database. Fill the exact region from the live service configuration.
-- The selected SMTP provider sends verification, recovery, and account-deletion messages. Name it in the privacy page and store forms.
-- Render may retain service and HTTP request logs according to the workspace plan; confirm the exact log data and retention period in the live account. Confirm whether backups are enabled and their retention period as well.
-- No analytics or advertising SDK is present in the current mobile dependency list. Recheck if a provider is added.
-- Fill the legal controller name, postal address, privacy contact, hosting region, email provider, log retention, and backup retention before presenting /privacy as final.
-- Reference forms: [Apple App Privacy](https://developer.apple.com/help/app-store-connect/manage-app-information/manage-app-privacy), [Google Play Data safety](https://support.google.com/googleplay/android-developer/answer/10787469?hl=en-AE), and [Google Play account deletion](https://support.google.com/googleplay/android-developer/answer/13327111?hl=en). Render describes workspace log retention in its [logging documentation](https://render.com/docs/logging).
+## Cycle de vie des données
 
-## Store form starting point (verify against the final release)
+- Un nouveau compte n'est utilisable qu'après confirmation de l'adresse e-mail.
+- Les comptes non vérifiés sont supprimés après 7 jours.
+- Les liens de vérification expirent après 48 heures ; les liens de réinitialisation après 1 heure ; les liens de suppression après 24 heures. Chaque lien est à usage unique.
+- Une réinitialisation de mot de passe révoque les sessions existantes.
+- La confirmation de suppression du compte supprime le compte et ses données d'entraînement actives (séances, séries, templates, sessions et jetons d'action).
+- La durée de conservation des sauvegardes et des journaux doit être confirmée dans les paramètres des fournisseurs avant publication.
 
-- Apple App Privacy: answer that data is collected. Candidate categories are Contact Information (name and email) and Health & Fitness (training records); both are linked to the account and used for app functionality. No advertising or tracking SDK appears in the current app source. Apple requires the policy URL and the declaration to cover the app and integrated third-party partners.
-- Google Play Data safety: candidate data types are Personal info (Name, Email address, User IDs) and Health and fitness (Fitness info); purposes include App functionality and Account management. Check how to report hashed client IPs for mail-abuse limits and any live service logs. Declare collection, whether data is optional, transport encryption, and account/data deletion.
-- Google Play treats a transfer to a service provider as excluded from "sharing" only when that provider processes data on the developer's behalf and instructions. Render and the selected SMTP provider may qualify; verify their live settings and terms before answering. Declare a transfer as sharing if a provider uses the data for another purpose.
-- Language and dark-mode settings remain on the device and are not transmitted to the backend; Google Play's collection definition excludes data processed only on-device.
+## Points à compléter avant publication
+
+- Identité juridique et adresse postale du responsable du traitement.
+- Adresse de contact dédiée à la confidentialité.
+- Nom exact du fournisseur d'e-mail et détails du traitement sous-traitant.
+- Durée de rétention des journaux Render.
+- Paramètres et durée de rétention des sauvegardes Supabase.
+- Vérification de la page publique de confidentialité et de la page de suppression de compte.
+
+Les formulaires de store doivent refléter les données effectivement traitées par l'application et ses fournisseurs. Ne pas déclarer une rétention précise tant qu'elle n'a pas été vérifiée.
+
+## Liens et références
+
+- Politique de confidentialité : `https://liftely-api.onrender.com/privacy`
+- Page de suppression de compte : `https://liftely-api.onrender.com/account-deletion`
+- [Apple App Privacy](https://developer.apple.com/help/app-store-connect/manage-app-information/manage-app-privacy)
+- [Google Play Data safety](https://support.google.com/googleplay/android-developer/answer/10787469)
+- [Google Play account deletion](https://support.google.com/googleplay/android-developer/answer/13327111)
+- [Render logging](https://render.com/docs/logging)
