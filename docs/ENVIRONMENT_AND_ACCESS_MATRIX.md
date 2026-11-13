@@ -3,6 +3,32 @@
 **Révision : 13 novembre 2026**  
 Ce document recense les noms de configuration, leur rôle et leur emplacement. Il ne contient aucune valeur secrète.
 
+## 0. Identifiants techniques et consoles fournisseurs
+
+Ces identifiants servent à retrouver les ressources lors d'une reprise. Ils ne sont pas des mots de passe ni des clés d'accès.
+
+| Fournisseur | Identifiant / ressource | Console directe |
+|---|---|---|
+| GitHub | Dépôt `skandergat/app-musculation`, branche de production `main` | https://github.com/skandergat/app-musculation |
+| GitHub Actions | Workflows CI, PostgreSQL, CodeQL, smoke production et sauvegarde | https://github.com/skandergat/app-musculation/actions |
+| Render | Workspace `app`, ID `tea-datfp449v7es738hpjm0` | https://dashboard.render.com |
+| Render | Service `liftely-api`, ID `srv-datfsp5g1s2s7397nfe0`, région Oregon, plan Free, branche `main`, racine `backend/` | https://dashboard.render.com/web/srv-datfsp5g1s2s7397nfe0 |
+| API publique | `https://liftely-api.onrender.com` ; santé `/health`, catalogue `/exercices` | https://liftely-api.onrender.com/health |
+| Supabase | Organisation `skander`, ID `zytzwinmdtkzyttdtyuc`, plan Free | https://supabase.com/dashboard/org/zytzwinmdtkzyttdtyuc |
+| Supabase | Projet `liftely`, ref `hzeggvylikhxpktbznqf`, PostgreSQL 17.11.0.003, région `eu-west-2` | https://supabase.com/dashboard/project/hzeggvylikhxpktbznqf |
+| Brevo | Compte transactionnel propriétaire ; identifiant de compte non inventorié | À ouvrir depuis le compte Brevo du propriétaire |
+| Expo / EAS | Profils locaux dans `mobile/eas.json`, aucun `projectId` EAS lié | À créer dans le compte Expo/EAS du propriétaire |
+| Apple / Google | Comptes développeur et fiches store non confirmés | À transférer depuis les comptes propriétaires |
+
+### Configuration Render observée
+
+- Build : `pip install -r requirements.txt` depuis `backend/`.
+- Start : `gunicorn --bind 0.0.0.0:$PORT app:app`.
+- Auto-deploy : activé sur chaque commit de `main`.
+- Health Check Path : champ vide au dernier contrôle ; à régler sur `/health` dans Settings > Health & Checks.
+- Variables secrètes : leurs noms et fonctions sont inventoriés ci-dessous ; les valeurs restent uniquement dans Render et ne doivent jamais être copiées dans ce dépôt.
+
+
 ## 1. Variables mobile
 
 | Nom | Usage | Sensibilité | État / règle |
