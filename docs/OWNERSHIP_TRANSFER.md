@@ -39,8 +39,8 @@ Code source, tags, docs, export chiffré, procédure restauration testée, inven
 
 ## État technique au 13 novembre 2026
 - Supabase PostgreSQL 17.11 actif ; cinq migrations appliquées et versionnées ; privilèges par défaut du rôle postgres entièrement révoqués pour anon/authenticated/service_role sur les futurs objets du schéma public.
-- Smoke production quotidien vert : PostgreSQL, 337 exercices actifs, route privée 401, Brevo sandbox accepté sans livraison, page confidentialité noindex avec hébergeurs/régions exacts.
-- Sécurité mobile : `npm audit` à 0 vulnérabilité ; Expo Doctor 21/21, lint, TypeScript, traductions et export Web verts après PR #78. PR #86/#87 activent Argon2id avec compatibilité PBKDF2 et migration transparente au login. La CI ajoute `pip-audit` via PR #88 (validation encore en cours au moment de cette révision).
+- Smoke production du 13 novembre vert : PostgreSQL, 337 exercices actifs, route privée 401, Brevo sandbox accepté sans livraison, page confidentialité noindex avec hébergeurs/régions exacts. Déploiement Argon2id Render `dep-dbrf38nf3r2c73bvfleg` Live.
+- Sécurité mobile/backend : `npm audit` à 0 vulnérabilité ; Expo Doctor 21/21, lint, TypeScript, traductions et export Web verts après PR #78. PR #86/#87 activent Argon2id avec compatibilité PBKDF2 et migration transparente au login. PR #92 ajoute `pip-audit` à la CI ; résultat : `No known vulnerabilities found`.
 - CodeQL hebdomadaire et Dependabot mensuel configurés ; aucune fusion automatique.
 - EAS profiles development/preview/production présents ; expo-dev-client installé ; icône iOS LIFTELY corrigée.
 - Scripts locaux fournis : backup Supabase chiffré (non exécuté) et reset SQLite copy-only (tests CI verts).
@@ -54,7 +54,7 @@ Code source, tags, docs, export chiffré, procédure restauration testée, inven
 - Exécuter le script de sauvegarde, copier l'archive chiffrée hors site et effectuer un test de restauration isolé.
 - Test réel Brevo avec destinataire autorisé (sandbox API déjà validé, aucune livraison effectuée).
 - Health Check Path Render.
-- Dix alertes npm moderate restantes à réévaluer lors des prochains patchs SDK.
+- Maintenir les audits npm et pip-audit à chaque release ; les deux derniers rapports sont à zéro vulnérabilité connue.
 - Évaluation déplacement Render Europe après mesures.
 
 ## Acceptation
