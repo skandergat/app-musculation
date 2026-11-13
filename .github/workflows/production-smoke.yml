@@ -42,6 +42,17 @@ jobs:
           echo "$result" | jq .
           echo "$result" | jq -e '.status == "ok" and .sandbox_request_accepted == true' >/dev/null
 
+      - name: Verify privacy page remains an accurate non-indexed draft
+        env:
+          BASE_URL: https://liftely-api.onrender.com
+        run: |
+          set -euo pipefail
+          privacy=$(curl --fail --silent --show-error "$BASE_URL/privacy")
+          echo "$privacy" | grep -Fq 'Supabase (base PostgreSQL) / Render (API)'
+          echo "$privacy" | grep -Fq 'Supabase eu-west-2 (Londres) ; Render Oregon (États-Unis)'
+          echo "$privacy" | grep -Fq 'Brevo (API transactionnelle HTTPS)'
+          echo "$privacy" | grep -Fq 'noindex,nofollow'
+          echo "Privacy page shows current providers/regions and remains noindex until legal fields are completed."
       - name: Verify exercise catalogue
         env:
           BASE_URL: https://liftely-api.onrender.com
