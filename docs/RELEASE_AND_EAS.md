@@ -4,7 +4,7 @@
 Expo SDK 57, Expo Router, schéma URL liftely://. Assets présents dans mobile/assets/images/ : icon.png, android-icon-foreground.png, android-icon-background.png, android-icon-monochrome.png, favicon.png et splash-icon.png. Les bundle IDs iOS/Android et l'identifiant projet EAS ne sont pas configurés. Ils sont permanents et doivent être choisis par le propriétaire.
 
 ## EAS
-mobile/eas.json définit les profils development, preview et production, ainsi que submit.production. Le projet EAS doit encore être créé dans le compte qui appartiendra au propriétaire, puis lié via expo.extra.eas.projectId dans mobile/app.json.
+mobile/eas.json définit les profils development, preview et production, ainsi que submit.production. Le paquet expo-dev-client est installé pour le profil development. Le projet EAS doit encore être créé dans le compte qui appartiendra au propriétaire, puis lié via expo.extra.eas.projectId dans mobile/app.json.
 
 Ne pas lancer de build avant :
 - vérification de disponibilité et choix de ios.bundleIdentifier et android.package ;
