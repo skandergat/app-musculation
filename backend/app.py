@@ -142,8 +142,7 @@ def hash_password(password):
 
 
 # Paramètres OWASP Argon2id (19 MiB, 2 passes, parallélisme 1).
-# Cette release sait vérifier Argon2id mais continue d'écrire le hash PBKDF2
-# historique afin de constituer une base de rollback avant le changement d'écriture.
+# Les anciens hashes PBKDF2 restent compatibles pendant la migration transparente.
 PASSWORD_HASHER = PasswordHasher(
     time_cost=2,
     memory_cost=19_456,
@@ -156,12 +155,24 @@ PASSWORD_HASHER = PasswordHasher(
 
 def verify_password(password, stored_hash):
     """
-    Vérifie les anciens hashes PBKDF2 et le futur format Argon2id.
+    Vérifie les hashes Argon2id actuels et les anciens hashes PBKDF2.
     """
     if not isinstance(stored_hash, str):
         return False
 
     if stored_hash.startswith("$argon2id$"):
+        parts = stored_hash.split("$")
+        # N'accepter que les paramètres émis par l'application afin d'éviter
+        # qu'un hash altéré ne demande une quantité arbitraire de mémoire/CPU.
+        if (
+            len(parts) != 6
+            or parts[1] != "argon2id"
+            or parts[2] != "v=19"
+            or parts[3] != "m=19456,t=2,p=1"
+            or not parts[4]
+            or not parts[5]
+        ):
+            return False
         try:
             return PASSWORD_HASHER.verify(stored_hash, password)
         except (VerifyMismatchError, VerificationError, InvalidHashError):
