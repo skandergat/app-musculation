@@ -101,7 +101,7 @@ Les versions exactes et plages sont dans `mobile/package.json`, `mobile/package-
 | `supabase/migrations/` | Historique SQL versionné |
 | `scripts/` | Sauvegarde et utilitaires de maintenance |
 | `merge_sqlite_for_migration.py`, `init_db.py` | Scripts historiques ; lire leur code avant toute exécution |
-| `requirements.txt` racine | Dépendances historiques ; le service Render utilise `backend/requirements.txt` |
+| `requirements.txt` racine | Ancienne liste Flask seule ; le service Render utilise `backend/requirements.txt` (Flask, Gunicorn, psycopg) |
 
 ### Mobile — chemins clés
 
@@ -448,7 +448,8 @@ Ces identifiants sont pérennes et peuvent être difficiles à changer après pu
 | P2 | Test de livraison Brevo réel | Nécessite destinataire autorisé et domaine expéditeur vérifié |
 | P2 | Réduire le monolithe `backend/app.py` | Modulariser par domaine sans casser les tests |
 | P2 | Spécification OpenAPI absente | Formaliser contrat API et schémas |
-| P2 | Revue des licences, droits des assets et chaîne de propriété IP | Nécessaire avant cession commerciale |
+| P1 avant vente/cession | Droits de propriété intellectuelle à clarifier | Aucun LICENSE racine ; `mobile/LICENSE` est le texte MIT d'Expo (copyright 650 Industries), pas une preuve de cession des droits LIFTELY. Vérifier auteur, contrats, assets, marques et licences de dépendances. |
+| P2 | Revue des licences et droits des assets | Nécessaire avant cession commerciale |
 
 ## 15. Règles de changement et rollback
 
@@ -473,7 +474,7 @@ Ces identifiants sont pérennes et peuvent être difficiles à changer après pu
 - Phrase de chiffrement sauvegarde conservée dans un coffre, distincte des archives.
 - Destinataire de test autorisé et domaine expéditeur Brevo validé.
 - Décision sur le passage du dépôt public au privé.
-- Inventaire des droits d'auteur et licences des assets.
+- Inventaire des droits d'auteur et licences des assets ; vérifier que le code métier LIFTELY appartient bien au cédant et que le fichier `mobile/LICENSE` ne soit pas interprété comme une licence globale du produit.
 - Décision commerciale : free/premium, abonnements, paiements, analytics, support.
 
 ## 17. Références officielles
