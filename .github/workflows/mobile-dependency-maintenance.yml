@@ -1,3 +1,4 @@
+# Bootstrap run after permission-safe workflow update.
 name: LIFTELY mobile dependency maintenance
 
 on:
