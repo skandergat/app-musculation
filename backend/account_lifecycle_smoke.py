@@ -145,7 +145,7 @@ registered = client.post(
 )
 assert registered.status_code == 201, registered.data
 assert "token" not in registered.get_json()
-conn = sqlite3.connect(DB)
+conn = sqlite3.connect(DATABASE)
 registered_hash = conn.execute(
     "SELECT password_hash FROM users WHERE email = ?", (email,)
 ).fetchone()[0]
@@ -188,7 +188,7 @@ new_password = client.post(
     json={"token": reset_token, "password": "NewPassword456!"},
 )
 assert new_password.status_code == 200, new_password.data
-conn = sqlite3.connect(DB)
+conn = sqlite3.connect(DATABASE)
 reset_hash = conn.execute(
     "SELECT password_hash FROM users WHERE email = ?", (email,)
 ).fetchone()[0]
