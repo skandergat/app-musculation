@@ -1,7 +1,9 @@
 """Tests de sécurité ciblés : anti-brute-force et en-têtes HTTP globaux."""
 from __future__ import annotations
 
+import hashlib
 import os
+import secrets
 import sqlite3
 import tempfile
 from datetime import datetime, timedelta
@@ -23,6 +25,20 @@ def add_user(email: str, password: str) -> None:
         "INSERT INTO users (nom, email, password_hash, date_creation, email_verified_at) "
         "VALUES (?, ?, ?, ?, ?)",
         ("Security Test", email, backend.hash_password(password),
+         datetime.now().isoformat(), datetime.now().isoformat()),
+    )
+    conn.commit()
+    conn.close()
+
+
+def add_legacy_user(email: str, password: str) -> None:
+    salt = secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 200_000)
+    conn = sqlite3.connect(DB)
+    conn.execute(
+        "INSERT INTO users (nom, email, password_hash, date_creation, email_verified_at) "
+        "VALUES (?, ?, ?, ?, ?)",
+        ("Legacy Security Test", email, salt.hex() + "$" + digest.hex(),
          datetime.now().isoformat(), datetime.now().isoformat()),
     )
     conn.commit()
@@ -63,7 +79,7 @@ assert blocked.get_json()["code"] == "login_rate_limited"
 
 # Un succès efface le compteur du compte/IP ; l'IP garde son compteur global.
 success_email = "success-reset@example.test"
-add_user(success_email, "CorrectPassword123!")
+add_legacy_user(success_email, "CorrectPassword123!")
 ip = "198.51.100.11"
 for _ in range(9):
     assert client.post(
@@ -77,6 +93,13 @@ success = client.post(
     environ_overrides={"REMOTE_ADDR": ip},
 )
 assert success.status_code == 200, success.data
+conn = sqlite3.connect(DB)
+upgraded_hash = conn.execute(
+    "SELECT password_hash FROM users WHERE email = ?", (success_email,)
+).fetchone()[0]
+conn.close()
+assert upgraded_hash.startswith("pbkdf2_sha256$600000$"), upgraded_hash[:40]
+assert not backend.password_hash_needs_upgrade(upgraded_hash)
 assert client.post(
     "/auth/login",
     json={"email": success_email, "password": "WrongPassword123!"},
