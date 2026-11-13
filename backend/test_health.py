@@ -89,10 +89,8 @@ class HealthEndpointTests(unittest.TestCase):
 
     @patch("urllib.request.urlopen")
     def test_brevo_probe_is_cached_for_five_minutes(self, urlopen):
-        response = Mock()
+        response = MagicMock()
         response.status = 201
-        response.__enter__ = Mock(return_value=response)
-        response.__exit__ = Mock(return_value=False)
         urlopen.return_value = response
         backend_app._BREVO_SANDBOX_CACHE.update({"checked_at": None, "ok": False})
 
