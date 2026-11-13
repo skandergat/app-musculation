@@ -1,6 +1,7 @@
 name: LIFTELY production API smoke
 # Manual post-Argon2id production verification requested 2026-11-13; sandbox only.
 # Recheck after password policy release 0130cd8; sandbox only, no delivery.
+# Recheck after Supabase service_role grant revocation migration 20261113114438; sandbox only.
 
 on:
   workflow_dispatch:
