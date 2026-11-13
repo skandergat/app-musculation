@@ -424,6 +424,7 @@ L'organisation Supabase est sur le plan Free : aucune sauvegarde quotidienne aut
 ## 13. Publication iOS / Android
 
 - `mobile/eas.json` existe et définit development, preview et production.
+- Les profils EAS `preview` et `production` définissent `EXPO_PUBLIC_API_URL=https://liftely-api.onrender.com`. Faute de staging, le preview utilise donc les données de production ; utiliser uniquement un compte QA dédié et ne pas faire de tests destructifs.
 - `expo-dev-client` est installé.
 - `mobile/app.json` a le nom, slug, scheme, icônes, splash, plugins et web output.
 - Les champs `ios.bundleIdentifier`, `android.package` et `extra.eas.projectId` ne sont pas renseignés.
