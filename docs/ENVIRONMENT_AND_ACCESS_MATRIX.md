@@ -46,6 +46,8 @@ Source de vérité des noms : `backend/.env.example`, `backend/app.py`, `backend
 
 Les workflows utilisent le `GITHUB_TOKEN` éphémère fourni par GitHub Actions avec des permissions déclarées au niveau du workflow. Les workflows PostgreSQL utilisent une base PostgreSQL de service éphémère. Les tests de production utilisent l'URL publique et ne nécessitent pas de DSN de production dans le workflow.
 
+Le workflow `.github/workflows/supabase-backup.yml` attend deux secrets Actions au niveau du dépôt : `LIFTELY_DATABASE_URL` et `LIFTELY_BACKUP_PASSPHRASE` (au moins 32 caractères aléatoires). Tant qu'ils ne sont pas créés, le job s'arrête sans connexion ni export. Les artifacts sont chiffrés AES-256 et conservés 7 jours ; le dépôt étant public, les artifacts sont téléchargeables par les lecteurs, mais ne contiennent que le fichier chiffré. Conserver la passphrase dans un coffre indépendant et copier les archives hors site.
+
 Ne pas ajouter de secret GitHub sans justification, permissions minimales et documentation. Le workflow historique `supabase-import.yml` peut contenir des références à des secrets de migration : ne pas le relancer sur la production sans revue du YAML et des conditions.
 
 Aucun secret n'est reproduit dans ce document.
