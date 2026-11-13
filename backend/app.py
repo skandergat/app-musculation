@@ -2301,6 +2301,13 @@ def login():
             "code": "email_not_verified",
         }), 403
 
+    # Rehash transparent des anciens comptes après une authentification réussie.
+    if password_hash_needs_upgrade(user["password_hash"]):
+        conn.execute(
+            "UPDATE users SET password_hash = ? WHERE id = ?",
+            (hash_password(password), user["id"]),
+        )
+
     conn.commit()
     effacer_limite_connexion_reussie(email)
     token = secrets.token_urlsafe(32)
