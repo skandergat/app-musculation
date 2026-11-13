@@ -15,6 +15,8 @@ LIFTELY est une application mobile de suivi de musculation et de calisthenics. C
 - [Checklist de transfert de propriété](docs/OWNERSHIP_TRANSFER.md)
 - [Inventaire confidentialité stores](docs/store-privacy-inventory.md)
 - [Migration PostgreSQL](backend/POSTGRES_MIGRATION.md)
+- [Guide de contribution](CONTRIBUTING.md)
+- [Politique de sécurité](SECURITY.md)
 
 ## Technologies
 | Couche | Technologie |
@@ -29,7 +31,9 @@ LIFTELY est une application mobile de suivi de musculation et de calisthenics. C
 
 ## Contrôles automatisés
 - CI backend/mobile et intégration PostgreSQL sur GitHub Actions.
-- Smoke check quotidien de l'API de production : PostgreSQL, catalogue et autorisation.
+- Smoke check quotidien de l'API de production : PostgreSQL, Brevo sandbox sans livraison, page confidentialité, catalogue et autorisation.
+- CodeQL hebdomadaire sur Python et JavaScript/TypeScript.
+- Dependabot mensuel pour npm, pip et GitHub Actions ; versions Expo/React Native protégées contre les upgrades hors SDK.
 - Maintenance mensuelle des dépendances mobiles via branche candidate et revue humaine.
 
 ## Règles impératives
