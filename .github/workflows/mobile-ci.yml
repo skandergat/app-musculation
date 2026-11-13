@@ -2,15 +2,9 @@ name: LIFTELY mobile validation
 
 on:
   pull_request:
-    paths:
-      - "mobile/**"
-      - ".github/workflows/mobile-ci.yml"
   push:
     branches:
       - main
-    paths:
-      - "mobile/**"
-      - ".github/workflows/mobile-ci.yml"
 
 permissions:
   contents: read
