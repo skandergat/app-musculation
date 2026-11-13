@@ -1,0 +1,106 @@
+name: LIFTELY encrypted Supabase backup
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: liftely-supabase-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Create encrypted PostgreSQL backup
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      LIFTELY_DATABASE_URL: ${{ secrets.LIFTELY_DATABASE_URL }}
+      LIFTELY_BACKUP_PASSPHRASE: ${{ secrets.LIFTELY_BACKUP_PASSPHRASE }}
+    steps:
+      - name: Check required repository secrets
+        id: credentials
+        shell: bash
+        run: |
+          if [[ -z "$LIFTELY_DATABASE_URL" || -z "$LIFTELY_BACKUP_PASSPHRASE" ]]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "## Backup skipped"
+              echo "Add repository Actions secrets `LIFTELY_DATABASE_URL` and `LIFTELY_BACKUP_PASSPHRASE` to enable automated backups."
+              echo "No database connection was attempted and no data was exported."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::Backup skipped because required repository secrets are missing."
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.credentials.outputs.ready == 'true'
+        uses: actions/checkout@v7
+
+      - name: Install GnuPG
+        if: steps.credentials.outputs.ready == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends gnupg
+
+      - name: Dump, validate and encrypt PostgreSQL
+        if: steps.credentials.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +x
+          umask 077
+          backup_dir="$RUNNER_TEMP/liftely-backup"
+          mkdir -p "$backup_dir"
+          stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+          dump="$backup_dir/liftely-$stamp.dump"
+          archive="$backup_dir/liftely-$stamp.dump.gpg"
+          passfile="$RUNNER_TEMP/liftely-backup-passphrase"
+
+          # The DSN is passed only through the container environment, never echoed.
+          docker run --rm \
+            -e LIFTELY_DATABASE_URL \
+            -v "$backup_dir:/backup" \
+            postgres:17-alpine \
+            sh -ceu 'pg_dump --dbname="$LIFTELY_DATABASE_URL" --format=custom --no-owner --no-acl --file=/backup/backup.dump && pg_restore --list /backup/backup.dump >/dev/null'
+          mv "$backup_dir/backup.dump" "$dump"
+
+          # Keep the encryption passphrase out of command-line arguments and repository artifacts.
+          printf '%s' "$LIFTELY_BACKUP_PASSPHRASE" > "$passfile"
+          chmod 600 "$passfile"
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase-file "$passfile" \
+            --symmetric --cipher-algo AES256 \
+            --output "$archive" "$dump"
+
+          # Verify that the encrypted archive decrypts successfully before publishing it.
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase-file "$passfile" \
+            --output /dev/null --decrypt "$archive"
+
+          checksum="$(sha256sum "$archive" | cut -d ' ' -f 1)"
+          size="$(du -h "$archive" | cut -f 1)"
+          rm -f "$dump" "$passfile"
+
+          {
+            echo "## Encrypted Supabase backup created"
+            echo "- UTC timestamp: $stamp"
+            echo "- Encrypted archive size: $size"
+            echo "- SHA-256: `$checksum`"
+            echo "- Plaintext dump removed from the runner workspace."
+            echo "- Artifact retention: 7 days."
+            echo "- This repository is public: artifacts are downloadable by repository readers but encrypted. Keep a strong unique passphrase outside GitHub and copy backups to private off-site storage."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload encrypted backup only
+        if: steps.credentials.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: liftely-supabase-backup-${{ github.run_id }}
+          path: ${{ runner.temp }}/liftely-backup/*.dump.gpg
+          if-no-files-found: error
+          retention-days: 7
