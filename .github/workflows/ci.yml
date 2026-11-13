@@ -34,6 +34,18 @@ jobs:
       - name: Health endpoint tests
         run: python -m unittest backend.test_health
 
+      - name: Validate PowerShell backup script syntax
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile("scripts/backup-supabase.ps1", [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors) {
+            $errors | Format-List | Out-String | Write-Error
+            exit 1
+          }
+
+
       - name: Account lifecycle smoke test
         run: python -m backend.account_lifecycle_smoke
 
