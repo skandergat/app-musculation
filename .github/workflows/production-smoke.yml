@@ -1,4 +1,5 @@
 name: LIFTELY production API smoke
+# Manual post-Argon2id production verification requested 2026-11-13; sandbox only.
 
 on:
   workflow_dispatch:
