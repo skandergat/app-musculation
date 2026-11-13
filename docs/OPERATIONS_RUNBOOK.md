@@ -73,6 +73,22 @@ Le script demande deux fois la phrase secrète 7-Zip ; conserver cette phrase s�
 5. Documenter date, résultat, RPO/RTO et supprimer la base temporaire.
 Aucune sauvegarde réelle ni restauration n'a été exécutée pendant cet audit ; pratiquer la procédure avant lancement public.
 
+## Sauvegarde automatisée chiffrée (GitHub Actions)
+
+Le workflow `.github/workflows/supabase-backup.yml` est planifié quotidiennement à 04:00 UTC et peut aussi être lancé manuellement depuis Actions. Il ne s'exécute réellement que si deux secrets de dépôt sont présents :
+
+- `LIFTELY_DATABASE_URL` : DSN PostgreSQL de production, copié directement dans GitHub Settings > Secrets and variables > Actions > New repository secret.
+- `LIFTELY_BACKUP_PASSPHRASE` : phrase aléatoire unique d'au moins 32 octets (idéalement 40+), conservée dans un gestionnaire de mots de passe séparé.
+
+Le workflow utilise un client PostgreSQL 17 en conteneur, produit un dump custom, vérifie sa lisibilité, le chiffre en AES-256 avec GnuPG, vérifie le déchiffrement, supprime le dump en clair et ne publie que le fichier chiffré comme artifact GitHub Actions avec rétention de 7 jours. Si les secrets sont absents, le job indique explicitement que la sauvegarde a été ignorée et n'essaie pas de se connecter.
+
+**Limites de sécurité et de continuité :**
+- Le dépôt est public : les artifacts peuvent être téléchargés par les lecteurs du dépôt. Ils sont chiffrés, mais la passphrase doit être longue, unique et gardée hors de GitHub.
+- Une rétention de 7 jours n'est pas une stratégie d'archivage hors site. Télécharger régulièrement l'archive chiffrée vers un stockage privé indépendant.
+- Ne jamais stocker la passphrase avec l'archive ; ne jamais publier un dump en clair.
+- Le workflow ne prouve pas la restauration. Faire périodiquement un exercice `pg_restore` sur une base PostgreSQL isolée et documenter RPO/RTO.
+- Le workflow est prêt dans le dépôt mais ne peut pas effectuer de sauvegarde tant que les deux secrets ne sont pas configurés par un administrateur du dépôt.
+
 ## Brevo
 Le backend utilise l'API transactionnelle HTTPS si LIFTELY_BREVO_API_KEY est configurée ; SMTP TLS existe en fallback. L'expéditeur doit être validé. Brevo propose le sandbox via header X-Sib-Sandbox: drop : valide payload/auth mais n'envoie aucun mail et ne crée aucun log. Test réel seulement avec un destinataire autorisé. Aucun test réel effectué.
 
