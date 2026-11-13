@@ -241,7 +241,7 @@ Toutes les routes privées doivent obtenir l'utilisateur depuis le Bearer token 
 ## 7. Authentification et sécurité des données
 
 - Authentification applicative maison dans Flask ; pas Supabase Auth.
-- Depuis les PR #86 et #87, les nouveaux mots de passe et les réinitialisations sont hashés en Argon2id (19 456 KiB, 2 passes, parallélisme 1). Après une connexion réussie, les anciens hashes PBKDF2-HMAC-SHA256 (200 000 itérations) sont re-hachés en Argon2id, sans reset forcé ni révocation de session. Le vérificateur conserve la compatibilité PBKDF2 pour les comptes qui ne se sont pas encore reconnectés. La PR #87 a été validée par les tests unitaires, le smoke de sécurité et l'intégration PostgreSQL ; le déploiement Render du commit d0cc9e6 doit être confirmé Live avant de considérer la bascule en production comme achevée.
+- Les nouveaux mots de passe sont hachés avec Argon2id (19 MiB, 2 passes, parallélisme 1). Les anciens hashes PBKDF2-HMAC-SHA256 à 200 000 itérations restent vérifiables et sont re-hachés en Argon2id au prochain login réussi. Inscription et réinitialisation exigent 15 caractères minimum (256 maximum), sans règles artificielles de composition. La release de compatibilité PR #86 est le minimum sûr pour un rollback ; ne pas revenir à une version antérieure qui ne sait pas lire Argon2id.
 - Jetons de session et jetons d'action persistés sous forme de hash SHA-256.
 - Durée de session : 30 jours.
 - Vérification e-mail : lien 48 h.
@@ -443,7 +443,7 @@ Ces identifiants sont pérennes et peuvent être difficiles à changer après pu
 | P1 | Sauvegarde chiffrée hors site et restauration testée | Réduire le risque de perte de données |
 | P1 | Health Check Path Render = `/health` | Configuration Dashboard manuelle |
 | P1 | Revue sécurité indépendante de l'authentification maison | Réduire risques auth/session/IDOR |
-| Terminé | Audit npm mobile : 0 vulnérabilité ; Expo Doctor 21/21 | PR #78 et CI du 13 novembre 2026 |
+| P1 | 10 vulnérabilités npm modérées au dernier audit ; aucune high/critical | Résoudre sans downgrade SDK |
 | P1 | Branch `main` non protégée au dernier contrôle | Activer ruleset/required checks et revue PR |
 | P2 | Render Oregon ↔ Supabase Londres | Mesurer latence ; migration région seulement avec plan de bascule |
 | P2 | Test de livraison Brevo réel | Nécessite destinataire autorisé et domaine expéditeur vérifié |
