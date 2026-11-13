@@ -41,7 +41,7 @@ export default function InscriptionScreen() {
       return;
     }
 
-    if (password.length < 8) {
+    if (password.length < 15) {
       setMessage(t('passwordMin'));
       setMessageSuccess(false);
       return;
@@ -118,6 +118,8 @@ export default function InscriptionScreen() {
           onChangeText={(value) => { setPassword(value); setMessage(''); }}
           secureTextEntry
           autoCapitalize="none"
+          autoComplete="new-password"
+          maxLength={256}
           editable={!creationReussie}
         />
 
@@ -129,6 +131,8 @@ export default function InscriptionScreen() {
           onChangeText={(value) => { setConfirmation(value); setMessage(''); }}
           secureTextEntry
           autoCapitalize="none"
+          autoComplete="new-password"
+          maxLength={256}
           editable={!creationReussie}
         />
 
