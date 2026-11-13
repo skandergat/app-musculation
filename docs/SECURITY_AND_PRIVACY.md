@@ -4,7 +4,7 @@
 Actifs : comptes, e-mails, hash de mots de passe, jetons, historiques d'entraînement, base PostgreSQL, clés fournisseurs et sauvegardes. Menaces : prise de compte, accès horizontal IDOR/BOLA, fuite de secrets, erreurs de migration, dépendances compromises et sauvegardes/logs non chiffrés.
 
 ## Contrôles identifiés
-- Hash mot de passe PBKDF2-HMAC-SHA256 avec sel.
+- Hash mot de passe : cette release conserve l'écriture PBKDF2-HMAC-SHA256 historique à 200 000 tours, mais sait vérifier Argon2id (m=19 456 KiB, t=2, p=1) afin de permettre une migration réversible. La prochaine release écrira Argon2id et re-hachera les anciens hashes après login réussi. Paramètres alignés sur la recommandation OWASP Argon2id.
 - Hash SHA-256 des jetons d'action et de session persistés.
 - Jetons d'action temporaires et à usage unique.
 - Stockage mobile natif SecureStore ; stockage local Web à évaluer face au risque XSS.
@@ -31,3 +31,6 @@ Données : nom, e-mail, hash mot de passe, jetons, séances, charges, répétiti
 
 ## Secrets
 Garder les secrets dans Render, GitHub Secrets et coffres fournisseurs. Rotation lors d'une cession. Jamais de DSN/clé dans un commit, issue ou variable EXPO_PUBLIC ; pas de jetons bruts dans les logs ni de dumps en clair dans un dépôt public.
+
+
+Référence paramètres : [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html).

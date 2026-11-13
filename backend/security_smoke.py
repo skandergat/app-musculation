@@ -29,6 +29,19 @@ def add_user(email: str, password: str) -> None:
     conn.close()
 
 
+def add_argon2_user(email: str, password: str) -> None:
+    stored = backend.PASSWORD_HASHER.hash(password)
+    conn = sqlite3.connect(DB)
+    conn.execute(
+        "INSERT INTO users (nom, email, password_hash, date_creation, email_verified_at) "
+        "VALUES (?, ?, ?, ?, ?)",
+        ("Argon2 Security Test", email, stored,
+         datetime.now().isoformat(), datetime.now().isoformat()),
+    )
+    conn.commit()
+    conn.close()
+
+
 # En-têtes présents sur JSON, page HTML et réponse d'erreur.
 for response in (client.get("/exercices"), client.get("/privacy"),
                  client.get("/route-inexistante")):
@@ -82,6 +95,16 @@ assert client.post(
     json={"email": success_email, "password": "WrongPassword123!"},
     environ_overrides={"REMOTE_ADDR": ip},
 ).status_code == 401
+
+# La release de compatibilité doit aussi pouvoir authentifier un hash Argon2id.
+versioned_email = "versioned@example.test"
+add_argon2_user(versioned_email, "VersionedPassword123!")
+versioned_login = client.post(
+    "/auth/login",
+    json={"email": versioned_email, "password": "VersionedPassword123!"},
+    environ_overrides={"REMOTE_ADDR": "198.51.100.13"},
+)
+assert versioned_login.status_code == 200, versioned_login.data
 
 # La limite IP globale s'applique même avec des adresses e-mail différentes.
 for attempt in range(60):
