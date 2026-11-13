@@ -1,6 +1,9 @@
 # Checklist de transfert ou cession de LIFTELY
 
 ## Préparation
+- [ ] Confirmer la propriété du code métier, des maquettes, du nom LIFTELY, du logo, des illustrations, des contenus et des domaines ; conserver les preuves de création/cession.
+- [ ] Vérifier les licences des dépendances et des assets individuellement. Le fichier `mobile/LICENSE` contient la licence MIT d'Expo (copyright 650 Industries) et ne constitue pas une licence globale ni une preuve de propriété du code LIFTELY. Aucun fichier `LICENSE` à la racine n'a été identifié au dernier audit.
+- [ ] Décider si le dépôt public doit devenir privé avant une négociation confidentielle ; un dépôt public a déjà rendu l'historique accessible.
 - [ ] Dépôt à jour, release taguée, issues/PR exportées.
 - [ ] Archive du code et des documents sans secrets.
 - [ ] Export PostgreSQL chiffré et restauration vérifiée sur base isolée.

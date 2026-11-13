@@ -5,7 +5,9 @@ LIFTELY est une application mobile de suivi de musculation et de calisthenics. C
 **Production :** API Render https://liftely-api.onrender.com → Supabase PostgreSQL 17.11, région Londres (eu-west-2). Ne jamais exécuter de tests destructifs sur cette API ou cette base.
 
 ## Dossier de reprise
+- [Dossier maître complet (produit, technique et exploitation)](docs/PROJECT_MASTER_DOSSIER.md)
 - [Guide de reprise développeur](docs/DEVELOPER_HANDOVER.md)
+- [Matrice des variables, secrets et accès fournisseurs](docs/ENVIRONMENT_AND_ACCESS_MATRIX.md)
 - [Architecture et cartographie du code](docs/ARCHITECTURE.md)
 - [Runbook d'exploitation](docs/OPERATIONS_RUNBOOK.md)
 - [Sécurité et confidentialité](docs/SECURITY_AND_PRIVACY.md)
