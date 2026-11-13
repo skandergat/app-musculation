@@ -34,7 +34,7 @@ jobs:
             echo "ready=false" >> "$GITHUB_OUTPUT"
             {
               echo "## Backup skipped"
-              echo "Add repository Actions secrets `LIFTELY_DATABASE_URL` and `LIFTELY_BACKUP_PASSPHRASE` to enable automated backups."
+              printf '%s\\n' 'Add repository Actions secrets LIFTELY_DATABASE_URL and LIFTELY_BACKUP_PASSPHRASE to enable automated backups.'
               echo "No database connection was attempted and no data was exported."
             } >> "$GITHUB_STEP_SUMMARY"
             echo "::warning::Backup skipped because required repository secrets are missing."
