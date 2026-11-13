@@ -44,12 +44,13 @@ L'import transactionnel a été validé par GitHub Actions, run [43309393635](ht
 
 ## Historique des migrations
 
-Les trois migrations appliquées en production sont désormais versionnées dans `supabase/migrations/` :
+Les cinq migrations appliquées en production sont désormais versionnées dans `supabase/migrations/` :
 
 1. `20261112205509_enable_rls_auth_login_limits.sql`
 2. `20261112212316_reconcile_auth_login_limits_table.sql`
 3. `20261113094009_harden_public_schema_and_index_foreign_keys.sql`
-4. `20261113100533_revoke_public_default_privileges.sql`\n5. `20261113102246_revoke_remaining_public_default_privileges.sql`
+4. `20261113100533_revoke_public_default_privileges.sql`
+5. `20261113102246_revoke_remaining_public_default_privileges.sql`
 
 Ne pas rejouer une migration manuellement si elle figure déjà dans `supabase_migrations.schema_migrations`. Les fichiers versionnés doivent rester identiques aux instructions SQL enregistrées dans l'historique distant.
 
