@@ -9,6 +9,7 @@
 | Brevo | Compte propriétaire | E-mails transactionnels |
 
 ## Déploiement Render
+État observé : auto-deploy sur chaque commit main, déclencheur `commit`, région Oregon, plan Free, Health Check Path vide. Pour le durcissement pré-lancement, définir `/health`, basculer le déclencheur sur `checksPass` si disponible et ajouter des build filters limités au backend afin d'éviter les déploiements provoqués par la documentation/mobile. Ces paramètres doivent être changés dans le Dashboard Render (le connecteur disponible ne les expose pas).
 Branche main, racine backend/, auto-deploy actif.
 - Build : pip install -r requirements.txt
 - Start : gunicorn --bind 0.0.0.0:$PORT app:app
