@@ -90,6 +90,13 @@ success = client.post(
     environ_overrides={"REMOTE_ADDR": ip},
 )
 assert success.status_code == 200, success.data
+conn = sqlite3.connect(DB)
+upgraded_hash = conn.execute(
+    "SELECT password_hash FROM users WHERE email = ?", (success_email,) 
+).fetchone()[0]
+conn.close()
+assert upgraded_hash.startswith("$argon2id$v=19$m=19456,t=2,p=1$")
+assert backend.verify_password("CorrectPassword123!", upgraded_hash)
 assert client.post(
     "/auth/login",
     json={"email": success_email, "password": "WrongPassword123!"},
