@@ -4,6 +4,11 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 4 * * *"
+  push:
+    branches:
+      - ops/encrypted-supabase-backups
+    paths:
+      - .github/workflows/supabase-backup.yml
 
 permissions:
   contents: read
@@ -33,6 +38,10 @@ jobs:
               echo "No database connection was attempted and no data was exported."
             } >> "$GITHUB_STEP_SUMMARY"
             echo "::warning::Backup skipped because required repository secrets are missing."
+          elif [[ ${#LIFTELY_BACKUP_PASSPHRASE} -lt 32 ]]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Backup skipped because LIFTELY_BACKUP_PASSPHRASE must contain at least 32 characters."
+            echo "Backup skipped: the encryption passphrase must be at least 32 characters." >> "$GITHUB_STEP_SUMMARY"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
