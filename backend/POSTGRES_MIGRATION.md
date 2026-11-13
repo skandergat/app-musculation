@@ -40,7 +40,7 @@ L'import transactionnel a été validé par GitHub Actions, run [43309393635](ht
 - Supabase Security Advisor affiche encore l'information `RLS enabled no policy` sur les onze tables. C'est cohérent avec le choix de ne créer aucune politique d'accès direct ; l'accès Data API reste bloqué par l'absence de privilèges. Ne pas ajouter de politique permissive sans revoir l'architecture d'authentification.
 - Six index ont été ajoutés sur les clés étrangères non indexées : `sessions.user_id`, `templates.user_id`, `template_exercices.exercice_id`, `seance_exercices.exercice_id`, `series.seance_id`, `series.exercice_id`.
 - Le Performance Advisor ne signale plus de clé étrangère sans index. Les index « inutilisés » sur les tables vides ne doivent pas être supprimés sur cette seule base.
-- Les privilèges par défaut des rôles gérés Supabase n'ont pas pu être modifiés depuis le rôle courant. Réauditer les ACL par défaut si de nouvelles tables sont ajoutées.
+- Les privilèges par défaut du rôle créateur \`postgres\` dans \`public\` ont été durcis : les futurs objets ne reçoivent plus automatiquement les droits Data API (tables, séquences, fonctions) pour \`anon\`, \`authenticated\` et \`service_role\`. Les nouvelles permissions doivent être accordées explicitement. Les ACL du rôle interne \`supabase_admin\` ne sont pas modifiées par cette migration.
 
 ## Historique des migrations
 
