@@ -4,7 +4,7 @@
 Actifs : comptes, e-mails, hash de mots de passe, jetons, historiques d'entraînement, base PostgreSQL, clés fournisseurs et sauvegardes. Menaces : prise de compte, accès horizontal IDOR/BOLA, fuite de secrets, erreurs de migration, dépendances compromises et sauvegardes/logs non chiffrés.
 
 ## Contrôles identifiés
-- Hash mot de passe : cette release conserve l'écriture PBKDF2-HMAC-SHA256 historique à 200 000 tours, mais sait vérifier Argon2id (m=19 456 KiB, t=2, p=1) afin de permettre une migration réversible. La prochaine release écrira Argon2id et re-hachera les anciens hashes après login réussi. Paramètres alignés sur la recommandation OWASP Argon2id.
+- Hash mot de passe : Argon2id (m=19 456 KiB, t=2, p=1). Les hashes PBKDF2-HMAC-SHA256 legacy à 200 000 tours restent vérifiables et sont automatiquement re-hachés en Argon2id après login réussi. Les nouveaux comptes et les resets exigent 15 caractères minimum et 256 maximum ; les comptes existants ne sont pas forcés à changer leur mot de passe.
 - Hash SHA-256 des jetons d'action et de session persistés.
 - Jetons d'action temporaires et à usage unique.
 - Stockage mobile natif SecureStore ; stockage local Web à évaluer face au risque XSS.
