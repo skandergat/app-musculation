@@ -151,26 +151,46 @@ def hash_password(password, salt=None):
     return f"{salt.hex()}${password_hash.hex()}"
 
 
+PASSWORD_HASH_ALGORITHM = "pbkdf2_sha256"
+LEGACY_PASSWORD_HASH_ITERATIONS = 200_000
+PASSWORD_HASH_MIN_ITERATIONS = 100_000
+PASSWORD_HASH_MAX_ITERATIONS = 2_000_000
+
+
 def verify_password(password, stored_hash):
     """
-    Vérifie un mot de passe contre son hash.
+    Vérifie l'ancien format salt$hash et le format versionné PBKDF2.
+    Cette release de compatibilité continue d'écrire l'ancien format afin
+    qu'un rollback vers la version précédente reste possible.
     """
     try:
-        salt_hex, hash_hex = stored_hash.split("$")
-        salt = bytes.fromhex(salt_hex)
+        parts = stored_hash.split("$")
+        if len(parts) == 2:
+            salt_hex, hash_hex = parts
+            iterations = LEGACY_PASSWORD_HASH_ITERATIONS
+        elif len(parts) == 4 and parts[0] == PASSWORD_HASH_ALGORITHM:
+            _, iterations_text, salt_hex, hash_hex = parts
+            iterations = int(iterations_text)
+        else:
+            return False
 
-        password_hash = hashlib.pbkdf2_hmac(
+        if not PASSWORD_HASH_MIN_ITERATIONS <= iterations <= PASSWORD_HASH_MAX_ITERATIONS:
+            return False
+
+        salt = bytes.fromhex(salt_hex)
+        expected_hash = bytes.fromhex(hash_hex)
+        if len(salt) != 16 or len(expected_hash) != 32:
+            return False
+
+        actual_hash = hashlib.pbkdf2_hmac(
             "sha256",
             password.encode("utf-8"),
             salt,
-            200_000,
+            iterations,
         )
 
-        return secrets.compare_digest(
-            password_hash.hex(),
-            hash_hex,
-        )
-    except Exception:
+        return secrets.compare_digest(actual_hash, expected_hash)
+    except (AttributeError, TypeError, ValueError):
         return False
 
 
