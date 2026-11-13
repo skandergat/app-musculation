@@ -15,7 +15,7 @@ Branche main, racine backend/, auto-deploy actif.
 
 Après fusion, surveiller le déploiement et les logs. Ne pas changer plusieurs variables à la fois.
 Contrôles non destructifs :
-- GET /health : santé de l'API et connexion DB selon implémentation.
+- GET /health : renvoie status, database_backend (sqlite/postgresql) et transactional_email_configured (booléen). Le booléen indique seulement que les paramètres sont présents, pas que Brevo a accepté une requête ni livré un e-mail.
 - GET /exercices : catalogue.
 - GET /templates sans token : doit renvoyer 401.
 
