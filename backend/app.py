@@ -134,9 +134,17 @@ def purger_auth_temporaire_periodiquement():
 # OUTILS
 # ============================================================
 
+PASSWORD_HASH_ALGORITHM = "pbkdf2_sha256"
+PASSWORD_HASH_ITERATIONS = 600_000
+LEGACY_PASSWORD_HASH_ITERATIONS = 200_000
+PASSWORD_HASH_MIN_ITERATIONS = 100_000
+PASSWORD_HASH_MAX_ITERATIONS = 2_000_000
+
+
 def hash_password(password, salt=None):
     """
-    Hash sécurisé du mot de passe avec PBKDF2-HMAC-SHA256.
+    Crée un hash PBKDF2-HMAC-SHA256 versionné.
+    Les paramètres sont inclus pour permettre les futures migrations.
     """
     if salt is None:
         salt = secrets.token_bytes(16)
@@ -145,32 +153,62 @@ def hash_password(password, salt=None):
         "sha256",
         password.encode("utf-8"),
         salt,
-        200_000,
+        PASSWORD_HASH_ITERATIONS,
     )
 
-    return f"{salt.hex()}${password_hash.hex()}"
+    return (
+        PASSWORD_HASH_ALGORITHM + "$" + str(PASSWORD_HASH_ITERATIONS)
+        + "$" + salt.hex() + "$" + password_hash.hex()
+    )
+
+
+def password_hash_needs_upgrade(stored_hash):
+    """Indique si un hash valide doit être remplacé au prochain login."""
+    try:
+        parts = stored_hash.split("$")
+        if len(parts) == 2:
+            return True
+        if len(parts) != 4 or parts[0] != PASSWORD_HASH_ALGORITHM:
+            return True
+        iterations = int(parts[1])
+        return iterations < PASSWORD_HASH_ITERATIONS
+    except (AttributeError, TypeError, ValueError):
+        return True
 
 
 def verify_password(password, stored_hash):
     """
-    Vérifie un mot de passe contre son hash.
+    Vérifie les hashes versionnés et l'ancien format salt$hash (200 000 tours).
+    Les paramètres lus en base sont bornés pour éviter un coût CPU arbitraire.
     """
     try:
-        salt_hex, hash_hex = stored_hash.split("$")
-        salt = bytes.fromhex(salt_hex)
+        parts = stored_hash.split("$")
+        if len(parts) == 2:
+            salt_hex, hash_hex = parts
+            iterations = LEGACY_PASSWORD_HASH_ITERATIONS
+        elif len(parts) == 4 and parts[0] == PASSWORD_HASH_ALGORITHM:
+            _, iterations_text, salt_hex, hash_hex = parts
+            iterations = int(iterations_text)
+        else:
+            return False
 
-        password_hash = hashlib.pbkdf2_hmac(
+        if not PASSWORD_HASH_MIN_ITERATIONS <= iterations <= PASSWORD_HASH_MAX_ITERATIONS:
+            return False
+
+        salt = bytes.fromhex(salt_hex)
+        expected_hash = bytes.fromhex(hash_hex)
+        if len(salt) != 16 or len(expected_hash) != 32:
+            return False
+
+        actual_hash = hashlib.pbkdf2_hmac(
             "sha256",
             password.encode("utf-8"),
             salt,
-            200_000,
+            iterations,
         )
 
-        return secrets.compare_digest(
-            password_hash.hex(),
-            hash_hex,
-        )
-    except Exception:
+        return secrets.compare_digest(actual_hash, expected_hash)
+    except (AttributeError, TypeError, ValueError):
         return False
 
 
