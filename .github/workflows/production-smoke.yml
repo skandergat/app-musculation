@@ -1,3 +1,4 @@
+# Verify current production disclosure and sandbox integration.
 name: LIFTELY production API smoke
 
 on:
