@@ -382,7 +382,7 @@ Workflows actuels :
 - `.github/workflows/mobile-dependency-maintenance.yml` : candidat de mise à jour mensuel, tests, sans fusion automatique.
 - `.github/workflows/supabase-import.yml` : workflow historique d'import contrôlé ; ne pas exécuter à nouveau sur production.
 
-Au dernier audit CI, les tests backend, le lint, le typecheck, l'export Web et Expo Doctor 21/21 passaient. Le dernier audit npm montrait 10 vulnérabilités modérées, 0 high, 0 critical et 0 low ; les correctifs automatiques restants proposés par npm impliquent notamment un downgrade majeur Expo vers SDK 52. Ne pas utiliser `npm audit fix --force`. Vérifier le résultat d'un nouveau run avant d'affirmer que le nombre a changé.
+Après la PR #78, le dernier audit npm de la branche principale est à **0 vulnérabilité** (0 low, 0 moderate, 0 high, 0 critical). L'override `minimatch` vers 11.0.8 supprime les avis transitifs sans downgrade Expo. La CI candidate a validé `npm ci`, traductions, lint, TypeScript, Expo Doctor 21/21, export Web, intégration PostgreSQL et CodeQL. Ne pas utiliser `npm audit fix --force` ; maintenir l'audit sur chaque release.
 
 ## 12. Déploiement et exploitation
 
