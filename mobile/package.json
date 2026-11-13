@@ -50,7 +50,8 @@
     "source-map-js": "^1.2.2",
     "http-cache-semantics": "^4.3.0",
     "@expo/code-signing-certificates": "^0.0.7",
-    "decode-uri-component": "^0.5.1"
+    "decode-uri-component": "^0.5.1",
+    "minimatch": "^11.0.8"
   },
   "scripts": {
     "start": "expo start",
