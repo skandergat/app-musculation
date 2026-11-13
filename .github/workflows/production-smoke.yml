@@ -1,0 +1,52 @@
+name: LIFTELY production API smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 7 * * *"
+  push:
+    branches:
+      - ops/production-smoke-trigger
+    paths:
+      - .github/workflows/production-smoke.yml
+
+permissions:
+  contents: read
+
+jobs:
+  production-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check production API and database
+        env:
+          BASE_URL: https://liftely-api.onrender.com
+        run: |
+          set -euo pipefail
+          health=$(curl --fail --silent --show-error --retry 10 --retry-delay 6 --retry-all-errors "$BASE_URL/health")
+          echo "$health" | jq .
+          echo "$health" | jq -e '.status == "ok" and .database_backend == "postgresql" and (.transactional_email_configured | type == "boolean")' >/dev/null
+          email_ready=$(echo "$health" | jq -r '.transactional_email_configured')
+          echo "Production database backend: PostgreSQL"
+          echo "Transactional email configuration present: $email_ready"
+          if [ "$email_ready" != "true" ]; then
+            echo "::error::Transactional email settings are missing. No message was sent."
+            exit 1
+          fi
+      - name: Verify exercise catalogue
+        env:
+          BASE_URL: https://liftely-api.onrender.com
+        run: |
+          set -euo pipefail
+          exercises=$(curl --fail --silent --show-error --retry 5 --retry-delay 4 "$BASE_URL/exercices")
+          count=$(echo "$exercises" | jq 'if type == "array" then length else 0 end')
+          echo "Active exercises returned: $count"
+          test "$count" -gt 0
+      - name: Verify private API rejects anonymous access
+        env:
+          BASE_URL: https://liftely-api.onrender.com
+        run: |
+          set -euo pipefail
+          status=$(curl --silent --output /tmp/private-response.json --write-out "%{http_code}" "$BASE_URL/templates")
+          echo "Anonymous GET /templates status: $status"
+          test "$status" = "401"
