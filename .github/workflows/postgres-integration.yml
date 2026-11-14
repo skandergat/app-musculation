@@ -39,6 +39,30 @@ jobs:
         run: python -m pip install -r backend/requirements.txt
       - name: Provision isolated PostgreSQL schema
         run: psql "$LIFTELY_DATABASE_URL" -v ON_ERROR_STOP=1 -f backend/postgres_schema.sql
+
+      - name: Create Supabase Data API roles for hardening test
+        run: |
+          psql "$LIFTELY_DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          DO $
+          BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+              CREATE ROLE anon NOLOGIN;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+              CREATE ROLE authenticated NOLOGIN;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
+              CREATE ROLE service_role NOLOGIN;
+            END IF;
+          END
+          $;
+          SQL
+
+      - name: Apply and verify Supabase staging hardening migration
+        run: |
+          psql "$LIFTELY_DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261114122500_enable_rls_all_liftely_tables.sql
+          count="$(psql "$LIFTELY_DATABASE_URL" -Atc "SELECT COUNT(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind='r' AND c.relname = ANY(ARRAY['users','exercices','sessions','auth_action_tokens','auth_mail_limits','auth_login_limits','templates','template_exercices','seances','series','seance_exercices']) AND c.relrowsecurity AND NOT has_table_privilege('anon', c.oid, 'SELECT') AND NOT has_table_privilege('authenticated', c.oid, 'SELECT') AND NOT has_table_privilege('service_role', c.oid, 'SELECT')")"
+          test "$count" = "11"
       - name: Compile backend and migration scripts
         run: python -m py_compile backend/app.py backend/db_compat.py backend/migrate_sqlite_to_postgres.py backend/migration_preflight.py backend/test_migration_preflight.py backend/test_sqlite_postgres_import.py backend/test_real_staging_migration.py
       - name: Unit-test read-only migration preflight
