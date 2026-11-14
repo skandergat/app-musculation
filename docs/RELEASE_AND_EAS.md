@@ -108,7 +108,7 @@ npx.cmd expo start --lan
 
 Le téléphone et le PC doivent être sur le même réseau Wi-Fi. Vérifier que le journal du backend indique SQLite, et non PostgreSQL. Ne jamais définir de DSN Supabase de production dans ces terminaux.
 - Les tests CI PostgreSQL utilisent une base éphémère dédiée ; ils ne doivent jamais recevoir le DSN de production.
-- Un backend staging accessible aux builds EAS preview reste à héberger. Une option gratuite Render peut être envisagée avec stockage éphémère et données synthétiques uniquement ; aucun service n'a été créé car le workspace Render doit être explicitement sélectionné et il faut confirmer les limites gratuites avant activation.
+- Le service Render Free `liftely-api-staging` est créé en région Frankfurt (`srv-dbs5nbmc6qcc7388b550`), sur la branche `chore/staging-supabase-bootstrap`, sans auto-deploy. Le build réussit. Son démarrage est volontairement bloqué par un DSN placeholder : renseigner `LIFTELY_DATABASE_URL` avec le DSN du projet Supabase staging avant le premier déploiement exploitable. Aucun secret de production n'a été copié.
 
 Le profil preview ne devient utilisable sur appareil qu'après déploiement du backend de staging, définition de l'URL EAS preview et test de non-régression.
 
