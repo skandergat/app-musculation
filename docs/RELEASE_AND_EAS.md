@@ -53,11 +53,27 @@ Vérifier les quotas et coûts EAS avant de lancer les builds. Les frais Apple D
 - [ ] Preview testée iOS et Android
 - [ ] Rollback et monitoring prêts
 
+## Séparation API preview / production
+
+Les profils EAS ne doivent jamais partager implicitement leur backend :
+- `development` utilise le backend local ou une URL de développement explicite.
+- `preview` utilise l'environnement EAS `preview` et exige une variable `EXPO_PUBLIC_API_URL` configurée vers un backend de staging dédié.
+- `production` utilise l'URL API de production.
+
+Le profil `preview` ne contient volontairement plus l'URL Render de production. Le module `mobile/src/config/api.ts` échoue maintenant de façon explicite si une preview n'a pas d'URL dédiée ou si cette URL pointe vers `liftely-api.onrender.com`. Cela évite qu'une build de test touche la base de production par erreur.
+
+**Conséquence assumée :** tant que le backend de staging n'est pas créé et que `EXPO_PUBLIC_API_URL` n'est pas définie dans l'environnement EAS `preview`, la build preview doit échouer plutôt que d'utiliser la production. Ne pas contourner ce garde-fou.
+
+## Staging sans coût récurrent
+
+- Une branche Supabase payante à l'heure n'est pas retenue : le tarif vérifié est de 0,01344 USD/heure (environ 9,80 USD sur 30 jours si elle reste active).
+- Le projet Supabase de production ne doit pas être cloné ni modifié pour les tests.
+- Le backend prend en charge SQLite via `LIFTELY_DB_PATH` lorsque `LIFTELY_DATABASE_URL`, `SUPABASE_DB_URL` et `DATABASE_URL` sont absentes. Une copie locale de la base de test et des données synthétiques peuvent donc servir aux tests développeur sans credentials de production.
+- Les tests CI PostgreSQL utilisent une base éphémère dédiée ; ils ne doivent jamais recevoir le DSN de production.
+- Un backend staging accessible aux builds EAS preview reste à héberger. Une option gratuite Render peut être envisagée avec stockage éphémère et données synthétiques uniquement ; aucun service n'a été créé car le workspace Render doit être explicitement sélectionné et il faut confirmer les limites gratuites avant activation.
+
+Le profil preview ne devient utilisable sur appareil qu'après déploiement du backend de staging, définition de l'URL EAS preview et test de non-régression.
 
 ## URL API des builds
 
-Les profils `preview` et `production` définissent explicitement `EXPO_PUBLIC_API_URL=https://liftely-api.onrender.com`. Cela évite qu'un bundle EAS de production échoue parce que l'URL API est absente.
-
-**Attention :** il n'existe pas encore de backend de staging. Les builds preview et production communiquent donc avec la base réelle Supabase via l'API Render. Ne pas les utiliser pour des tests destructifs ; créer un compte QA dédié et ne pas injecter de données réelles. Créer un environnement staging séparé avant d'ouvrir la preview à des testeurs externes.
-
-Le profil `development` ne fixe pas cette variable : le développeur doit utiliser son `.env.local` ou le fallback réseau local.
+Le profil production utilise `https://liftely-api.onrender.com`. Le profil preview est maintenant isolé et protégé contre un repli silencieux sur la production. Le profil development conserve son fallback réseau local.
