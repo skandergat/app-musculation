@@ -67,6 +67,8 @@ jobs:
 
       - name: Security smoke test
         run: python -m backend.security_smoke
+      - name: CSP template safety tests
+        run: python -m unittest backend.test_csp_templates
 
       - name: Backend smoke test
         env:
