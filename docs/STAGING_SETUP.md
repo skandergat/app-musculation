@@ -32,7 +32,7 @@
 6. Keep production deploys, production schema changes, and app-store releases out of this staging setup.
 ## Transactional email staging (Brevo)
 - Do not copy the production Brevo API key into staging. Create a separate staging API key in the owner's Brevo account.
-- Configure `LIFTELY_BREVO_API_KEY` as a Render secret, `LIFTELY_EMAIL_FROM` with a verified sender, `LIFTELY_EMAIL_SENDER_NAME=LIFTELY`, and `LIFTELY_EMAIL_PROVIDER=brevo` only after the provider setting is confirmed by the backend implementation.
+- Configure `LIFTELY_BREVO_API_KEY` as a Render secret, `LIFTELY_EMAIL_FROM` with a verified sender, `LIFTELY_EMAIL_SENDER_NAME=LIFTELY`, and `LIFTELY_EMAIL_PROVIDER=Brevo Transactional API HTTPS` only if this is the actual provider; this value is displayed by the privacy page and must reflect reality.
 - `LIFTELY_PUBLIC_BASE_URL` is already set to the staging API URL; verify links generated in email templates before any delivery.
 - After the staging PostgreSQL connection is working, test `POST /health/brevo-sandbox`. The endpoint sends a sandbox-only request with the `X-Sib-Sandbox: drop` header and a non-deliverable test recipient; it does not prove real inbox delivery.
 - Do not run real registration/reset emails until a dedicated test inbox and sender are confirmed. Production email credentials and recipients must remain isolated.
