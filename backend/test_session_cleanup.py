@@ -39,9 +39,13 @@ class SessionCleanupPerformanceTests(unittest.TestCase):
                 self.assertIsNone(app.get_user_from_request())
 
         statements = [statement for statement, _ in connection.statements]
+        session_queries = [
+            statement for statement in statements if "FROM sessions" in statement
+        ]
+        self.assertTrue(session_queries, statements)
         self.assertTrue(
-            any("FROM sessions" in statement for statement in statements),
-            statements,
+            any("date_expiration > ?" in statement for statement in session_queries),
+            session_queries,
         )
         self.assertFalse(
             any("DELETE FROM sessions" in statement for statement in statements),
