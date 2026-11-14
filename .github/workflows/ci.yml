@@ -41,6 +41,8 @@ jobs:
         run: python -m unittest backend.test_health
       - name: Password hash compatibility tests
         run: python -m unittest backend.test_password_hashing
+      - name: Session cleanup performance tests
+        run: python -m unittest backend.test_session_cleanup
       - name: SQLite reset-copy safety tests
         run: python -m unittest scripts.test_reset_liftely_user_data_copy
 
