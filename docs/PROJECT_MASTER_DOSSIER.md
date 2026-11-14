@@ -27,7 +27,7 @@ LIFTELY est une application de suivi de musculation et de calisthenics. Le mobil
 | EAS | `mobile/eas.json` présent ; projet EAS et identifiants stores non liés |
 | Builds stores | Aucune build de production validée à ce jour |
 | Politique de confidentialité | Page publiée comme brouillon non indexable ; champs juridiques à compléter |
-| Sauvegarde | Workflow GitHub chiffré exécuté avec succès ; restauration testée sur PostgreSQL isolé ; artifact chiffré conservé 7 jours |
+| Sauvegarde | Une archive chiffrée validée et restaurée sur PostgreSQL isolé existe (run `43515211149`, expire le 20 novembre 2026) ; le dernier run `43588877585` du 14 novembre a échoué sur un retour à la ligne dans le DSN ; correction proposée dans une PR en attente |
 
 ### Décisions structurantes
 
@@ -420,7 +420,7 @@ Après la PR #78, le dernier audit npm de la branche principale est à **0 vuln�
 
 Le script `scripts/backup-supabase.ps1` réalise un dump custom PostgreSQL, vérifie sa lisibilité, chiffre une archive 7z AES-256 avec noms chiffrés, puis supprime le dump temporaire. Il requiert PostgreSQL client 17+ et 7-Zip. Il refuse d'écrire dans le dépôt Git.
 
-L'organisation Supabase est sur le plan Free : aucune sauvegarde quotidienne automatique n'est incluse. Le workflow `.github/workflows/supabase-backup.yml` est planifié quotidiennement à 04:00 UTC et chiffre les dumps PostgreSQL en AES-256 avant de les stocker comme artifacts GitHub pour 7 jours. Il attend les secrets de dépôt `LIFTELY_DATABASE_URL` et `LIFTELY_BACKUP_PASSPHRASE` (minimum 32 caractères aléatoires). Le workflow a produit avec succès une archive chiffrée (run GitHub Actions `43515211149`, artifact `liftely-supabase-backup-43515211149`). Une restauration de contrôle a également réussi dans un PostgreSQL 17 jetable (run `43518028317`) : les 349 exercices ont été restaurés. La base Supabase de production n'a pas été modifiée pendant ce test. L'artifact GitHub expire après 7 jours ; le copier dans un stockage privé durable et conserver la passphrase séparément. Le script manuel PowerShell reste disponible.
+L'organisation Supabase est sur le plan Free : aucune sauvegarde quotidienne automatique n'est incluse. Le workflow `.github/workflows/supabase-backup.yml` est planifié quotidiennement à 04:00 UTC et chiffre les dumps PostgreSQL en AES-256 avant de les stocker comme artifacts GitHub pour 7 jours. Il attend les secrets de dépôt `LIFTELY_DATABASE_URL` et `LIFTELY_BACKUP_PASSPHRASE` (minimum 32 caractères aléatoires). Le workflow a produit une archive chiffrée validée (run GitHub Actions `43515211149`, artifact `liftely-supabase-backup-43515211149`, expiration le 20 novembre 2026). Une restauration de contrôle a également réussi dans un PostgreSQL 17 jetable (run `43518028317`) : les 349 exercices ont été restaurés. Le dernier run planifié `43588877585` du 14 novembre 2026 a échoué avant le dump : le DSN fourni à `pg_dump` contient un retour à la ligne final dans le nom de base. Une normalisation défensive du DSN est proposée dans la PR `fix/backup-dsn-normalization-and-privacy-accuracy` ; ne pas considérer l'automatisation comme rétablie avant un run vert et un nouvel artifact. La base Supabase de production n'a pas été modifiée pendant ce test. L'artifact GitHub expire après 7 jours ; le copier dans un stockage privé durable et conserver la passphrase séparément. Le script manuel PowerShell reste disponible.
 
 ## 13. Publication iOS / Android
 

@@ -7,7 +7,7 @@ Cet inventaire reflète l'architecture contrôlée le 13 novembre 2026. Il doit 
 | Donnée | Finalité | Stockage / traitement |
 | --- | --- | --- |
 | Nom, adresse e-mail, date de création du compte | Création et gestion du compte, vérification d'adresse et récupération | Supabase PostgreSQL, schéma `public`, région `eu-west-2` (Londres) |
-| Mot de passe | Authentification | Seul un hash PBKDF2-HMAC-SHA256 salé est stocké dans PostgreSQL |
+| Mot de passe | Authentification | Nouveaux mots de passe hachés avec Argon2id ; les anciens hashes PBKDF2-HMAC-SHA256 sont migrés vers Argon2id après une connexion réussie |
 | Jeton de session | Maintenir la connexion | Stockage sécurisé natif / stockage navigateur ; seul le hash SHA-256 est conservé par l'API |
 | Jeton d'action e-mail | Vérification, réinitialisation, suppression du compte | Seul le hash SHA-256 est conservé par l'API ; le jeton brut est inclus dans un lien temporaire |
 | Identifiants de limitation e-mail/IP | Réduire les abus automatisés | Identifiants hachés dans PostgreSQL, avec durée de conservation limitée par la logique applicative |

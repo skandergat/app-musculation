@@ -70,6 +70,15 @@ jobs:
           archive="$backup_dir/liftely-$stamp.dump.gpg"
           passfile="$RUNNER_TEMP/liftely-backup-passphrase"
 
+          # GitHub Secrets can retain a trailing line ending when a URI is pasted.
+          # Literal CR/LF characters are invalid in a PostgreSQL connection URI.
+          LIFTELY_DATABASE_URL="$(printf '%s' "$LIFTELY_DATABASE_URL" | tr -d '\015\012')"
+          if [[ "$LIFTELY_DATABASE_URL" =~ [[:space:]] ]]; then
+            echo "::error::LIFTELY_DATABASE_URL contains whitespace; update the Actions secret with a clean PostgreSQL URI."
+            exit 1
+          fi
+          export LIFTELY_DATABASE_URL
+
           # The DSN is passed only through the container environment, never echoed.
           docker run --rm \
             -e LIFTELY_DATABASE_URL \
