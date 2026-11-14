@@ -72,11 +72,21 @@ Le profil `preview` ne contient volontairement plus l'URL Render de production. 
 
 ### Démarrer un backend local isolé sous Windows / PowerShell
 
-Depuis la racine du dépôt, créer une copie de staging (la source reste en lecture seule et les données de compte sont vidées uniquement dans la copie) :
+Depuis la racine du dépôt, créer une base staging déterministe depuis le fixture public assaini (349 exercices, aucun compte ni historique) :
 
 ~~~powershell
-python scripts/reset_liftely_user_data_copy.py --source backend\musculation.db --output "$env:USERPROFILE\LIFTELY-Backups\staging\liftely-staging.sqlite" --apply-to-copy
+python scripts/create_liftely_staging_sqlite.py --output "$env:USERPROFILE\LIFTELY-Backups\staging\liftely-staging.sqlite"
 ~~~
+
+Le script vérifie l'intégrité SQLite, les clés étrangères et le nombre exact de lignes. Il refuse d'écraser un fichier existant et refuse de créer le fichier à l'intérieur du dépôt.
+
+Pour initialiser un **nouveau projet PostgreSQL staging uniquement**, définir localement `LIFTELY_DATABASE_URL` avec le DSN du projet staging (jamais celui de production), puis exécuter :
+
+~~~powershell
+python backend\migrate_sqlite_to_postgres.py --source "$env:USERPROFILE\LIFTELY-Backups\staging\liftely-staging.sqlite" --create-schema
+~~~
+
+L'importeur lit la source SQLite en lecture seule, refuse les données cibles existantes non identiques et réalise l'import dans une transaction. Retirer ensuite le DSN de l'environnement PowerShell.
 
 Dans un terminal PowerShell dédié, lancer le backend exclusivement sur cette copie :
 
