@@ -112,6 +112,10 @@ def purger_auth_temporaire_periodiquement():
             return
         conn = get_db()
         conn.execute(
+            "DELETE FROM sessions WHERE date_expiration <= ?",
+            (maintenant.isoformat(),),
+        )
+        conn.execute(
             "DELETE FROM auth_action_tokens WHERE date_expiration <= ?",
             (maintenant.isoformat(),),
         )
@@ -374,12 +378,6 @@ def get_user_from_request():
     token_hash = hash_token(token)
 
     conn = get_db()
-
-    conn.execute(
-        "DELETE FROM sessions WHERE date_expiration <= ?",
-        (datetime.now().isoformat(),),
-    )
-    conn.commit()
 
     user = conn.execute(
         """
