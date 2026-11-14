@@ -1,6 +1,6 @@
 # LIFTELY — matrice des variables, secrets et accès fournisseurs
 
-**Révision : 13 novembre 2026**  
+**Révision : 14 novembre 2026**  
 Ce document recense les noms de configuration, leur rôle et leur emplacement. Il ne contient aucune valeur secrète.
 
 ## 0. Identifiants techniques et consoles fournisseurs
@@ -12,7 +12,9 @@ Ces identifiants servent à retrouver les ressources lors d'une reprise. Ils ne 
 | GitHub | Dépôt `skandergat/app-musculation`, branche de production `main` | https://github.com/skandergat/app-musculation |
 | GitHub Actions | Workflows CI, PostgreSQL, CodeQL, smoke production et sauvegarde | https://github.com/skandergat/app-musculation/actions |
 | Render | Workspace `app`, ID `tea-datfp449v7es738hpjm0` | https://dashboard.render.com |
-| Render | Service `liftely-api`, ID `srv-datfsp5g1s2s7397nfe0`, région Oregon, plan Free, branche `main`, racine `backend/` | https://dashboard.render.com/web/srv-datfsp5g1s2s7397nfe0 |
+| Render | Service production `liftely-api`, ID `srv-datfsp5g1s2s7397nfe0`, région Oregon, plan Free, branche `main`, racine `backend/` | https://dashboard.render.com/web/srv-datfsp5g1s2s7397nfe0 |
+| Render | Service staging `liftely-api-staging`, ID `srv-dbs5nbmc6qcc7388b550`, région Frankfurt, plan Free, branche `chore/staging-supabase-bootstrap`, auto-deploy désactivé | https://dashboard.render.com/web/srv-dbs5nbmc6qcc7388b550 |
+| API staging | `https://liftely-api-staging.onrender.com` ; DSN PostgreSQL staging à configurer avant tout déploiement exploitable | https://liftely-api-staging.onrender.com/health |
 | API publique | `https://liftely-api.onrender.com` ; santé `/health`, catalogue `/exercices` | https://liftely-api.onrender.com/health |
 | Supabase | Organisation `skander`, ID `zytzwinmdtkzyttdtyuc`, plan Free | https://supabase.com/dashboard/org/zytzwinmdtkzyttdtyuc |
 | Supabase | Projet `liftely`, ref `hzeggvylikhxpktbznqf`, PostgreSQL 17.11.0.003, région `eu-west-2` | https://supabase.com/dashboard/project/hzeggvylikhxpktbznqf |
@@ -22,9 +24,9 @@ Ces identifiants servent à retrouver les ressources lors d'une reprise. Ils ne 
 
 ### Configuration Render observée
 
-- Build : `pip install -r requirements.txt` depuis `backend/`.
-- Start : `gunicorn --bind 0.0.0.0:$PORT app:app`.
-- Auto-deploy : activé sur `main`, déclencheur `checksPass`.
+- Production : build `pip install -r requirements.txt` depuis `backend/`, start `gunicorn --bind 0.0.0.0:$PORT app:app`, auto-deploy sur `main` après checks.
+- Staging : build `pip install -r backend/requirements.txt` depuis la racine, start `gunicorn --chdir backend --bind 0.0.0.0:$PORT app:app`, Free Frankfurt, auto-deploy désactivé.
+- Le service staging a été créé ; le build Python est passé. Le démarrage applicatif échoue volontairement car `LIFTELY_DATABASE_URL` est un placeholder non valide, pour interdire le repli SQLite. Remplacer ce placeholder par le DSN PostgreSQL staging dans Render avant de déployer.
 - Health Check Path : `/health`, confirmé dans les paramètres Render le 13 novembre 2026 ; sondes HTTP 200 observées.
 - Variables secrètes : leurs noms et fonctions sont inventoriés ci-dessous ; les valeurs restent uniquement dans Render et ne doivent jamais être copiées dans ce dépôt.
 
@@ -39,7 +41,7 @@ Ces identifiants servent à retrouver les ressources lors d'une reprise. Ils ne 
 
 Fichier d'exemple : `mobile/.env.example`. Le fichier local réel doit rester ignoré par Git.
 
-Les profils EAS `preview` et `production` définissent la même URL publique de production dans `mobile/eas.json`. Le profil `development` utilise le `.env.local` du développeur ou le fallback local. Ne pas traiter `preview` comme un environnement de staging : il écrit dans la vraie base de production.
+Le profil EAS `production` définit `https://liftely-api.onrender.com`. Le profil `preview` ne contient pas d'URL API : `EXPO_PUBLIC_API_URL` doit être ajoutée à l'environnement EAS `preview` et pointer vers `https://liftely-api-staging.onrender.com` après connexion PostgreSQL et validation de `/health`. Le garde-fou de `mobile/src/config/api.ts` refuse la production en preview. Le profil `development` utilise le `.env.local` du développeur ou le fallback local.
 
 ## 2. Variables backend / Render
 
