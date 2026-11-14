@@ -69,6 +69,32 @@ Le profil `preview` ne contient volontairement plus l'URL Render de production. 
 - Une branche Supabase payante à l'heure n'est pas retenue : le tarif vérifié est de 0,01344 USD/heure (environ 9,80 USD sur 30 jours si elle reste active).
 - Le projet Supabase de production ne doit pas être cloné ni modifié pour les tests.
 - Le backend prend en charge SQLite via `LIFTELY_DB_PATH` lorsque `LIFTELY_DATABASE_URL`, `SUPABASE_DB_URL` et `DATABASE_URL` sont absentes. Une copie locale de la base de test et des données synthétiques peuvent donc servir aux tests développeur sans credentials de production.
+
+### Démarrer un backend local isolé sous Windows / PowerShell
+
+Depuis la racine du dépôt, créer une copie de staging (la source reste en lecture seule et les données de compte sont vidées uniquement dans la copie) :
+
+~~~powershell
+python scripts/reset_liftely_user_data_copy.py --source backend\musculation.db --output "$env:USERPROFILE\LIFTELY-Backups\staging\liftely-staging.sqlite" --apply-to-copy
+~~~
+
+Dans un terminal PowerShell dédié, lancer le backend exclusivement sur cette copie :
+
+~~~powershell
+$env:LIFTELY_DB_PATH = "$env:USERPROFILE\LIFTELY-Backups\staging\liftely-staging.sqlite"
+Remove-Item Env:LIFTELY_DATABASE_URL,Env:SUPABASE_DB_URL,Env:DATABASE_URL -ErrorAction SilentlyContinue
+python backend\app.py
+~~~
+
+Dans un second terminal, depuis `mobile\`, lancer Expo en développement local (ne pas créer de build EAS Preview tant que le backend distant de staging n'existe pas) :
+
+~~~powershell
+$env:EXPO_PUBLIC_APP_ENV = "development"
+$env:EXPO_PUBLIC_API_URL = ""
+npx.cmd expo start --lan
+~~~
+
+Le téléphone et le PC doivent être sur le même réseau Wi-Fi. Vérifier que le journal du backend indique SQLite, et non PostgreSQL. Ne jamais définir de DSN Supabase de production dans ces terminaux.
 - Les tests CI PostgreSQL utilisent une base éphémère dédiée ; ils ne doivent jamais recevoir le DSN de production.
 - Un backend staging accessible aux builds EAS preview reste à héberger. Une option gratuite Render peut être envisagée avec stockage éphémère et données synthétiques uniquement ; aucun service n'a été créé car le workspace Render doit être explicitement sélectionné et il faut confirmer les limites gratuites avant activation.
 
