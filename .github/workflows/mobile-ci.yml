@@ -38,6 +38,9 @@ jobs:
       - name: Check translation parity
         run: npm run check:translations
 
+      - name: Check preview API isolation
+        run: npm run check:preview-isolation
+
       - name: Lint
         run: npm run lint
 

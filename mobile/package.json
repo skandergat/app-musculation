@@ -61,7 +61,8 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "postinstall": "patch-package",
-    "check:translations": "node scripts/check-translations.cjs"
+    "check:translations": "node scripts/check-translations.cjs",
+    "check:preview-isolation": "node scripts/check-preview-api-isolation.cjs"
   },
   "private": true
 }
