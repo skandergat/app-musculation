@@ -41,7 +41,7 @@ Ces identifiants servent à retrouver les ressources lors d'une reprise. Ils ne 
 
 Fichier d'exemple : `mobile/.env.example`. Le fichier local réel doit rester ignoré par Git.
 
-Le profil EAS `production` définit `https://liftely-api.onrender.com`. Le profil `preview` ne contient pas d'URL API : `EXPO_PUBLIC_API_URL` doit être ajoutée à l'environnement EAS `preview` et pointer vers `https://liftely-api-staging.onrender.com` après connexion PostgreSQL et validation de `/health`. Le garde-fou de `mobile/src/config/api.ts` refuse la production en preview. Le profil `development` utilise le `.env.local` du développeur ou le fallback local.
+Le profil EAS `production` définit `https://liftely-api.onrender.com`. Le profil `preview` définit maintenant `EXPO_PUBLIC_API_URL=https://liftely-api-staging.onrender.com` directement dans `mobile/eas.json`. Le garde-fou de `mobile/src/config/api.ts` refuse la production en preview. Le profil `development` utilise le `.env.local` du développeur ou le fallback local. Le projet EAS reste à lier au compte propriétaire avant tout build.
 
 ## 2. Variables backend / Render
 
