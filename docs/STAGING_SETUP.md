@@ -14,13 +14,14 @@
 - Import only the public exercise catalogue (349 rows); never copy users, sessions, tokens, rate-limit records, templates, or workout history from production.
 
 ## Render staging service
-- Create a separate Free web service from this repository, root directory `backend/`, Python runtime.
+- Render service created: `liftely-api-staging` (`srv-dbs5nbmc6qcc7388b550`), Free, Frankfurt, branch `chore/staging-supabase-bootstrap`, auto-deploy disabled. URL: `https://liftely-api-staging.onrender.com`.
+- Build command: `pip install -r backend/requirements.txt` from repository root; start command: `gunicorn --chdir backend --bind 0.0.0.0:$PORT app:app`.
 - Build command: `pip install -r requirements.txt`.
 - Start command: `gunicorn --bind 0.0.0.0:$PORT app:app`.
-- Set `DATABASE_URL` to the staging PostgreSQL connection string using Render's secret environment-variable UI.
+- `LIFTELY_DATABASE_URL` currently contains a deliberately invalid placeholder so the service cannot fall back to SQLite. Replace it with the staging PostgreSQL connection string in Render's secret environment-variable UI; never use the production DSN.
 - Set `LIFTELY_DB_PATH` only if required by the adapter; staging must select PostgreSQL, not a local SQLite file.
 - Set `LIFTELY_PUBLIC_BASE_URL` to the staging app's public URL only when the URL is known.
-- Health check path: `/health`; verify `database_backend` is `postgresql` before connecting Expo Preview.
+- Set Render health check path to `/health`; verify `database_backend` is `postgresql` before connecting Expo Preview.
 
 ## Release gates
 1. Confirm staging project is healthy and schema migration is recorded.
