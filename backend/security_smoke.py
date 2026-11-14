@@ -67,6 +67,9 @@ for response in (client.get("/exercices"), client.get("/privacy"),
     assert response.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
     assert response.headers["Permissions-Policy"] == "camera=(), microphone=(), geolocation=()"
     assert "frame-ancestors 'none'" in response.headers["Content-Security-Policy"]
+    assert "script-src 'self'" in response.headers["Content-Security-Policy"]
+    assert "style-src 'self'" in response.headers["Content-Security-Policy"]
+    assert "unsafe-inline" not in response.headers["Content-Security-Policy"]
 
 # Le proxy HTTPS de test doit déclencher HSTS.
 https_response = client.get("/exercices", headers={"X-Forwarded-Proto": "https"})

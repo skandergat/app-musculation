@@ -64,7 +64,7 @@ def ajouter_entetes_cors(response):
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; object-src 'none'; base-uri 'self'; "
         "form-action 'self'; frame-ancestors 'none'; "
-        "script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
+        "script-src 'self'; style-src 'self'; "
         "img-src 'self' data:; font-src 'self' data:; connect-src 'self'"
     )
 
