@@ -86,7 +86,9 @@ Pour initialiser un **nouveau projet PostgreSQL staging uniquement**, définir l
 python backend\migrate_sqlite_to_postgres.py --source "$env:USERPROFILE\LIFTELY-Backups\staging\liftely-staging.sqlite" --create-schema
 ~~~
 
-L'importeur lit la source SQLite en lecture seule, refuse les données cibles existantes non identiques et réalise l'import dans une transaction. Retirer ensuite le DSN de l'environnement PowerShell.
+L'importeur lit la source SQLite en lecture seule, refuse les données cibles existantes non identiques et réalise l'import dans une transaction.
+
+Après l'import, appliquer dans **le projet staging uniquement** tous les fichiers `supabase/migrations/*.sql` dans l'ordre chronologique, y compris `20261114122500_enable_rls_all_liftely_tables.sql`. Cette dernière migration active RLS sur les onze tables et retire les privilèges Data API de `anon`, `authenticated` et `service_role`, comme sur la production. Aucun accès direct Data API ne doit être ajouté : l'application passe par Flask. Vérifier ensuite que les onze tables ont RLS activé et qu'aucune de ces trois rôles ne possède de privilège SELECT. Retirer ensuite le DSN de l'environnement PowerShell.
 
 Dans un terminal PowerShell dédié, lancer le backend exclusivement sur cette copie :
 
