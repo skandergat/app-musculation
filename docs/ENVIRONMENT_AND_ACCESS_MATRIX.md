@@ -26,8 +26,8 @@ Ces identifiants servent à retrouver les ressources lors d'une reprise. Ils ne 
 
 - Production : build `pip install -r requirements.txt` depuis `backend/`, start `gunicorn --bind 0.0.0.0:$PORT app:app`, auto-deploy sur `main` après checks.
 - Staging : build `pip install -r backend/requirements.txt` depuis la racine, start `gunicorn --chdir backend --bind 0.0.0.0:$PORT app:app`, Free Frankfurt, auto-deploy désactivé.
-- Le service staging a été créé ; le build Python est passé. Le démarrage applicatif échoue volontairement car `LIFTELY_DATABASE_URL` est un placeholder non valide, pour interdire le repli SQLite. Remplacer ce placeholder par le DSN PostgreSQL staging dans Render avant de déployer.
-- Health Check Path : `/health`, confirmé dans les paramètres Render le 13 novembre 2026 ; sondes HTTP 200 observées.
+- Le service staging a été créé ; le build Python est passé. Les logs du 14 novembre montrent que `LIFTELY_DATABASE_URL` pointe vers l'endpoint direct IPv6 Supabase (`db.ybwvfprbpilijbzbujiw.supabase.co`), inaccessible depuis Render (`Network is unreachable`). Remplacer la valeur par la chaîne Session pooler (Supavisor IPv4) du projet staging, sans utiliser le DSN de production.
+- Health Check Path : vide dans la configuration Render staging observée le 15 novembre 2026 ; le régler sur `/health`. Ne pas confondre avec la configuration du service de production.
 - Variables secrètes : leurs noms et fonctions sont inventoriés ci-dessous ; les valeurs restent uniquement dans Render et ne doivent jamais être copiées dans ce dépôt.
 
 
