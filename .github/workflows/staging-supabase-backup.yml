@@ -1,0 +1,111 @@
+name: LIFTELY staging encrypted Supabase backup
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "15 4 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: liftely-staging-supabase-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Create encrypted STAGING PostgreSQL backup
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: staging
+    env:
+      LIFTELY_DATABASE_URL: ${{ secrets.STAGING_LIFTELY_DATABASE_URL }}
+      LIFTELY_BACKUP_PASSPHRASE: ${{ secrets.STAGING_LIFTELY_BACKUP_PASSPHRASE }}
+    steps:
+      - name: Validate staging-only credentials
+        id: credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +x
+          if [[ -z "$LIFTELY_DATABASE_URL" || -z "$LIFTELY_BACKUP_PASSPHRASE" ]]; then
+            echo "::error::Configure STAGING_LIFTELY_DATABASE_URL and STAGING_LIFTELY_BACKUP_PASSPHRASE in the GitHub staging environment."
+            exit 1
+          fi
+          if [[ ${#LIFTELY_BACKUP_PASSPHRASE} -lt 32 ]]; then
+            echo "::error::The staging backup passphrase must contain at least 32 characters."
+            exit 1
+          fi
+          LIFTELY_DATABASE_URL="$(printf '%s' "$LIFTELY_DATABASE_URL" | tr -d '\015\012')"
+          if [[ "$LIFTELY_DATABASE_URL" =~ [[:space:]] ]]; then
+            echo "::error::The staging database URL contains whitespace."
+            exit 1
+          fi
+          # Fail closed: this workflow must never dump production.
+          if [[ "$LIFTELY_DATABASE_URL" != *"hzeggvylikhxpktbznqf"* || "$LIFTELY_DATABASE_URL" == *"ybwvfprbpilijbzbujiw"* ]]; then
+            echo "::error::The database URL does not identify the LIFTELY staging Supabase project."
+            exit 1
+          fi
+          echo "::add-mask::$LIFTELY_DATABASE_URL"
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+          echo "LIFTELY_DATABASE_URL=$LIFTELY_DATABASE_URL" >> "$GITHUB_ENV"
+
+      - name: Install GnuPG
+        if: steps.credentials.outputs.ready == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends gnupg
+
+      - name: Dump, validate and encrypt staging PostgreSQL
+        if: steps.credentials.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +x
+          umask 077
+          backup_dir="$RUNNER_TEMP/liftely-staging-backup"
+          mkdir -p "$backup_dir"
+          stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+          dump="$backup_dir/liftely-staging-$stamp.dump"
+          archive="$backup_dir/liftely-staging-$stamp.dump.gpg"
+          passfile="$RUNNER_TEMP/liftely-staging-backup-passphrase"
+
+          docker run --rm \
+            -e LIFTELY_DATABASE_URL \
+            -v "$backup_dir:/backup" \
+            postgres:17-alpine \
+            sh -ceu 'pg_dump --dbname="$LIFTELY_DATABASE_URL" --format=custom --no-owner --no-acl --file=/backup/backup.dump && pg_restore --list /backup/backup.dump >/dev/null'
+          mv "$backup_dir/backup.dump" "$dump"
+
+          printf '%s' "$LIFTELY_BACKUP_PASSPHRASE" > "$passfile"
+          chmod 600 "$passfile"
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase-file "$passfile" \
+            --symmetric --cipher-algo AES256 \
+            --output "$archive" "$dump"
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase-file "$passfile" \
+            --output /dev/null --decrypt "$archive"
+
+          checksum="$(sha256sum "$archive" | cut -d ' ' -f 1)"
+          size="$(du -h "$archive" | cut -f 1)"
+          rm -f "$dump" "$passfile"
+          {
+            echo "## LIFTELY STAGING encrypted backup created"
+            echo "- UTC timestamp: $stamp"
+            echo "- Target: Supabase staging project hzeggvylikhxpktbznqf"
+            echo "- Encrypted archive size: $size"
+            echo "- SHA-256: `$checksum`"
+            echo "- Plaintext dump and temporary passphrase removed."
+            echo "- Artifact retention: 7 days."
+            echo "- Store the passphrase outside GitHub and copy the encrypted artifact to private off-site storage."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload encrypted staging backup only
+        if: steps.credentials.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: liftely-staging-supabase-backup-${{ github.run_id }}
+          path: ${{ runner.temp }}/liftely-staging-backup/*.dump.gpg
+          if-no-files-found: error
+          retention-days: 7
