@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import os
-import sqlite3
 import tempfile
 from urllib.parse import parse_qs, urlsplit
 
@@ -51,10 +50,11 @@ def create_account(email: str) -> dict:
 headers_a = create_account("isolation-a@example.test")
 headers_b = create_account("isolation-b@example.test")
 
-with sqlite3.connect(backend.DB_PATH) as conn:
-    exercise_id = conn.execute(
-        "SELECT id FROM exercices WHERE actif = 1 ORDER BY id LIMIT 1"
-    ).fetchone()[0]
+conn = backend.get_db()
+exercise_id = conn.execute(
+    "SELECT id FROM exercices WHERE actif = 1 ORDER BY id LIMIT 1"
+).fetchone()[0]
+conn.close()
 
 # Account A creates a private template.
 template = client.post(
