@@ -1,6 +1,6 @@
 # LIFTELY — matrice des variables, secrets et accès fournisseurs
 
-**Révision : 13 novembre 2026**  
+**Révision : 14 novembre 2026**  
 Ce document recense les noms de configuration, leur rôle et leur emplacement. Il ne contient aucune valeur secrète.
 
 ## 0. Identifiants techniques et consoles fournisseurs
@@ -12,7 +12,9 @@ Ces identifiants servent à retrouver les ressources lors d'une reprise. Ils ne 
 | GitHub | Dépôt `skandergat/app-musculation`, branche de production `main` | https://github.com/skandergat/app-musculation |
 | GitHub Actions | Workflows CI, PostgreSQL, CodeQL, smoke production et sauvegarde | https://github.com/skandergat/app-musculation/actions |
 | Render | Workspace `app`, ID `tea-datfp449v7es738hpjm0` | https://dashboard.render.com |
-| Render | Service `liftely-api`, ID `srv-datfsp5g1s2s7397nfe0`, région Oregon, plan Free, branche `main`, racine `backend/` | https://dashboard.render.com/web/srv-datfsp5g1s2s7397nfe0 |
+| Render | Service production `liftely-api`, ID `srv-datfsp5g1s2s7397nfe0`, région Oregon, plan Free, branche `main`, racine `backend/` | https://dashboard.render.com/web/srv-datfsp5g1s2s7397nfe0 |
+| Render | Service staging `liftely-api-staging`, ID `srv-dbs5nbmc6qcc7388b550`, région Frankfurt, plan Free, branche `chore/staging-supabase-bootstrap`, auto-deploy désactivé | https://dashboard.render.com/web/srv-dbs5nbmc6qcc7388b550 |
+| API staging | `https://liftely-api-staging.onrender.com` ; DSN PostgreSQL staging à configurer avant tout déploiement exploitable | https://liftely-api-staging.onrender.com/health |
 | API publique | `https://liftely-api.onrender.com` ; santé `/health`, catalogue `/exercices` | https://liftely-api.onrender.com/health |
 | Supabase | Organisation `skander`, ID `zytzwinmdtkzyttdtyuc`, plan Free | https://supabase.com/dashboard/org/zytzwinmdtkzyttdtyuc |
 | Supabase | Projet `liftely`, ref `hzeggvylikhxpktbznqf`, PostgreSQL 17.11.0.003, région `eu-west-2` | https://supabase.com/dashboard/project/hzeggvylikhxpktbznqf |
@@ -22,10 +24,10 @@ Ces identifiants servent à retrouver les ressources lors d'une reprise. Ils ne 
 
 ### Configuration Render observée
 
-- Build : `pip install -r requirements.txt` depuis `backend/`.
-- Start : `gunicorn --bind 0.0.0.0:$PORT app:app`.
-- Auto-deploy : activé sur `main`, déclencheur `checksPass`.
-- Health Check Path : `/health`, confirmé dans les paramètres Render le 13 novembre 2026 ; sondes HTTP 200 observées.
+- Production : build `pip install -r requirements.txt` depuis `backend/`, start `gunicorn --bind 0.0.0.0:$PORT app:app`, auto-deploy sur `main` après checks.
+- Staging : build `pip install -r backend/requirements.txt` depuis la racine, start `gunicorn --chdir backend --bind 0.0.0.0:$PORT app:app`, Free Frankfurt, auto-deploy désactivé.
+- Le service staging a été créé ; le build Python est passé. Les logs du 14 novembre montrent que `LIFTELY_DATABASE_URL` pointe vers l'endpoint direct IPv6 Supabase (`db.ybwvfprbpilijbzbujiw.supabase.co`), inaccessible depuis Render (`Network is unreachable`). Remplacer la valeur par la chaîne Session pooler (Supavisor IPv4) du projet staging, sans utiliser le DSN de production.
+- Health Check Path : vide dans la configuration Render staging observée le 15 novembre 2026 ; le régler sur `/health`. Ne pas confondre avec la configuration du service de production.
 - Variables secrètes : leurs noms et fonctions sont inventoriés ci-dessous ; les valeurs restent uniquement dans Render et ne doivent jamais être copiées dans ce dépôt.
 
 
@@ -39,7 +41,7 @@ Ces identifiants servent à retrouver les ressources lors d'une reprise. Ils ne 
 
 Fichier d'exemple : `mobile/.env.example`. Le fichier local réel doit rester ignoré par Git.
 
-Les profils EAS `preview` et `production` définissent la même URL publique de production dans `mobile/eas.json`. Le profil `development` utilise le `.env.local` du développeur ou le fallback local. Ne pas traiter `preview` comme un environnement de staging : il écrit dans la vraie base de production.
+Le profil EAS `production` définit `https://liftely-api.onrender.com`. Le profil `preview` définit maintenant `EXPO_PUBLIC_API_URL=https://liftely-api-staging.onrender.com` directement dans `mobile/eas.json`. Le garde-fou de `mobile/src/config/api.ts` refuse la production en preview. Le profil `development` utilise le `.env.local` du développeur ou le fallback local. Le projet EAS reste à lier au compte propriétaire avant tout build.
 
 ## 2. Variables backend / Render
 
@@ -74,7 +76,7 @@ Source de vérité des noms : `backend/.env.example`, `backend/app.py`, `backend
 
 Les workflows utilisent le `GITHUB_TOKEN` éphémère fourni par GitHub Actions avec des permissions déclarées au niveau du workflow. Les workflows PostgreSQL utilisent une base PostgreSQL 17 de service éphémère et Python 3.14, alignés sur les versions majeures observées en production. Les tests de production utilisent l'URL publique et ne nécessitent pas de DSN de production dans le workflow.
 
-Le workflow `.github/workflows/supabase-backup.yml` utilise les secrets Actions `LIFTELY_DATABASE_URL` et `LIFTELY_BACKUP_PASSPHRASE` (au moins 32 caractères aléatoires). Le run `43515211149` a réussi et son artifact chiffré AES-256 expire le 20 novembre 2026. Le dernier run planifié `43588877585` du 14 novembre a échoué : le DSN a transmis un retour à la ligne dans le nom de base PostgreSQL. Une correction défensive est proposée dans la PR `fix/backup-dsn-normalization-and-privacy-accuracy` ; vérifier un nouveau run réussi avant de déclarer l'automatisation rétablie. Le dépôt étant public, les artifacts sont téléchargeables par les lecteurs, mais ne contiennent que le fichier chiffré. Conserver la passphrase dans un coffre indépendant et copier chaque archive vers un stockage privé durable avant expiration.
+Le workflow `.github/workflows/supabase-backup.yml` utilise les secrets Actions `LIFTELY_DATABASE_URL` et `LIFTELY_BACKUP_PASSPHRASE` (au moins 32 caractères aléatoires). Le dernier artifact chiffré confirmé est celui du run `43515211149` (13 novembre) ; il expire le 20 novembre 2026. Le run planifié `43588877585` du 14 novembre a échoué à cause d'un retour à la ligne dans le DSN. Le correctif de normalisation a été fusionné dans la PR #107 à 12:04 UTC le 14 novembre, après cet échec ; aucun nouveau run réussi post-correctif n'est encore confirmé. Le prochain run planifié doit être contrôlé. Le dépôt étant public, les artifacts sont téléchargeables par les lecteurs, mais ne contiennent que le fichier chiffré. Conserver la passphrase dans un coffre indépendant et copier chaque archive vers un stockage privé durable avant expiration.
 
 Ne pas ajouter de secret GitHub sans justification, permissions minimales et documentation. Le workflow historique `supabase-import.yml` peut contenir des références à des secrets de migration : ne pas le relancer sur la production sans revue du YAML et des conditions.
 
